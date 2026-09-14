@@ -30,8 +30,7 @@ export function CallsLocked() {
             </h2>
             <p className="mt-4 max-w-xl text-base leading-7 text-[#657286]">
               Turn authorized customer and sales calls into reusable answers,
-              training examples, and possible company rules—after you review
-              them.
+              useful examples, and possible company rules—after you review them.
             </p>
             <button
               onClick={() => setOpen(true)}
@@ -48,7 +47,7 @@ export function CallsLocked() {
               "Customer questions",
               "Sales objections",
               "Successful responses",
-              "Training examples",
+              "Helpful examples",
             ].map((item) => (
               <div
                 key={item}
@@ -82,12 +81,12 @@ export function CallPrivacy({ acknowledged }: { acknowledged: boolean }) {
   }
   if (done) return null;
   return (
-    <div className="fixed inset-0 z-[130] grid place-items-center bg-[#0b1426]/55 p-4 backdrop-blur-sm">
+    <div className="mobile-sheet-overlay fixed inset-0 z-[130] grid place-items-center bg-[#0b1426]/55 p-4 backdrop-blur-sm">
       <section
         role="dialog"
         aria-modal="true"
         aria-labelledby="call-privacy-title"
-        className="w-full max-w-xl rounded-3xl bg-white p-6 shadow-2xl sm:p-8"
+        className="mobile-sheet-panel w-full max-w-xl rounded-3xl bg-white p-6 shadow-2xl sm:p-8"
       >
         <span className="grid size-11 place-items-center rounded-xl bg-[#edf2ff] text-[#3158d8]">
           <LockKeyhole className="size-5" />
@@ -274,6 +273,7 @@ export function CallRow({
     call_type: string;
     status: string;
     created_at: string;
+    provider?: string;
   };
 }) {
   return (
@@ -289,6 +289,7 @@ export function CallRow({
           {call.title}
         </span>
         <span className="mt-1 block text-xs capitalize text-[#7a8798]">
+          {call.provider === "twilio" ? "Twilio" : "Uploaded"} ·{" "}
           {call.call_type} · {new Date(call.created_at).toLocaleDateString()}
         </span>
       </span>

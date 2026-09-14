@@ -9,8 +9,7 @@ import {
   useEffect,
   useState,
 } from "react";
-import { LogOut, ShieldCheck, X } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { LogOut, X } from "lucide-react";
 
 type AuthContextValue = {
   loading: boolean;
@@ -27,35 +26,17 @@ export function useAuth() {
   return value;
 }
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [supabase] = useState(createClient);
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+export function AuthProvider({
+  children,
+  initialUser = null,
+}: {
+  children: ReactNode;
+  initialUser?: User | null;
+}) {
+  const [user, setUser] = useState<User | null>(initialUser);
   const [open, setOpen] = useState(false);
   const [authenticating, setAuthenticating] = useState(false);
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    let active = true;
-    void supabase.auth.getUser().then(({ data }) => {
-      if (active) {
-        setUser(data.user);
-        setLoading(false);
-      }
-    });
-
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setUser(session?.user ?? null);
-        setLoading(false);
-      },
-    );
-
-    return () => {
-      active = false;
-      listener.subscription.unsubscribe();
-    };
-  }, [supabase]);
 
   useEffect(() => {
     if (!open) return;
@@ -72,6 +53,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function continueWithGoogle() {
     setAuthenticating(true);
     setError("");
+    const { createClient } = await import("@/lib/supabase/client");
+    const supabase = createClient();
     const { error: signInError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
@@ -87,13 +70,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signOut() {
+    const { createClient } = await import("@/lib/supabase/client");
+    const supabase = createClient();
     await supabase.auth.signOut();
     setUser(null);
   }
 
   return (
     <AuthContext.Provider
-      value={{ loading, openAuth: () => setOpen(true), signOut, user }}
+      value={{ loading: false, openAuth: () => setOpen(true), signOut, user }}
     >
       {children}
       {open ? (
@@ -158,10 +143,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 {error}
               </p>
             ) : null}
-            <div className="mt-6 flex items-center justify-center gap-2 text-[11px] text-[#7d8795]">
-              <ShieldCheck size={13} />
-              Secure authentication powered by Supabase
-            </div>
             <p className="mt-5 text-center text-[10px] leading-5 text-[#929ba8]">
               By continuing, you agree to Opryn&apos;s{" "}
               <a

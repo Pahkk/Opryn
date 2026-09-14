@@ -6,7 +6,7 @@ test("page renders without overflow and navigation works", async ({
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1 })).toContainText(
-    "doesn't depend on you",
+    "Teach your business once.",
   );
   const overflow = await page.evaluate(
     () =>
@@ -16,14 +16,20 @@ test("page renders without overflow and navigation works", async ({
   expect(overflow).toBeLessThanOrEqual(1);
 
   if (testInfo.project.name === "desktop") {
-    await page.getByRole("link", { name: "How It Works", exact: true }).click();
-    await expect(page).toHaveURL(/#how-it-works$/);
+    await page
+      .getByRole("navigation", { name: "Main navigation" })
+      .getByRole("link", { name: "Product", exact: true })
+      .click();
+    await expect(page).toHaveURL(/#inside-opryn$/);
   } else {
     await page.getByRole("button", { name: "Toggle navigation menu" }).click();
-    await expect(
-      page.getByRole("navigation", { name: "Mobile navigation" }),
-    ).toBeVisible();
-    await page.getByRole("link", { name: "Pricing" }).click();
+    const mobileNavigation = page.getByRole("navigation", {
+      name: "Mobile navigation",
+    });
+    await expect(mobileNavigation).toBeVisible();
+    await mobileNavigation
+      .getByRole("link", { name: "Pricing", exact: true })
+      .click();
     await expect(page).toHaveURL(/\/pricing$/);
   }
 
@@ -37,7 +43,7 @@ test("page renders without overflow and navigation works", async ({
 test("pricing clearly separates Core and Premium", async ({ page }) => {
   await page.goto("/pricing");
   await expect(
-    page.getByRole("heading", { name: "Get your time back." }),
+    page.getByRole("heading", { name: "Company knowledge for people and AI." }),
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "Opryn Core" })).toBeVisible();
   await expect(
@@ -49,6 +55,12 @@ test("pricing clearly separates Core and Premium", async ({ page }) => {
   await expect(
     page.getByText("Learn From Calls", { exact: true }),
   ).toBeVisible();
+  await expect(
+    page.getByText("External AI Connections and secure Agent API"),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Document uploads and Google Drive import"),
+  ).toBeVisible();
   const overflow = await page.evaluate(
     () =>
       document.documentElement.scrollWidth -
@@ -57,51 +69,43 @@ test("pricing clearly separates Core and Premium", async ({ page }) => {
   expect(overflow).toBeLessThanOrEqual(1);
 });
 
-test("early access validates and stores a submission", async ({ page }) => {
+test("primary calls to action lead to signup", async ({ page }) => {
   await page.goto("/");
-  const ctas = page.getByRole("button", { name: "Get Early Access" });
-  await ctas.first().click();
-  const dialog = page.getByRole("dialog");
-  await expect(dialog).toBeVisible();
-
-  await dialog.getByRole("button", { name: "Request Early Access" }).click();
-  await expect(dialog.getByLabel("First name")).toBeFocused();
-  await dialog.getByLabel("First name").fill("Alex");
-  await dialog.getByLabel("Work email").fill("alex@example.com");
-  await dialog.getByLabel("Business name").fill("Northstar Services");
-  await dialog.getByLabel("Industry").selectOption({ label: "Home services" });
-  await dialog
-    .getByLabel("Number of employees")
-    .selectOption({ label: "4–10" });
-  await dialog
-    .getByLabel("Are you currently hiring?")
-    .selectOption({ label: "Within 3 months" });
-  await dialog
-    .getByLabel("What is hardest for you to hand off?")
-    .fill("Quoting unusual jobs and handling exceptions.");
-  await dialog.getByRole("button", { name: "Request Early Access" }).click();
-  await expect(page.getByTestId("submission-success")).toContainText(
-    "You're on the list",
-  );
-  const stored = await page.evaluate(() =>
-    localStorage.getItem("opryn-early-access"),
-  );
-  expect(stored).toContain("Northstar Services");
+  const ctas = page.getByRole("link", { name: "Get Started" });
+  expect(await ctas.count()).toBeGreaterThanOrEqual(2);
+  for (const cta of await ctas.all())
+    await expect(cta).toHaveAttribute("href", "/signup");
 });
 
-test("FAQ accordion opens and closes", async ({ page }) => {
+test("illustrative product demo grounds both consumers in the displayed source", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
-  const question = page.getByRole("button", {
-    name: "Do I have to document everything myself?",
-  });
-  await question.click();
-  await expect(question).toHaveAttribute("aria-expanded", "true");
-  await expect(page.getByText("The goal is the opposite.")).toBeVisible();
-  await question.click();
-  await expect(question).toHaveAttribute("aria-expanded", "false");
+  await expect(
+    page
+      .locator(".shared-policy")
+      .getByText(/Website projects include two revision rounds/),
+  ).toBeVisible();
+  await page
+    .getByRole("button", {
+      name: "Website bot",
+      exact: true,
+    })
+    .click();
+  await expect(page.locator(".shared-answer-stack .is-current h3")).toHaveText(
+    "Additional rounds require project lead approval.",
+  );
+  await expect(
+    page
+      .locator(".editorial-trust")
+      .getByText(
+        "No approved answer found. Route the question to the right person.",
+      ),
+  ).toBeVisible();
 });
 
-test("Google sign in opens an accessible auth flow", async ({
+test("Sign in opens the existing email and Google entry flow", async ({
   page,
 }, testInfo) => {
   await page.goto("/");
@@ -109,23 +113,15 @@ test("Google sign in opens an accessible auth flow", async ({
     await page.getByRole("button", { name: "Toggle navigation menu" }).click();
   }
 
-  await page.getByRole("button", { name: "Sign In" }).click();
-  const dialog = page.getByRole("dialog", {
-    name: "Sign in or create an account",
-  });
-  await expect(dialog).toBeVisible();
+  await page
+    .locator(".public-nav")
+    .getByRole("link", { name: "Sign In", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(page.getByLabel("Work email")).toBeVisible();
   await expect(
-    dialog.getByRole("button", { name: "Continue with Google" }),
+    page.getByRole("button", { name: "Continue with Google" }),
   ).toBeEnabled();
-  await expect(dialog.getByRole("link", { name: "Terms" })).toHaveAttribute(
-    "href",
-    "/terms",
-  );
-  await expect(
-    dialog.getByRole("link", { name: "Privacy Policy" }),
-  ).toHaveAttribute("href", "/privacy");
-  await dialog.getByRole("button", { name: "Close sign in" }).click();
-  await expect(dialog).not.toBeVisible();
 });
 
 test("public legal pages are linked and accessible", async ({ page }) => {
@@ -136,7 +132,7 @@ test("public legal pages are linked and accessible", async ({ page }) => {
     page.getByRole("heading", { name: "Privacy Policy", level: 1 }),
   ).toBeVisible();
   await expect(
-    page.getByText(/does not request access to your Gmail/),
+    page.getByText(/Only files you explicitly choose are imported/),
   ).toBeVisible();
 
   await page.getByRole("link", { name: "Terms", exact: true }).click();

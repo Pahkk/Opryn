@@ -6,6 +6,9 @@ const schema = z.object({
   title: z.string().trim().min(1).max(200),
   summary: z.string().trim().max(5000),
   purpose: z.string().trim().max(5000),
+  roleId: z.string().uuid().nullable().optional(),
+  expertId: z.string().uuid().nullable().optional(),
+  criticality: z.enum(["normal", "critical"]).optional(),
   steps: z
     .array(
       z.object({
@@ -69,6 +72,10 @@ export async function PATCH(
         title: parsed.data.title,
         summary: parsed.data.summary,
         purpose: parsed.data.purpose,
+        assigned_expert_id: parsed.data.expertId ?? null,
+        criticality: parsed.data.criticality ?? "normal",
+        edited_before_approval:
+          existing.status === "approved" ? undefined : true,
         status: existing.status === "approved" ? "approved" : "needs_review",
       })
       .eq("id", id);
@@ -85,35 +92,47 @@ export async function PATCH(
         .eq("organization_id", membership.organization_id);
       if (deleteError) throw deleteError;
     }
-    const { error: stepError } = await supabase
-      .from("process_steps")
-      .insert(
-        parsed.data.steps.map((step, index) => ({
+    const { error: assignmentDeleteError } = await supabase
+      .from("process_role_assignments")
+      .delete()
+      .eq("process_id", id)
+      .eq("organization_id", membership.organization_id);
+    if (assignmentDeleteError) throw assignmentDeleteError;
+    if (parsed.data.roleId) {
+      const { error: assignmentError } = await supabase
+        .from("process_role_assignments")
+        .insert({
           organization_id: membership.organization_id,
           process_id: id,
-          step_order: index + 1,
-          title: step.title,
-          description: step.description,
-        })),
-      );
+          role_id: parsed.data.roleId,
+        });
+      if (assignmentError) throw assignmentError;
+    }
+    const { error: stepError } = await supabase.from("process_steps").insert(
+      parsed.data.steps.map((step, index) => ({
+        organization_id: membership.organization_id,
+        process_id: id,
+        step_order: index + 1,
+        title: step.title,
+        description: step.description,
+      })),
+    );
     if (stepError) throw stepError;
     if (parsed.data.rules.length) {
-      const { error: ruleError } = await supabase
-        .from("process_rules")
-        .insert(
-          parsed.data.rules.map((rule) => ({
-            organization_id: membership.organization_id,
-            process_id: id,
-            title: rule.title,
-            text: rule.text,
-            confidence: rule.confidence ?? null,
-            status: existing.status === "approved" ? "approved" : "draft",
-            created_by: user.id,
-            approved_by: existing.status === "approved" ? user.id : null,
-            approved_at:
-              existing.status === "approved" ? new Date().toISOString() : null,
-          })),
-        );
+      const { error: ruleError } = await supabase.from("process_rules").insert(
+        parsed.data.rules.map((rule) => ({
+          organization_id: membership.organization_id,
+          process_id: id,
+          title: rule.title,
+          text: rule.text,
+          confidence: rule.confidence ?? null,
+          status: existing.status === "approved" ? "approved" : "draft",
+          created_by: user.id,
+          approved_by: existing.status === "approved" ? user.id : null,
+          approved_at:
+            existing.status === "approved" ? new Date().toISOString() : null,
+        })),
+      );
       if (ruleError) throw ruleError;
     }
     if (parsed.data.exceptions.length) {

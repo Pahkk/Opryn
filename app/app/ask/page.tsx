@@ -2,126 +2,69 @@ import { AskOpryn } from "@/components/app/ask-opryn";
 import { PageHeading } from "@/components/app/page-heading";
 import { requireAppContext } from "@/lib/app-context";
 import { createClient } from "@/lib/supabase/server";
+
 export default async function AskPage({
   searchParams,
 }: {
   searchParams: Promise<{ q?: string }>;
 }) {
-  const { q } = await searchParams;
-  const context = await requireAppContext();
-  const supabase = await createClient();
-  const [{ count }, { data: processes }, { data: roles }, { data: discovery }] =
-    await Promise.all([
-      supabase
-        .from("knowledge_chunks")
-        .select("id", { count: "exact", head: true })
-        .eq("organization_id", context.organization.id)
-        .eq("approved", true),
-      supabase
+  const [{ q }, context, supabase] = await Promise.all([
+    searchParams,
+    requireAppContext(),
+    createClient(),
+  ]);
+  // Session/RLS applies knowledge visibility; no industry or role-name guesses.
+  const { data: chunks, error } = await supabase
+    .from("knowledge_chunks")
+    .select("id,content,process_id,rule_id,role_id")
+    .eq("organization_id", context.organization.id)
+    .eq("approved", true)
+    .eq("health_status", "healthy")
+    .order("last_confirmed_at", { ascending: false })
+    .limit(20);
+  if (error)
+    throw new Error(
+      "Your approved knowledge couldn't be loaded. Please try again.",
+    );
+  const accessible = (chunks ?? []).filter(
+    (chunk) =>
+      context.isAdmin ||
+      !chunk.role_id ||
+      chunk.role_id === context.membership.roleId,
+  );
+  const processIds = [
+    ...new Set(
+      accessible.flatMap((chunk) =>
+        chunk.process_id ? [chunk.process_id] : [],
+      ),
+    ),
+  ];
+  const { data: processes, error: processError } = processIds.length
+    ? await supabase
         .from("processes")
         .select("id,title")
         .eq("organization_id", context.organization.id)
         .eq("status", "approved")
-        .order("updated_at", { ascending: false })
-        .limit(8),
-      supabase
-        .from("roles")
-        .select("name")
-        .eq("organization_id", context.organization.id)
-        .order("name")
-        .limit(6),
-      context.isAdmin
-        ? supabase
-            .from("organization_discovery")
-            .select("common_questions,hardest_to_handoff")
-            .eq("organization_id", context.organization.id)
-            .maybeSingle()
-        : Promise.resolve({ data: null }),
-    ]);
-  const prompts = buildPrompts({
-    processes: processes ?? [],
-    roles: roles ?? [],
-    industry: context.organization.industry,
-    commonQuestions: discovery?.common_questions ?? "",
-    hardestToHandoff: discovery?.hardest_to_handoff ?? "",
-  });
+        .in("id", processIds)
+        .limit(8)
+    : { data: [], error: null };
+  if (processError)
+    throw new Error("Your suggested questions couldn't be loaded.");
+  const prompts = (processes ?? []).map((process) => ({
+    category: "Approved process",
+    text: `Walk me through ${process.title}.`,
+  }));
   return (
     <>
       <PageHeading
         title="Ask Opryn"
-        description="Ask anything about how your company works."
+        description="Your company's approved knowledge. A clear answer, with its source."
       />
       <AskOpryn
-        hasKnowledge={Boolean(count)}
+        hasKnowledge={accessible.length > 0}
         prompts={prompts}
         initialQuestion={q?.slice(0, 4000) ?? ""}
       />
     </>
   );
-}
-
-function buildPrompts(input: {
-  processes: Array<{ id: string; title: string }>;
-  roles: Array<{ name: string }>;
-  industry: string;
-  commonQuestions: string;
-  hardestToHandoff: string;
-}) {
-  const processPrompts = input.processes.flatMap((process) => [
-    { category: "Process", text: `Walk me through ${process.title}.` },
-    {
-      category: "Watch out for",
-      text: `What mistakes or exceptions should I watch for during ${process.title}?`,
-    },
-  ]);
-  const rolePrompts = input.roles.flatMap((role) => [
-    {
-      category: "My role",
-      text: `What should a ${role.name} learn first?`,
-    },
-    {
-      category: "Approvals",
-      text: `Which decisions should a ${role.name} send for approval?`,
-    },
-  ]);
-  const general = [
-    { category: "Today", text: "What should I work on first today?" },
-    {
-      category: "Decisions",
-      text: "Which decisions can I make without asking the owner?",
-    },
-    {
-      category: "Quality",
-      text: "What should I double-check before I finish a task?",
-    },
-    {
-      category: "Training",
-      text: "What company knowledge should I learn next?",
-    },
-    {
-      category: input.industry || "Company",
-      text: `What are the most important customer rules for our ${input.industry || "business"}?`,
-    },
-    {
-      category: "Escalation",
-      text: "When should I stop and ask someone for help?",
-    },
-  ];
-  const discovery = [input.commonQuestions, input.hardestToHandoff]
-    .filter(Boolean)
-    .map((text, index) => ({
-      category: index ? "Handoff" : "Common question",
-      text: text.length > 140 ? `${text.slice(0, 137)}…` : text,
-    }));
-  const unique = new Map<string, { category: string; text: string }>();
-  for (const prompt of [
-    ...processPrompts,
-    ...rolePrompts,
-    ...discovery,
-    ...general,
-  ]) {
-    const key = prompt.text.trim().toLowerCase();
-    if (prompt.text.trim() && !unique.has(key)) unique.set(key, prompt);
-  }
-  return [...unique.values()].slice(0, 20);
 }

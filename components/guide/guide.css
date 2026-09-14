@@ -1,0 +1,401 @@
+.guide-dock {
+  position: fixed;
+  right: 24px;
+  bottom: 22px;
+  z-index: 65;
+  max-width: min(380px, calc(100vw - 32px));
+  color: #26384a;
+}
+.guide-launcher {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-left: auto;
+  border: 1px solid #cbd4dd;
+  border-radius: 10px;
+  background: #fafafa;
+  padding: 0 15px;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 3px 12px #26384a0c;
+}
+.opryn-app:has(dialog[open]) .guide-dock,
+.opryn-app:has(.picker-dialog) .guide-dock {
+  visibility: hidden;
+}
+.opryn-app:has(#workspace-main :is(input, textarea, select):focus) .guide-dock {
+  visibility: hidden;
+}
+.guide-setup-strip {
+  margin: 18px 40px 0;
+  padding: 16px 0;
+  border-bottom: 1px solid #d2d8de;
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  color: #26384a;
+  font-size: 13px;
+}
+.guide-setup-strip strong {
+  font-size: 16px;
+}
+.guide-setup-strip p {
+  margin: 3px 0;
+}
+.guide-setup-strip progress {
+  max-width: 100px;
+  height: 5px;
+  accent-color: #536b82;
+}
+.guide-setup-strip > button {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.guide-setup-strip > button:last-child {
+  margin-left: auto;
+  padding: 10px;
+}
+.guide-eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.13em;
+  font-weight: 600;
+  color: #65707b;
+}
+.opryn-dialog.dialog-guide {
+  margin: 0 0 0 auto;
+  padding: 0;
+  max-width: min(400px, 100vw);
+  width: 400px;
+  max-height: 100%;
+  height: var(--dialog-height, 100dvh);
+  border: 0;
+  background: #f8f9fa;
+  color: #26384a;
+}
+.dialog-guide::backdrop {
+  background: #26384a22;
+}
+.guide-panel {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.guide-panel > header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 22px 24px;
+  border-bottom: 1px solid #d2d8de;
+  flex-shrink: 0;
+}
+.guide-panel h2 {
+  font-size: 22px;
+  letter-spacing: -0.03em;
+  font-weight: 600;
+}
+.guide-panel header button {
+  min-width: 44px;
+  min-height: 44px;
+  display: grid;
+  place-items: center;
+}
+.guide-panel-scroll {
+  padding: 22px 24px;
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
+  overscroll-behavior: contain;
+}
+.guide-panel h3 {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0 0 12px;
+}
+.guide-workspace {
+  font-size: 12px;
+  color: #65707b;
+  overflow-wrap: anywhere;
+}
+.guide-intro {
+  margin: 22px 0;
+  font-size: 20px;
+  line-height: 1.45;
+  letter-spacing: -0.025em;
+}
+.guide-intro strong {
+  font-weight: 500;
+}
+.guide-setup-list {
+  border-block: 1px solid #d2d8de;
+  padding: 18px 0;
+  margin-bottom: 24px;
+}
+.guide-setup-list h3 {
+  display: flex;
+  justify-content: space-between;
+}
+.guide-setup-list p {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+  margin: 12px 0;
+}
+.guide-setup-list small {
+  margin-left: auto;
+  font-size: 10px;
+}
+.guide-setup-list p > span {
+  width: 16px;
+}
+.guide-setup-list .guide-primary {
+  margin-top: 14px;
+}
+.guide-panel button,
+.guide-resume button {
+  min-height: 44px;
+  font-size: 13px;
+}
+.guide-primary {
+  background: #34495e;
+  color: white;
+  padding: 10px 15px;
+  border-radius: 8px;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+.guide-panel button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+.guide-actions > button,
+.guide-workflows > button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  text-align: left;
+  gap: 12px;
+  border-bottom: 1px solid #e0e4e8;
+  padding: 11px 0;
+}
+.guide-actions small {
+  white-space: nowrap;
+  color: #536b82;
+  font-size: 11px;
+}
+.guide-actions button:hover,
+.guide-workflows button:hover {
+  background: #e9edf1;
+}
+.guide-workflows {
+  margin-top: 24px;
+  font-size: 13px;
+}
+.guide-workflows summary {
+  cursor: pointer;
+  min-height: 44px;
+  padding-block: 12px;
+}
+.guide-answer {
+  margin-top: 24px;
+  font-size: 14px;
+  line-height: 1.7;
+  border-left: 2px solid #536b82;
+  padding-left: 14px;
+}
+.guide-answer > button {
+  display: block;
+  text-align: left;
+}
+.guide-current {
+  border-top: 1px solid #d2d8de;
+  font-size: 13px;
+  padding-top: 16px;
+}
+.guide-current button {
+  margin-right: 14px;
+}
+.guide-notice {
+  font-size: 13px;
+  line-height: 1.6;
+  margin-top: 16px;
+}
+.guide-composer {
+  border-top: 1px solid #d2d8de;
+  padding: 18px 24px max(20px, env(safe-area-inset-bottom));
+  background: #f8f9fa;
+  flex-shrink: 0;
+}
+.guide-composer label {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+.guide-composer > div {
+  display: flex;
+  gap: 8px;
+}
+.guide-composer input {
+  width: 100%;
+  min-width: 0;
+  font-size: 16px;
+  border: 1px solid #cbd4dd;
+  border-radius: 8px;
+  padding: 10px;
+  background: #fff;
+}
+.guide-composer small {
+  display: block;
+  margin-top: 10px;
+  font-size: 10px;
+  color: #65707b;
+}
+.guide-resume {
+  background: #fafafa;
+  padding: 16px;
+  border: 1px solid #cbd4dd;
+  border-radius: 10px;
+  box-shadow: 0 5px 24px #26384a10;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+.guide-resume p {
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+.guide-resume p:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+}
+.guide-resume p:first-child span {
+  white-space: nowrap;
+}
+.guide-resume > div {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.opryn-guide-pointer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000000002;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 2px #26384a25);
+}
+.driver-popover.opryn-guide-coach {
+  background: #fafafa;
+  color: #26384a;
+  border: 1px solid #d2d8de;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 8px 30px #26384a12;
+  max-width: min(340px, calc(100vw - 24px));
+  font-family: inherit;
+}
+.opryn-guide-coach .driver-popover-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+.opryn-guide-coach .driver-popover-description {
+  font-size: 14px;
+  line-height: 1.65;
+  margin-top: 10px;
+}
+.opryn-guide-coach .driver-popover-progress-text {
+  font-size: 11px;
+  color: #65707b;
+}
+.opryn-guide-coach .driver-popover-footer {
+  gap: 10px;
+}
+.opryn-guide-coach .driver-popover-footer button {
+  min-height: 44px;
+  border-radius: 7px;
+  border: 1px solid #cbd4dd;
+  padding: 8px 12px;
+  text-shadow: none;
+  font-size: 12px;
+  background: #fafafa;
+  color: #26384a;
+}
+.opryn-guide-coach .driver-popover-footer .driver-popover-next-btn {
+  background: #34495e;
+  color: white;
+  border-color: #34495e;
+}
+.opryn-guide-coach .driver-popover-footer button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.opryn-guide-coach .driver-popover-close-btn {
+  width: 44px;
+  height: 44px;
+  color: #26384a;
+}
+.driver-active-element[data-guide] {
+  outline: 2px solid #536b82 !important;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 8px rgba(83, 107, 130, .16), 0 4px 18px rgba(38, 56, 74, .1) !important;
+}
+.guide-panel :focus-visible,
+.guide-dock :focus-visible,
+.guide-setup-strip :focus-visible,
+.opryn-guide-coach :focus-visible {
+  outline: 2px solid #34495e;
+  outline-offset: 3px;
+}
+@media (max-width: 1023px) {
+  .guide-dock {
+    bottom: calc(86px + env(safe-area-inset-bottom));
+    right: 16px;
+  }
+  .guide-setup-strip {
+    margin: 14px 16px 0;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+  }
+  .guide-setup-strip progress {
+    display: none;
+  }
+}
+@media (max-width: 767px), (pointer: coarse) {
+  .opryn-guide-pointer {
+    display: none;
+  }
+}
+@media (max-width: 767px) {
+  .opryn-dialog.dialog-guide {
+    width: 100%;
+    max-width: 100%;
+  }
+  .guide-panel > header,
+  .guide-panel-scroll,
+  .guide-composer {
+    padding-inline: 20px;
+  }
+  .guide-resume {
+    max-height: 33dvh;
+    overflow: auto;
+  }
+  .guide-launcher {
+    min-height: 40px;
+    font-size: 12px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .opryn-guide-coach,
+  .opryn-guide-pointer {
+    animation: none !important;
+    transition: none !important;
+  }
+}

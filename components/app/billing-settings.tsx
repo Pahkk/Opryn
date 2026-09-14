@@ -16,8 +16,10 @@ type Props = {
   interval: BillingInterval;
   status: string;
   periodEnd: string | null;
+  trialEnd?: string | null;
   cancelAtPeriodEnd: boolean;
   hasStripeCustomer: boolean;
+  hasSubscription: boolean;
   billingReady: boolean;
   success?: boolean;
 };
@@ -26,17 +28,28 @@ export function BillingSettings(props: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const details = PLAN_DETAILS[props.plan];
+  const statusLabel = props.hasSubscription
+    ? props.status.replaceAll("_", " ")
+    : "No paid plan";
   async function manage() {
+    if (loading) return;
     setLoading(true);
     setError("");
-    const response = await fetch("/api/billing/portal", { method: "POST" });
-    const body = await response.json().catch(() => ({}));
-    if (!response.ok || !body.url) {
-      setError(body.error ?? "Billing could not be opened right now.");
+    try {
+      const response = await fetch("/api/billing/portal", { method: "POST" });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || !body.url) {
+        setError(body.error ?? "Billing could not be opened right now.");
+        setLoading(false);
+        return;
+      }
+      window.location.assign(body.url);
+    } catch {
+      setError(
+        "Billing could not be opened. Check your connection and try again.",
+      );
       setLoading(false);
-      return;
     }
-    window.location.assign(body.url);
   }
   return (
     <section className="rounded-2xl border border-[#dfe5ed] bg-white p-5 sm:p-7">
@@ -55,11 +68,20 @@ export function BillingSettings(props: Props) {
           </div>
         </div>
         <span
-          className={`w-fit rounded-full px-3 py-1 text-xs font-bold capitalize ${props.status === "active" || props.status === "trialing" ? "bg-[#eaf7f1] text-[#177257]" : "bg-[#fff4df] text-[#8a6217]"}`}
+          className={`w-fit rounded-full px-3 py-1 text-xs font-bold capitalize ${props.hasSubscription && (props.status === "active" || props.status === "trialing") ? "bg-[#eaf7f1] text-[#177257]" : "bg-[#eef3f8] text-[#53627a]"}`}
         >
-          {props.status.replace("_", " ")}
+          {statusLabel}
         </span>
       </div>
+      {props.status === "trialing" && props.trialEnd && (
+        <p className="mt-4 text-sm text-[#536b82]">
+          {details.name} trial · Ends{" "}
+          {new Date(props.trialEnd).toLocaleDateString()}.{" "}
+          {props.cancelAtPeriodEnd
+            ? "Cancellation is scheduled. Check Billing for your final access date."
+            : "Manage payment and cancellation below."}
+        </p>
+      )}
       {props.success ? (
         <div
           role="status"
@@ -70,18 +92,29 @@ export function BillingSettings(props: Props) {
         </div>
       ) : null}
       <div className="mt-6 grid gap-3 sm:grid-cols-3">
-        <BillingValue label="Current plan" value={details.name} />
+        <BillingValue
+          label="Current plan"
+          value={props.hasSubscription ? details.name : "No paid plan"}
+        />
         <BillingValue
           label="Price"
-          value={`$${props.interval === "year" ? details.annualMonthlyEquivalent : details.monthlyPrice}/month`}
+          value={
+            props.hasSubscription
+              ? `$${props.interval === "year" ? details.annualMonthlyEquivalent : details.monthlyPrice}/month`
+              : "Not billing"
+          }
           note={
-            props.interval === "year" ? "billed annually" : "billed monthly"
+            props.hasSubscription
+              ? props.interval === "year"
+                ? "billed annually"
+                : "billed monthly"
+              : undefined
           }
         />
         <BillingValue
           label={props.cancelAtPeriodEnd ? "Access ends" : "Next billing date"}
           value={
-            props.periodEnd
+            props.hasSubscription && props.periodEnd
               ? new Date(props.periodEnd).toLocaleDateString(undefined, {
                   month: "short",
                   day: "numeric",
@@ -118,7 +151,11 @@ export function BillingSettings(props: Props) {
           href="/pricing"
           className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#d9e0e9] px-4 text-sm font-semibold text-[#354156] hover:bg-[#f7f9fc]"
         >
-          {props.plan === "core" ? "Upgrade plan" : "View pricing"}
+          {!props.hasSubscription
+            ? "Choose a plan"
+            : props.plan === "core"
+              ? "Upgrade plan"
+              : "View pricing"}
           <ArrowUpRight className="size-4" />
         </Link>
       </div>

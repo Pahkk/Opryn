@@ -1,9 +1,10 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { Calendar, CheckCircle2, PlayCircle, UserRound } from "lucide-react";
 import { ProcessReview } from "@/components/app/process-review";
 import { ProcessDetailGuide } from "@/components/app/process-intelligence";
+import { ProcessChecklist } from "@/components/app/process-checklist";
 import { PageHeading } from "@/components/app/page-heading";
-import { TrainingButton } from "@/components/app/training-button";
 import { requireAppContext } from "@/lib/app-context";
 import { safeAppReturnPath } from "@/lib/return-path";
 import { createClient } from "@/lib/supabase/server";
@@ -13,10 +14,10 @@ export default async function ProcessDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ returnTo?: string }>;
+  searchParams: Promise<{ returnTo?: string; edit?: string }>;
 }) {
   const { id } = await params;
-  const { returnTo } = await searchParams;
+  const { returnTo, edit } = await searchParams;
   const returnPath = safeAppReturnPath(returnTo, "/app/processes");
   const context = await requireAppContext();
   const supabase = await createClient();
@@ -43,6 +44,7 @@ export default async function ProcessDetailPage({
     mediaResult,
     assignmentsResult,
     rolesResult,
+    membersResult,
   ] = await Promise.all([
     supabase
       .from("process_steps")
@@ -81,6 +83,10 @@ export default async function ProcessDetailPage({
       .from("roles")
       .select("id,name")
       .eq("organization_id", context.organization.id),
+    supabase
+      .from("organization_members")
+      .select("user_id,permission_level")
+      .eq("organization_id", context.organization.id),
   ]);
 
   const relatedError = [
@@ -91,6 +97,7 @@ export default async function ProcessDetailPage({
     mediaResult.error,
     assignmentsResult.error,
     rolesResult.error,
+    membersResult.error,
   ].find(Boolean);
   if (relatedError) {
     console.error("Unable to load process details", {
@@ -141,6 +148,14 @@ export default async function ProcessDetailPage({
   const assignedRoles = (assignmentsResult.data ?? [])
     .map((assignment) => roleNames.get(assignment.role_id))
     .filter((name): name is string => Boolean(name));
+  const memberIds = (membersResult.data ?? []).map((member) => member.user_id);
+  const { data: memberProfiles, error: memberProfilesError } = memberIds.length
+    ? await supabase
+        .from("profiles")
+        .select("id,full_name,email")
+        .in("id", memberIds)
+    : { data: [], error: null };
+  if (memberProfilesError) throw new Error("Unable to load process experts.");
   const processGuide = (
     <ProcessDetailGuide
       processId={id}
@@ -161,7 +176,28 @@ export default async function ProcessDetailPage({
       .createSignedUrl(media.storage_path, 3600);
     mediaUrl = data?.signedUrl ?? null;
   }
-  if (context.isAdmin)
+  const hasVideo = Boolean(mediaUrl && media?.mime_type.startsWith("video/"));
+  const conversationSource =
+    process.learning_source === "ai_conversation"
+      ? process.source_provider === "chatgpt"
+        ? "ChatGPT conversation"
+        : process.source_provider === "claude"
+          ? "Claude conversation"
+          : "Selected AI conversation"
+      : null;
+  const { data: nextPending } =
+    context.isAdmin && process.status !== "approved"
+      ? await supabase
+          .from("processes")
+          .select("id,title")
+          .eq("organization_id", context.organization.id)
+          .eq("status", "needs_review")
+          .neq("id", process.id)
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle()
+      : { data: null };
+  if (context.isAdmin && (process.status !== "approved" || edit === "true"))
     return (
       <>
         <PageHeading
@@ -169,17 +205,46 @@ export default async function ProcessDetailPage({
             process.status === "approved" ? "Approved process" : "Owner review"
           }
           title={process.title}
-          description="Check every step and rule before this becomes trusted company knowledge."
+          description={
+            conversationSource
+              ? `Source: ${process.source_title || conversationSource}. Check every finding before it becomes trusted company knowledge.`
+              : "Check every step and rule before this becomes trusted company knowledge."
+          }
+          actions={
+            process.status === "approved" ? (
+              <Link
+                href={`/app/ask?q=${encodeURIComponent(`I have a question about ${process.title}`)}`}
+                className="inline-flex min-h-11 items-center rounded-xl border border-[#cfd8e5] bg-white px-4 text-sm font-semibold text-[#3158d8]"
+              >
+                Ask Opryn about this
+              </Link>
+            ) : undefined
+          }
         />
         {processGuide}
         <ProcessReview
           returnTo={returnPath}
+          roleOptions={(rolesResult.data ?? []).map((role) => ({
+            id: role.id,
+            label: role.name,
+          }))}
+          expertOptions={(memberProfiles ?? []).map((profile) => ({
+            id: profile.id,
+            label: profile.full_name || profile.email,
+          }))}
+          nextReview={nextPending}
           initial={{
+            libraryCategory: process.library_category,
+            libraryTags: process.library_tags,
+            libraryRevision: process.library_revision,
             id: process.id,
             title: process.title,
             summary: process.summary,
             purpose: process.purpose,
             status: process.status,
+            roleId: assignmentsResult.data?.[0]?.role_id ?? null,
+            expertId: process.assigned_expert_id ?? null,
+            criticality: process.criticality ?? "normal",
             steps: steps.map((step) => ({
               id: step.id,
               title: step.title,
@@ -206,13 +271,6 @@ export default async function ProcessDetailPage({
         />
       </>
     );
-  const { data: training } = await supabase
-    .from("training_assignments")
-    .select("status")
-    .eq("organization_id", context.organization.id)
-    .eq("user_id", context.user.id)
-    .eq("process_id", id)
-    .maybeSingle();
   return (
     <article className="mx-auto max-w-4xl">
       <PageHeading
@@ -220,9 +278,22 @@ export default async function ProcessDetailPage({
         title={process.title}
         description={process.summary}
         actions={
-          training ? (
-            <TrainingButton processId={id} status={training.status} />
-          ) : undefined
+          <div className="flex flex-wrap gap-2">
+            {context.isAdmin ? (
+              <Link
+                href={`/app/processes/${id}?edit=true`}
+                className="inline-flex min-h-11 items-center rounded-xl border border-[#cfd8e5] bg-white px-4 text-sm font-semibold text-[#3158d8]"
+              >
+                Edit Process
+              </Link>
+            ) : null}
+            <Link
+              href={`/app/ask?q=${encodeURIComponent(`I have a question about ${process.title}`)}`}
+              className="inline-flex min-h-11 items-center rounded-xl border border-[#cfd8e5] bg-white px-4 text-sm font-semibold text-[#3158d8]"
+            >
+              Ask Opryn about this
+            </Link>
+          </div>
         }
       />
       {processGuide}
@@ -236,7 +307,7 @@ export default async function ProcessDetailPage({
           Updated {new Date(process.updated_at).toLocaleDateString()}
         </span>
       </div>
-      {mediaUrl ? (
+      {hasVideo && mediaUrl ? (
         <section className="mb-6 rounded-2xl border border-[#dfe5ed] bg-white p-5">
           <h2 className="flex items-center gap-2 font-semibold">
             <PlayCircle className="size-5 text-[#3158d8]" />
@@ -257,21 +328,19 @@ export default async function ProcessDetailPage({
         <p className="mt-2 text-sm leading-6 text-[#657286]">
           {process.purpose}
         </p>
-        <div className="mt-8 space-y-6">
-          {steps.map((step) => (
-            <div key={step.id} className="grid grid-cols-[36px_1fr] gap-4">
-              <span className="grid size-9 place-items-center rounded-xl bg-[#edf2ff] text-xs font-bold text-[#3158d8]">
-                {step.step_order}
-              </span>
-              <div>
-                <h3 className="font-semibold">{step.title}</h3>
-                <p className="mt-1 text-sm leading-6 text-[#657286]">
-                  {step.description}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
+        <ProcessChecklist processId={id} steps={steps} />
+        {exceptionsResult.data?.length ? (
+          <section className="mt-8 border-t border-[#e7ebf0] pt-6">
+            <h2 className="text-lg font-semibold">Exceptions</h2>
+            <ul className="mt-3 space-y-3 text-sm leading-7 text-[#52627a]">
+              {exceptionsResult.data.map((item, index) => (
+                <li key={index} className="rounded-xl bg-[#f5f7fb] p-4">
+                  {item.text}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
         {rules.length ? (
           <div className="mt-9 border-t border-[#e7ebf0] pt-7">
             <h2 className="text-lg font-semibold">Company rules</h2>
@@ -279,7 +348,8 @@ export default async function ProcessDetailPage({
               {rules.map((rule: RuleRow) => (
                 <div
                   key={rule.id}
-                  className="flex gap-3 rounded-xl bg-[#f3f7ff] p-4"
+                  id={`rule-${rule.id}`}
+                  className="flex scroll-mt-28 gap-3 rounded-xl bg-[#f3f7ff] p-4 target:ring-4 target:ring-[#3158d8]/20"
                 >
                   <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-[#3158d8]" />
                   <div>

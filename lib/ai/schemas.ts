@@ -34,6 +34,8 @@ export const companyAnswerSchema = z.object({
   answer: z.string().max(10000),
   steps: z.array(z.string().min(1).max(1000)).max(8),
   important_note: z.string().max(2000),
+  requires_approval: z.boolean(),
+  approval_reason: z.string().max(1000),
   cited_source_ids: z.array(z.string().uuid()).max(15),
 });
 
@@ -46,6 +48,20 @@ export const employeeImageCaseSchema = z.object({
 export const suggestedRuleSchema = z.object({
   title: z.string().min(1).max(200),
   rule: z.string().min(1).max(10000),
+  complete: z.boolean(),
+  clarification_questions: z.array(z.string().min(1).max(500)).max(3),
+});
+
+export const knowledgeRelationshipSchema = z.object({
+  relationships: z
+    .array(
+      z.object({
+        source_id: z.string().uuid(),
+        relationship: z.enum(["compatible", "possible_duplicate", "conflict"]),
+        explanation: z.string().max(1000),
+      }),
+    )
+    .max(8),
 });
 
 export const processRecommendationsSchema = z.object({

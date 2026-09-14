@@ -4,6 +4,10 @@ export type PlanFeature =
   | "videoLearning"
   | "screenRecording"
   | "callLearning"
+  | "aiConnections"
+  | "mcpAccess"
+  | "slackIntegration"
+  | "teamsIntegration"
   | "advancedAnalytics"
   | "priorityProcessing";
 
@@ -12,6 +16,10 @@ export const PLAN_FEATURES = Object.freeze({
     videoLearning: false,
     screenRecording: false,
     callLearning: false,
+    aiConnections: true,
+    mcpAccess: false,
+    slackIntegration: true,
+    teamsIntegration: true,
     advancedAnalytics: false,
     priorityProcessing: false,
     teamLimit: 5,
@@ -20,6 +28,10 @@ export const PLAN_FEATURES = Object.freeze({
     videoLearning: true,
     screenRecording: true,
     callLearning: true,
+    aiConnections: true,
+    mcpAccess: true,
+    slackIntegration: true,
+    teamsIntegration: true,
     advancedAnalytics: true,
     priorityProcessing: true,
     teamLimit: 20,

@@ -1,22 +1,23 @@
 "use client";
 
 import { Menu, X } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useEarlyAccess } from "./early-access";
-import { AccountControls } from "./auth";
+import { AccountControls, useAuth } from "./auth";
 import { Logo } from "./ui";
+import { company } from "@/lib/marketing/company";
 
 const links = [
-  ["How It Works", "#how-it-works"],
-  ["Product", "#product"],
-  ["Who It’s For", "#who-its-for"],
+  ["Product", "/#inside-opryn"],
+  ["Integrations", "/integrations"],
+  ["AI", "/ai"],
   ["Pricing", "/pricing"],
 ];
 
 export function Navbar() {
+  const { user } = useAuth();
   const [menu, setMenu] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const { openEarlyAccess } = useEarlyAccess();
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
     onScroll();
@@ -25,9 +26,9 @@ export function Navbar() {
   }, []);
   return (
     <header
-      className={`fixed inset-x-0 top-0 z-50 transition-all ${scrolled ? "border-b border-[#e3e8ef]/85 bg-[#fbfcfe]/88 shadow-[0_5px_20px_rgba(25,38,59,.04)] backdrop-blur-xl" : "bg-transparent"}`}
+      className={`public-nav fixed inset-x-0 top-0 z-50 transition-colors duration-200 ${scrolled ? "is-scrolled border-b border-[#e3e8ef] bg-[#fbfcfe]" : "bg-transparent"}`}
     >
-      <div className="container-shell flex h-[72px] items-center justify-between">
+      <div className="container-shell flex h-[76px] items-center justify-between">
         <Logo />
         <nav
           className="hidden items-center gap-7 lg:flex"
@@ -44,28 +45,48 @@ export function Navbar() {
           ))}
         </nav>
         <div className="hidden items-center gap-2 lg:flex">
-          <AccountControls />
-          <button
+          {user ? (
+            <AccountControls />
+          ) : (
+            <Link className="button button-ghost" href="/login">
+              Sign In
+            </Link>
+          )}
+          <Link
             className="button button-primary"
-            type="button"
-            onClick={openEarlyAccess}
+            href={user ? "/app" : "/signup"}
           >
-            Get Early Access
-          </button>
+            {user ? "Open Opryn" : "Get Started"}
+          </Link>
         </div>
         <button
           type="button"
-          className="grid size-10 place-items-center rounded-xl border border-[#dce2e9] bg-white lg:hidden"
+          className="grid size-11 place-items-center rounded-xl border border-[#dce2e9] bg-white lg:hidden"
           onClick={() => setMenu(!menu)}
           aria-expanded={menu}
           aria-label="Toggle navigation menu"
+          aria-controls="public-mobile-navigation"
+          onKeyDown={(event) => {
+            if (event.key === "Escape") setMenu(false);
+          }}
         >
           {menu ? <X size={19} /> : <Menu size={19} />}
         </button>
       </div>
       {menu && (
         <nav
-          className="mobile-menu-in border-t border-[#e4e8ee] bg-white px-5 py-4 shadow-lg lg:hidden"
+          id="public-mobile-navigation"
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              setMenu(false);
+              document
+                .querySelector<HTMLButtonElement>(
+                  '[aria-controls="public-mobile-navigation"]',
+                )
+                ?.focus();
+            }
+          }}
+          className="public-mobile-menu mobile-menu-in border-t border-[#e4e8ee] bg-white px-5 py-4 shadow-lg lg:hidden"
           aria-label="Mobile navigation"
         >
           <div className="mx-auto flex max-w-[640px] flex-col">
@@ -79,16 +100,20 @@ export function Navbar() {
                 {label}
               </a>
             ))}
-            <AccountControls mobile />
-            <button
+            {user ? (
+              <AccountControls mobile />
+            ) : (
+              <Link className="py-3.5 text-sm font-medium" href="/login">
+                Sign In
+              </Link>
+            )}
+            <Link
               className="button button-primary mt-2"
-              onClick={() => {
-                setMenu(false);
-                openEarlyAccess();
-              }}
+              href={user ? "/app" : "/signup"}
+              onClick={() => setMenu(false)}
             >
-              Get Early Access
-            </button>
+              {user ? "Open Opryn" : "Get Started"}
+            </Link>
           </div>
         </nav>
       )}
@@ -98,26 +123,70 @@ export function Navbar() {
 
 export function Footer() {
   return (
-    <footer className="border-t border-[#1f2b3d] bg-[#0d1729] py-8 text-white">
-      <div className="container-shell flex flex-col items-center justify-between gap-5 sm:flex-row">
-        <Logo inverse />
-        <p className="text-xs text-[#8e99aa]">
-          © 2026 Opryn. Built for owners building real teams.
+    <footer className="public-footer editorial-footer border-t border-[#dfe5ed] bg-[#f8f9fb] py-8 text-[#10213d]">
+      <div className="container-shell editorial-footer-brand">
+        <Logo />
+        <p>
+          Operational knowledge
+          <br />
+          for your people and AI.
         </p>
-        <nav className="flex items-center gap-5" aria-label="Footer navigation">
-          <a
-            className="text-xs text-[#aeb8c6] hover:text-white"
-            href="/privacy"
-          >
-            Privacy
-          </a>
-          <a className="text-xs text-[#aeb8c6] hover:text-white" href="/terms">
-            Terms
-          </a>
-          <a className="text-xs text-[#aeb8c6] hover:text-white" href="#top">
-            Back to top
-          </a>
-        </nav>
+      </div>
+      <div className="container-shell launch-footer">
+        {[
+          [
+            "Product",
+            [
+              ["How It Works", "/#how-it-works"],
+              ["Integrations", "/integrations"],
+              ["AI Connections", "/ai"],
+              ["Pricing", "/pricing"],
+            ],
+          ],
+          [
+            "Company",
+            [
+              ["About", "/about"],
+              ["Security", "/security"],
+              ["Contact", "/contact"],
+            ],
+          ],
+          [
+            "Legal",
+            [
+              ["Privacy", "/privacy"],
+              ["Terms", "/terms"],
+            ],
+          ],
+          [
+            "Account",
+            [
+              ["Sign In", "/login"],
+              ["Get Started", "/signup"],
+            ],
+          ],
+        ].map(([label, items]) => (
+          <nav key={label as string} aria-label={`${label} footer links`}>
+            <strong>{label as string}</strong>
+            {(items as string[][]).map(([text, href]) => (
+              <Link key={href} href={href}>
+                {text}
+              </Link>
+            ))}
+          </nav>
+        ))}
+        <p className="launch-footer-note">
+          © 2026 Opryn.
+          {company.supportEmail ? (
+            <>
+              {" "}
+              ·{" "}
+              <a href={`mailto:${company.supportEmail}`}>
+                {company.supportEmail}
+              </a>
+            </>
+          ) : null}
+        </p>
       </div>
     </footer>
   );

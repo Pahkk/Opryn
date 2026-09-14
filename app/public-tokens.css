@@ -1,0 +1,28 @@
+/* Public identity only. Authenticated screens retain their application tokens. */
+.knowledge-public-site,
+.public-nav,
+.editorial-footer,
+.legal-document {
+  --editorial-page: #f4f5f6;
+  --editorial-surface: #fafaf9;
+  --editorial-secondary: #e9edf1;
+  --editorial-tint: #dde4eb;
+  --editorial-ink: #171c22;
+  --editorial-copy: #5b6672;
+  --editorial-brand: #536b82;
+  --editorial-deep: #34495e;
+  --editorial-navy: #26384a;
+  --editorial-active: #e3eaf1;
+  --editorial-line: #d2d8de;
+  --editorial-subtle-line: #e0e4e8;
+  --editorial-success: #45634f;
+  --editorial-success-surface: #e5ece6;
+  --editorial-review: #785b2a;
+  --editorial-review-surface: #f1eadc;
+  --editorial-error: #943e3e;
+  --story-information: #f4f5f6;
+  --story-structure: #eef1f4;
+  --story-review: #e9edf1;
+  --story-approved: #e4e9ee;
+  --story-use: #dde4eb;
+}

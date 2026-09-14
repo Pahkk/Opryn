@@ -1,0 +1,41 @@
+{
+  "display_information": {
+    "name": "Opryn",
+    "description": "Approved company answers, wherever your team works.",
+    "background_color": "#071B3D"
+  },
+  "features": {
+    "bot_user": {
+      "display_name": "Opryn",
+      "always_online": false
+    },
+    "slash_commands": [
+      {
+        "command": "/opryn",
+        "url": "https://www.opryn.app/api/webhooks/slack",
+        "description": "Ask Opryn about your company",
+        "usage_hint": "How do we handle late invoices?",
+        "should_escape": false
+      }
+    ]
+  },
+  "oauth_config": {
+    "redirect_urls": ["https://www.opryn.app/api/integrations/slack/callback"],
+    "scopes": {
+      "bot": ["app_mentions:read", "chat:write", "commands", "im:history"]
+    }
+  },
+  "settings": {
+    "event_subscriptions": {
+      "request_url": "https://www.opryn.app/api/webhooks/slack",
+      "bot_events": ["app_mention", "message.im"]
+    },
+    "interactivity": {
+      "is_enabled": true,
+      "request_url": "https://www.opryn.app/api/webhooks/slack"
+    },
+    "org_deploy_enabled": false,
+    "socket_mode_enabled": false,
+    "token_rotation_enabled": false
+  }
+}

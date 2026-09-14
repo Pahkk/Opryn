@@ -1,0 +1,235 @@
+/* Homepage-only palette: never recolor provider marks or authenticated UI. */
+.knowledge-public-site
+  :is(.integration-status, .learning-findings > p strong, .day-surface) {
+  color: var(--editorial-brand);
+}
+.knowledge-public-site .day-summary {
+  border-color: var(--editorial-line);
+  background: var(--editorial-surface);
+  box-shadow: none;
+}
+.knowledge-public-site .day-line {
+  background: var(--editorial-secondary);
+}
+.knowledge-public-site .day-line::after {
+  background: var(--editorial-line);
+}
+.knowledge-public-site .opryn-connector__track {
+  stroke: var(--editorial-line);
+}
+.knowledge-public-site :is(.opryn-connector__signal, .opryn-connector__arrow) {
+  stroke: var(--editorial-brand);
+}
+.knowledge-public-site,
+.knowledge-public-site .story-home {
+  --story-ink: var(--editorial-ink);
+  --story-copy: var(--editorial-copy);
+  --story-blue: var(--editorial-brand);
+  --story-blue-dark: var(--editorial-deep);
+  --story-soft: var(--editorial-secondary);
+  --story-paper: var(--editorial-page);
+  --story-line: var(--editorial-line);
+  --opryn-blue: var(--editorial-brand);
+  --blue: var(--editorial-brand);
+  color: var(--editorial-ink);
+  background: var(--editorial-page);
+}
+.knowledge-public-site .story-hero,
+.knowledge-public-site .story-product-preview,
+.knowledge-public-site .story-integrations {
+  background: var(--editorial-page);
+}
+.knowledge-public-site .story-problem,
+.knowledge-public-site .story-trust,
+.knowledge-public-site .knowledge-ai-section {
+  background: var(--editorial-secondary);
+}
+.knowledge-public-site .story-learning,
+.knowledge-public-site .knowledge-new-person,
+.knowledge-public-site .story-day {
+  background: var(--editorial-surface);
+}
+.knowledge-public-site .story-memory,
+.knowledge-public-site .story-final,
+.knowledge-public-site .brand-workspace {
+  background: var(--editorial-tint);
+}
+.knowledge-public-site .story-evolves {
+  background: var(--editorial-secondary);
+}
+.knowledge-public-site .public-nav.is-scrolled,
+.knowledge-public-site .public-mobile-menu,
+.knowledge-public-site .public-footer {
+  background: var(--editorial-page) !important;
+  border-color: var(--editorial-line) !important;
+}
+.knowledge-public-site .button-primary,
+.knowledge-public-site .story-button-primary {
+  background: var(--editorial-brand);
+  color: var(--editorial-surface);
+  box-shadow: none;
+}
+.knowledge-public-site .button-primary:hover,
+.knowledge-public-site .story-button-primary:hover {
+  background: var(--editorial-deep);
+  box-shadow: none;
+}
+.knowledge-public-site .story-button-secondary {
+  background: var(--editorial-surface);
+  border-color: var(--editorial-line);
+}
+.knowledge-public-site
+  :is(
+    .story-eyebrow,
+    .story-index,
+    .story-text-link,
+    .shared-answer-stack article > span,
+    .knowledge-update-policy strong
+  ) {
+  color: var(--editorial-brand);
+}
+.knowledge-public-site
+  :is(
+    .story-hero-lede,
+    .story-hero-note,
+    .knowledge-motion-control,
+    .knowledge-update-note,
+    .knowledge-source-note,
+    .knowledge-update-policy p,
+    .knowledge-consumer-grid p,
+    .shared-policy p,
+    .shared-answer-stack article > p,
+    .knowledge-example p,
+    .knowledge-example footer,
+    .shared-policy > span,
+    .knowledge-example > span,
+    .knowledge-update-policy > span,
+    .story-learning-promise,
+    .story-trust-points p,
+    .remember-row p
+  ) {
+  color: var(--editorial-copy);
+}
+.knowledge-public-site
+  :is(
+    .shared-knowledge-demo,
+    .knowledge-example,
+    .knowledge-update,
+    .unknown-demo
+  ) {
+  background: var(--editorial-surface);
+  border-color: var(--editorial-line);
+  box-shadow: none;
+}
+.knowledge-public-site
+  :is(
+    .learning-opryn,
+    .memory-core,
+    .unknown-question,
+    .unknown-owner,
+    .remember-row > strong
+  ) {
+  background: var(--editorial-secondary);
+  border-color: var(--editorial-line);
+  color: var(--editorial-deep);
+  box-shadow: none;
+}
+.knowledge-public-site .shared-consumers button[aria-pressed="true"] {
+  background: var(--editorial-secondary);
+  color: var(--editorial-deep);
+}
+.knowledge-public-site .opryn-connector {
+  color: var(--editorial-brand);
+  --opryn-blue: var(--editorial-brand);
+}
+.knowledge-public-site .editorial-image {
+  padding: 0;
+  max-width: 680px;
+}
+.knowledge-public-site .editorial-image img {
+  border-radius: 10px;
+  transform: none;
+  box-shadow: none;
+}
+.knowledge-public-site .story-hero-grid {
+  align-items: center;
+}
+.knowledge-public-site .story-hero-copy {
+  align-self: center;
+}
+.knowledge-public-site .knowledge-hero-heading {
+  font-size: clamp(40px, 4vw, 62px);
+}
+.knowledge-public-site .knowledge-rotator {
+  font-size: 0.78em;
+  line-height: 1.15;
+}
+.knowledge-public-site .knowledge-rotator > span {
+  transition: none;
+  transform: none;
+}
+.knowledge-public-site .typing-reserve {
+  visibility: hidden;
+}
+.knowledge-public-site .brand-learning-visual {
+  display: flex;
+  justify-content: center;
+  margin: 48px 0 64px;
+}
+.knowledge-public-site #how-it-works .editorial-image {
+  margin-top: 32px;
+}
+.knowledge-public-site .brand-workspace {
+  padding-block: 88px;
+}
+.knowledge-public-site .brand-word {
+  display: inline-block;
+}
+.knowledge-public-site .story-reveal-enabled .brand-reveal-text .brand-word {
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity 450ms ease,
+    transform 450ms ease;
+  transition-delay: var(--word-delay);
+}
+.knowledge-public-site
+  .story-reveal-enabled
+  .brand-reveal-text[data-visible="true"]
+  .brand-word {
+  opacity: 1;
+  transform: none;
+}
+.knowledge-public-site :is(a, button):focus-visible {
+  outline: 2px solid var(--editorial-deep);
+  outline-offset: 4px;
+}
+@media (max-width: 900px) {
+  .knowledge-public-site .editorial-image {
+    max-width: 100%;
+  }
+  .knowledge-public-site .story-hero-grid {
+    gap: 28px;
+  }
+  .knowledge-public-site .brand-workspace {
+    padding-block: 56px;
+  }
+}
+@media (max-width: 480px) {
+  .knowledge-public-site .knowledge-hero-heading {
+    font-size: 40px;
+  }
+  .knowledge-public-site .knowledge-rotator {
+    font-size: 0.78em;
+  }
+  .knowledge-public-site .brand-learning-visual {
+    margin-block: 32px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .knowledge-public-site .story-reveal-enabled .brand-reveal-text .brand-word {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}

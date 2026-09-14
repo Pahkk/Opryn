@@ -24,7 +24,7 @@ export function UpgradeModal({
   if (!open) return null;
   return (
     <div
-      className="fixed inset-0 z-[150] grid place-items-center bg-[#0d1729]/55 p-4 backdrop-blur-sm"
+      className="mobile-sheet-overlay fixed inset-0 z-[150] grid place-items-center bg-[#0d1729]/55 p-4 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-labelledby="premium-heading"
@@ -32,7 +32,7 @@ export function UpgradeModal({
         if (event.currentTarget === event.target) onClose();
       }}
     >
-      <section className="relative w-full max-w-xl overflow-hidden rounded-[24px] border border-white/10 bg-white shadow-[0_30px_90px_rgba(13,23,41,.3)]">
+      <section className="mobile-sheet-panel relative w-full max-w-xl overflow-hidden rounded-[24px] border border-white/10 bg-white shadow-[0_30px_90px_rgba(13,23,41,.3)]">
         <div className="bg-[#111d34] px-6 py-7 text-white sm:px-8">
           <PremiumBadge className="bg-[#2a3d5d] text-[#b9c8ff]" />
           <h2

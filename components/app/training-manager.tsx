@@ -4,14 +4,15 @@ import Link from "next/link";
 import { useState } from "react";
 import {
   ArrowRight,
-  BookOpenCheck,
   Check,
-  CircleCheckBig,
-  Clock3,
+  ImageIcon,
   LoaderCircle,
-  Users,
+  Video,
 } from "lucide-react";
 import { showAppToast } from "@/lib/client-toast";
+import { OprynEmptyState } from "@/components/opryn/opryn-empty-state";
+import { OprynMetric } from "@/components/opryn/opryn-metric";
+import { TeamIcon } from "@/components/opryn-icons/opryn-icons";
 
 type Person = {
   id: string;
@@ -31,6 +32,8 @@ type Process = {
   title: string;
   summary: string;
   roleNames: string[];
+  hasVideo: boolean;
+  imageCount: number;
 };
 
 export function TrainingManager({
@@ -89,8 +92,8 @@ export function TrainingManager({
         })),
       ]);
       showAppToast(
-        "Training assigned!",
-        "The selected teammates can now find this process on their Training page.",
+        "Learning assigned",
+        "The selected teammates can find this process in My Learning.",
       );
     } catch (caught) {
       setError(
@@ -103,24 +106,15 @@ export function TrainingManager({
 
   if (!processes.length)
     return (
-      <section className="rounded-2xl border border-[#dfe5ed] bg-white p-8 text-center sm:p-12">
-        <span className="mx-auto grid size-12 place-items-center rounded-xl bg-[#eaf7f1] text-[#177257]">
-          <BookOpenCheck className="size-5" />
-        </span>
-        <h2 className="mt-4 text-lg font-semibold">
-          Approve a process to create training
-        </h2>
-        <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#718095]">
-          Once a process is approved, you can assign it to the people who need
-          to learn it and track completion here.
-        </p>
-        <Link
-          href="/app/processes/new"
-          className="mt-5 inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#3158d8] px-4 text-sm font-semibold text-white"
-        >
-          Capture a process <ArrowRight className="size-4" />
-        </Link>
-      </section>
+      <OprynEmptyState
+        title="Start with one approved process"
+        description="Once a process is approved, assign it to the people who need it and follow their progress here."
+        action={
+          <Link href="/app/processes/new" className="opryn-action">
+            Teach Opryn <ArrowRight className="size-4" />
+          </Link>
+        }
+      />
     );
 
   const completed = assignments.filter(
@@ -132,20 +126,14 @@ export function TrainingManager({
 
   return (
     <div className="space-y-5">
-      <div className="grid gap-3 sm:grid-cols-3">
-        <TrainingMetric
-          icon={<BookOpenCheck />}
-          label="Assignments"
-          value={assignments.length}
-        />
-        <TrainingMetric icon={<Clock3 />} label="In progress" value={started} />
-        <TrainingMetric
-          icon={<CircleCheckBig />}
-          label="Completed"
-          value={completed}
-          green
-        />
-      </div>
+      <section
+        aria-label="Learning overview"
+        className="learning-summary opryn-surface grid divide-y divide-[var(--opryn-border)] overflow-hidden sm:grid-cols-3 sm:divide-x sm:divide-y-0"
+      >
+        <OprynMetric label="Assignments" value={assignments.length} />
+        <OprynMetric label="In progress" value={started} />
+        <OprynMetric label="Completed" value={completed} />
+      </section>
 
       {error ? (
         <p
@@ -169,7 +157,7 @@ export function TrainingManager({
           return (
             <article
               key={process.id}
-              className="overflow-hidden rounded-2xl border border-[#dfe5ed] bg-white shadow-sm"
+              className="opryn-surface overflow-hidden border-l-[3px] border-l-[var(--opryn-blue)]"
             >
               <div className="grid gap-5 p-5 lg:grid-cols-[minmax(0,.8fr)_minmax(380px,1.2fr)] lg:p-6">
                 <div>
@@ -203,14 +191,30 @@ export function TrainingManager({
                       ))}
                     </div>
                   ) : null}
+                  {process.hasVideo || process.imageCount ? (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {process.hasVideo ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-[#edf2ff] px-2.5 py-1 text-[10px] font-semibold text-[#3158d8]">
+                          <Video className="size-3" /> Video included
+                        </span>
+                      ) : null}
+                      {process.imageCount ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-[#f1f4f8] px-2.5 py-1 text-[10px] font-semibold text-[#657286]">
+                          <ImageIcon className="size-3" /> {process.imageCount}{" "}
+                          {process.imageCount === 1 ? "image" : "images"}
+                        </span>
+                      ) : null}
+                    </div>
+                  ) : null}
                   <Link
                     href={`/app/processes/${process.id}`}
                     className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-[#3158d8]"
                   >
-                    Review process <ArrowRight className="size-3.5" />
+                    Review process &amp; media{" "}
+                    <ArrowRight className="size-3.5" />
                   </Link>
                 </div>
-                <div className="rounded-xl bg-[#f7f9fc] p-4">
+                <div className="border-t border-[var(--opryn-border)] bg-[var(--opryn-soft-blue)] p-4 lg:border-l lg:border-t-0">
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="text-xs font-semibold text-[#37465c]">
@@ -225,7 +229,7 @@ export function TrainingManager({
                         complete
                       </p>
                     </div>
-                    <Users className="size-4 text-[#7a8698]" />
+                    <TeamIcon className="size-4 text-[var(--opryn-muted)]" />
                   </div>
                   {!people.length ? (
                     <p className="mt-4 rounded-lg bg-white p-3 text-xs leading-5 text-[#718095]">
@@ -272,7 +276,7 @@ export function TrainingManager({
                     type="button"
                     disabled={saving === process.id || unchanged}
                     onClick={() => void save(process.id)}
-                    className="mt-4 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#3158d8] px-4 text-xs font-semibold text-white transition hover:bg-[#2446b8] disabled:bg-[#c8cfda]"
+                    className="opryn-action mt-4 w-full text-xs disabled:cursor-not-allowed disabled:opacity-45"
                   >
                     {saving === process.id ? (
                       <LoaderCircle className="size-4 animate-spin" />
@@ -285,32 +289,6 @@ export function TrainingManager({
           );
         })}
       </section>
-    </div>
-  );
-}
-
-function TrainingMetric({
-  icon,
-  label,
-  value,
-  green = false,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: number;
-  green?: boolean;
-}) {
-  return (
-    <div className="flex items-center gap-3 rounded-2xl border border-[#dfe5ed] bg-white p-4">
-      <span
-        className={`grid size-10 place-items-center rounded-xl [&>svg]:size-4 ${green ? "bg-[#eaf7f1] text-[#177257]" : "bg-[#edf2ff] text-[#3158d8]"}`}
-      >
-        {icon}
-      </span>
-      <div>
-        <strong className="block text-xl tracking-[-.03em]">{value}</strong>
-        <span className="text-[11px] text-[#718095]">{label}</span>
-      </div>
     </div>
   );
 }

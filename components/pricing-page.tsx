@@ -2,29 +2,27 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, Check, LoaderCircle, ShieldCheck } from "lucide-react";
+import { ArrowLeft, LoaderCircle } from "lucide-react";
 import type { BillingInterval, PlanId } from "@/lib/billing/plans";
+import { PLAN_DETAILS, PLAN_FEATURES } from "@/lib/billing/plans";
 
 const coreFeatures = [
   "Ask Opryn and employee Q&A",
-  "Up to 5 employees",
-  "Processes and company rules",
+  `One owner + up to ${PLAN_FEATURES.core.teamLimit} employees`,
+  "Processes, company rules and training",
   "Text and audio learning",
   "Document uploads and Google Drive import",
-  "Roles, training, and knowledge gaps",
-  "Owner question inbox",
-  "Basic time-saved tracking",
+  "External AI Connections and secure Agent API",
+  "Knowledge gaps and owner review",
 ];
 const premiumFeatures = [
   "Everything in Core",
-  "Up to 20 employees",
+  `One owner + up to ${PLAN_FEATURES.premium.teamLimit} employees`,
   "Video and screen-recording learning",
   "Learn From Calls",
-  "Sales and customer-call analysis",
-  "Recurring questions and objections",
-  "Real-call training examples",
-  "Advanced knowledge and time-saved insights",
-  "Priority AI processing",
+  "Call insights and reviewed examples",
+  "ChatGPT and Claude connections",
+  "Secure remote MCP access",
 ];
 
 export function PricingPage({
@@ -67,14 +65,14 @@ export function PricingPage({
       .catch(() => setRedirecting(false));
   }, [initialCheckout, signedIn, canManage, billingReady]);
   return (
-    <main className="bg-[#f7f9fc] px-4 pb-20 pt-28 text-[#111b2e] sm:px-6">
+    <main className="pricing-experience px-4 pb-24 pt-32 text-[var(--editorial-ink)] sm:px-6">
       {redirecting ? (
         <div
           role="status"
           className="fixed inset-0 z-[100] grid place-items-center bg-white/85 backdrop-blur-sm"
         >
           <div className="text-center">
-            <LoaderCircle className="mx-auto size-8 animate-spin text-[#3158d8]" />
+            <LoaderCircle className="mx-auto size-8 animate-spin text-[var(--editorial-brand)]" />
             <p className="mt-4 text-sm font-semibold">
               Opening secure checkout…
             </p>
@@ -82,19 +80,26 @@ export function PricingPage({
         </div>
       ) : null}
       <div className="mx-auto max-w-6xl">
-        <div className="text-center">
-          <p className="text-xs font-bold uppercase tracking-[.14em] text-[#3158d8]">
-            Pricing
-          </p>
+        {signedIn ? (
+          <Link
+            href="/app"
+            className="mb-9 inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#d8dfe8] bg-white px-4 text-sm font-semibold text-[var(--editorial-deep)] shadow-[0_6px_20px_rgba(25,38,59,.04)] transition hover:-translate-y-0.5 hover:border-[#b9c5d4] hover:bg-[var(--editorial-secondary)]"
+          >
+            <ArrowLeft className="size-4" aria-hidden="true" />
+            Back to Home
+          </Link>
+        ) : null}
+        <div className="pricing-hero text-center">
+          <p className="editorial-index justify-center">Pricing</p>
           <h1 className="mt-4 text-4xl font-semibold tracking-[-.055em] sm:text-6xl">
-            Get your time back.
+            Company knowledge for people and AI.
           </h1>
-          <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-[#687487] sm:text-lg">
-            Choose how much of the teaching, answering, and training you want
-            Opryn to handle.
+          <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-[var(--editorial-copy)] sm:text-lg">
+            Start with a shared company memory. Add deeper learning and AI
+            connections when you need them.
           </p>
           {annualEnabled ? (
-            <div className="mx-auto mt-8 inline-flex rounded-xl border border-[#d9e0e9] bg-white p-1">
+            <div className="mx-auto mt-8 inline-flex border border-[#cfd6df] bg-white p-1">
               <ToggleButton
                 active={interval === "month"}
                 onClick={() => setInterval("month")}
@@ -105,20 +110,26 @@ export function PricingPage({
                 active={interval === "year"}
                 onClick={() => setInterval("year")}
               >
-                Annual · Save 20%
+                Annual
               </ToggleButton>
             </div>
           ) : null}
         </div>
-        <div className="mt-12 grid items-stretch gap-5 lg:grid-cols-2">
+        <div className="pricing-grid mt-14 grid items-stretch overflow-hidden border-y border-[#cbd3dd] lg:grid-cols-2">
           <PlanCard
             plan="core"
             title="Opryn Core"
-            price={interval === "year" ? 79 : 99}
-            billingNote={
-              interval === "year" ? "billed annually" : "billed monthly"
+            price={
+              interval === "year"
+                ? PLAN_DETAILS.core.annualMonthlyEquivalent
+                : PLAN_DETAILS.core.monthlyPrice
             }
-            copy="For small businesses starting to get company knowledge out of the owner's head."
+            billingNote={
+              interval === "year"
+                ? `$${PLAN_DETAILS.core.annualMonthlyEquivalent * 12} USD billed annually`
+                : "USD billed monthly"
+            }
+            copy="Build company knowledge for your team and API-connected systems."
             features={coreFeatures}
             interval={interval}
             signedIn={signedIn}
@@ -128,11 +139,17 @@ export function PricingPage({
           <PlanCard
             plan="premium"
             title="Opryn Premium"
-            price={interval === "year" ? 199 : 249}
-            billingNote={
-              interval === "year" ? "billed annually" : "billed monthly"
+            price={
+              interval === "year"
+                ? PLAN_DETAILS.premium.annualMonthlyEquivalent
+                : PLAN_DETAILS.premium.monthlyPrice
             }
-            copy="For owners who want Opryn learning directly from how the business actually works."
+            billingNote={
+              interval === "year"
+                ? `$${PLAN_DETAILS.premium.annualMonthlyEquivalent * 12} USD billed annually`
+                : "USD billed monthly"
+            }
+            copy="Learn from richer business activity and connect directly to supported AI clients."
             features={premiumFeatures}
             interval={interval}
             signedIn={signedIn}
@@ -141,6 +158,86 @@ export function PricingPage({
             featured
           />
         </div>
+        <p className="launch-fine mt-6">
+          Pending invitations count toward the employee limit; one owner is
+          excluded. At the limit, new invitations are blocked. Upgrade Core to
+          Premium or remove a pending invitation. Standard plans have no paid
+          extra-seat option.{" "}
+          <Link href="/contact">Contact us for larger teams</Link>.
+        </p>
+        <section
+          className="plan-comparison"
+          aria-labelledby="plan-comparison-title"
+        >
+          <h2 id="plan-comparison-title">The details, side by side.</h2>
+          <div className="comparison-scroll">
+            <table>
+              <caption>Core and Premium capabilities</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Capability</th>
+                  <th scope="col">Core</th>
+                  <th scope="col">Premium</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  [
+                    "Employees, plus one owner",
+                    `Up to ${PLAN_FEATURES.core.teamLimit}`,
+                    `Up to ${PLAN_FEATURES.premium.teamLimit}`,
+                  ],
+                  [
+                    "Ask, processes, training and review",
+                    "Included",
+                    "Included",
+                  ],
+                  [
+                    "Documents, Google files, text and audio",
+                    "Included",
+                    "Included",
+                  ],
+                  [
+                    "External AI Connections / Agent API",
+                    "Included",
+                    "Included",
+                  ],
+                  [
+                    "ChatGPT / Claude through remote MCP",
+                    "Not included",
+                    "Included; supported client required",
+                  ],
+                  [
+                    "Video / screen recordings / call learning",
+                    "Not included",
+                    "Included",
+                  ],
+                  [
+                    "Knowledge gaps and role-based learning",
+                    "Included",
+                    "Included",
+                  ],
+                  [
+                    "Insights",
+                    "Basic time-saved tracking",
+                    "Advanced insights and call analysis",
+                  ],
+                  [
+                    "Trial",
+                    "No Core trial",
+                    "5-day trial available during onboarding, once per organization",
+                  ],
+                ].map(([label, core, premium]) => (
+                  <tr key={label}>
+                    <th scope="row">{label}</th>
+                    <td>{core}</td>
+                    <td>{premium}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
         <PricingFAQ />
       </div>
     </main>
@@ -197,42 +294,42 @@ function PlanCard({
   const signupPath = `/signup?next=${encodeURIComponent(`/onboarding?next=${encodeURIComponent(`/pricing?checkout=${plan}`)}`)}`;
   return (
     <article
-      className={`relative flex flex-col rounded-[24px] border bg-white p-6 sm:p-8 ${featured ? "border-[#3158d8] shadow-[0_24px_70px_rgba(49,88,216,.14)]" : "border-[#dfe5ed]"}`}
+      className={`pricing-plan relative flex flex-col bg-white p-7 sm:p-10 ${featured ? "pricing-plan--featured border-t border-[#cbd3dd] bg-[var(--editorial-active)] lg:border-l lg:border-t-0" : ""}`}
     >
       {featured ? (
-        <span className="absolute right-5 top-5 rounded-full bg-[#eaf7f1] px-3 py-1 text-[10px] font-bold uppercase tracking-[.09em] text-[#177257]">
-          Most Popular
+        <span className="absolute right-7 top-8 text-[10px] font-bold uppercase tracking-[.12em] text-[var(--editorial-brand)] sm:right-10 sm:top-10">
+          Recommended
         </span>
       ) : null}
       <h2 className="text-xl font-semibold">{title}</h2>
-      <p className="mt-3 min-h-14 max-w-lg text-sm leading-6 text-[#6c788b]">
+      <p className="mt-3 min-h-14 max-w-lg text-sm leading-6 text-[var(--editorial-copy)]">
         {copy}
       </p>
-      <div className="mt-6 flex items-end gap-2">
+      <div className="pricing-price-line mt-6 flex items-baseline gap-3">
         <strong className="text-5xl font-semibold tracking-[-.055em]">
           ${price}
         </strong>
-        <span className="pb-1 text-sm text-[#788396]">/month</span>
+        <span className="whitespace-nowrap text-base tracking-normal text-[var(--editorial-copy)]">
+          /month
+        </span>
       </div>
-      <p className="mt-1 text-xs text-[#8a94a3]">{billingNote}</p>
+      <p className="mt-1 text-xs text-[var(--editorial-copy)]">{billingNote}</p>
       {featured ? (
-        <p className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-[#177257]">
-          <ShieldCheck className="size-4" /> 14-day free trial for eligible
-          workspaces
+        <p className="mt-4 text-xs font-semibold text-[var(--editorial-brand)]">
+          5-day Premium trial available during onboarding
         </p>
       ) : null}
-      <ul className="my-7 space-y-3">
-        {features.map((feature) => (
-          <li key={feature} className="flex gap-2.5 text-sm text-[#56647a]">
-            <Check className="mt-0.5 size-4 shrink-0 text-[#2b9875]" />
-            {feature}
-          </li>
-        ))}
-      </ul>
+      {featured ? (
+        <p className="mt-2 text-sm leading-6 text-[var(--editorial-copy)]">
+          Choose a trial after your first sourced answer in onboarding, or
+          purchase now. This page starts a paid plan without a trial. Checkout
+          confirms the payment method and renewal amount.
+        </p>
+      ) : null}
       {!signedIn ? (
         <Link href={signupPath} className={buttonClass(featured)}>
           {plan === "premium" ? "Start Premium" : "Start with Core"}
-          <ArrowRight className="size-4" />
+          <span aria-hidden="true">→</span>
         </Link>
       ) : canManage ? (
         <button
@@ -247,24 +344,34 @@ function PlanCard({
             : plan === "premium"
               ? "Start Premium"
               : "Start with Core"}
-          {!loading && billingReady ? <ArrowRight className="size-4" /> : null}
+          {!loading && billingReady ? <span aria-hidden="true">→</span> : null}
         </button>
       ) : (
-        <p className="rounded-xl bg-[#f3f5f8] p-3 text-center text-xs font-semibold text-[#657184]">
+        <p className="border border-[#d9dfe6] bg-[var(--editorial-secondary)] p-3 text-center text-xs font-semibold text-[var(--editorial-copy)]">
           Ask a workspace owner to change the plan.
         </p>
       )}
       {error ? (
-        <p role="alert" className="mt-3 text-xs text-[#a83f49]">
+        <p role="alert" className="mt-3 text-xs text-[var(--editorial-error)]">
           {error}
         </p>
       ) : null}
+      <ul className="my-8 border-t border-[#d7dde5]">
+        {features.map((feature) => (
+          <li
+            key={feature}
+            className="pricing-feature border-b border-[#dce2e8] py-3 text-sm text-[var(--editorial-copy)]"
+          >
+            {feature}
+          </li>
+        ))}
+      </ul>
     </article>
   );
 }
 
 function buttonClass(featured: boolean) {
-  return `mt-auto inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-55 ${featured ? "bg-[#3158d8] text-white shadow-[0_9px_22px_rgba(49,88,216,.2)] hover:bg-[#2446b8]" : "border border-[#d3dae5] text-[#30405a] hover:bg-[#f7f9fc]"}`;
+  return `mt-auto inline-flex min-h-12 items-center justify-center gap-2 rounded-lg px-5 text-sm font-semibold transition duration-300 disabled:cursor-not-allowed disabled:opacity-55 ${featured ? "bg-[var(--editorial-brand)] text-white hover:-translate-y-0.5 hover:bg-[var(--editorial-deep)]" : "border border-[#cbd3dd] bg-white text-[var(--editorial-deep)] hover:-translate-y-0.5 hover:bg-[var(--editorial-secondary)]"}`;
 }
 
 function ToggleButton({
@@ -280,7 +387,7 @@ function ToggleButton({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-lg px-4 py-2 text-xs font-semibold ${active ? "bg-[#3158d8] text-white" : "text-[#687487]"}`}
+      className={`pricing-toggle px-4 py-2 text-xs font-semibold transition-colors duration-300 ${active ? "is-active bg-[var(--editorial-brand)] text-white" : "text-[var(--editorial-copy)]"}`}
     >
       {children}
     </button>
@@ -303,25 +410,27 @@ function PricingFAQ() {
     ],
     [
       "Is call recording automatic?",
-      "No. The first version analyzes recordings your business intentionally provides.",
+      "You can upload selected recordings. Configured Twilio call learning can automatically process eligible recordings according to your organization's settings and consent responsibilities.",
     ],
     [
       "Does Opryn listen without permission?",
-      "No. Opryn only processes calls intentionally uploaded by an authorized business.",
+      "The business must authorize recordings and comply with applicable consent rules. Opryn accepts selected uploads and recordings from explicitly configured call integrations; it does not monitor employees' microphones or screens in the background.",
     ],
   ];
   return (
-    <section className="mx-auto mt-20 max-w-3xl">
+    <section className="pricing-faq mx-auto mt-20 max-w-3xl">
       <h2 className="text-center text-3xl font-semibold tracking-[-.04em]">
         Pricing questions
       </h2>
-      <div className="mt-8 divide-y divide-[#e2e7ed] rounded-2xl border border-[#dfe5ed] bg-white px-5 sm:px-7">
+      <div className="mt-8 divide-y divide-[#d8dee6] border-y border-[#cfd6df] px-1 sm:px-3">
         {items.map(([question, answer]) => (
           <details key={question} className="group py-5">
             <summary className="cursor-pointer list-none text-sm font-semibold">
               {question}
             </summary>
-            <p className="mt-3 text-sm leading-6 text-[#6a7689]">{answer}</p>
+            <p className="mt-3 text-sm leading-6 text-[var(--editorial-copy)]">
+              {answer}
+            </p>
           </details>
         ))}
       </div>

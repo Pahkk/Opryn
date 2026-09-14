@@ -87,7 +87,7 @@ export function RoleBuilder() {
               </div>
               <aside className="border-t border-[#e5e9ef] bg-[#f8fafd] p-5 md:border-l md:border-t-0">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-[#788495]">
-                  Training progress
+                  Knowledge ready
                 </p>
                 <p className="metric mt-2 text-2xl font-semibold">7 of 9</p>
                 <p className="text-[10px] text-[#7c8796]">processes learned</p>
@@ -115,7 +115,7 @@ export function RoleBuilder() {
                   >
                     <ShieldCheck
                       size={12}
-                      className="shrink-0 text-[#c47a1b]"
+                      className="shrink-0 text-[#756b9a]"
                     />
                     {i}
                   </div>
@@ -178,7 +178,7 @@ export function Independence() {
                     <Status
                       title="Needs work"
                       items={["Vendor ordering", "Complaints"]}
-                      color="#c47a1b"
+                      color="#756b9a"
                     />
                     <Status
                       title="Bottlenecks"
@@ -208,7 +208,7 @@ export function Independence() {
                 <div className="product-card flex flex-col">
                   <p className="app-kicker">Biggest knowledge gap</p>
                   <div className="my-auto py-6">
-                    <span className="grid size-10 place-items-center rounded-xl bg-[#fff5e8] text-[#c47a1b]">
+                    <span className="grid size-10 place-items-center rounded-xl bg-[#f0eef6] text-[#756b9a]">
                       <AlertCircle size={18} />
                     </span>
                     <h4 className="mt-3 font-semibold">Vendor Purchasing</h4>
@@ -275,12 +275,12 @@ export function VacationReadiness() {
                   82% Ready
                 </p>
               </div>
-              <span className="grid size-12 place-items-center rounded-full bg-[#fff4d8] text-[#c47a1b]">
+              <span className="grid size-12 place-items-center rounded-full bg-[#f0eef6] text-[#756b9a]">
                 <Sun size={23} />
               </span>
             </div>
             <div className="my-6 h-2 rounded-full bg-[#e8ecf1]">
-              <div className="h-full w-[82%] rounded-full bg-gradient-to-r from-[#1b8b69] to-[#4cad8f]" />
+              <div className="h-full w-[82%] rounded-full bg-gradient-to-r from-[#245fc9] to-[#4c8ee2]" />
             </div>
             <div className="grid gap-2 sm:grid-cols-2">
               {items.map(([label, tone]) => (
@@ -289,13 +289,13 @@ export function VacationReadiness() {
                   className="flex items-center gap-2 rounded-lg border border-[#e4e8ed] bg-white px-3 py-2.5 text-[11px] font-medium text-[#465266]"
                 >
                   <span
-                    className={`size-2 rounded-full ${tone === "green" ? "bg-[#1b8b69]" : tone === "amber" ? "bg-[#d28b2c]" : "bg-[#c14c55]"}`}
+                    className={`size-2 rounded-full ${tone === "green" ? "bg-[#1b8b69]" : tone === "amber" ? "bg-[#756b9a]" : "bg-[#c14c55]"}`}
                   />
                   {label}
                 </div>
               ))}
             </div>
-            <div className="mt-5 flex flex-col items-start justify-between gap-3 rounded-xl border border-[#f0dfb8] bg-[#fffaf0] p-4 sm:flex-row sm:items-center">
+            <div className="mt-5 flex flex-col items-start justify-between gap-3 rounded-xl border border-[#d9d4e7] bg-[var(--opryn-amber-surface)] p-4 sm:flex-row sm:items-center">
               <p className="text-xs font-medium leading-5 text-[#775a24]">
                 Resolve 2 knowledge gaps before leaving for 7 days.
               </p>

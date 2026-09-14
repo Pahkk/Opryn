@@ -11,7 +11,6 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import Link from "next/link";
-import { useEarlyAccess } from "./early-access";
 import { CheckItem, SectionIntro } from "./ui";
 
 const audiences = [
@@ -80,7 +79,7 @@ const before = [
   "New hires constantly ask questions",
   "Processes live in people's heads",
   "Same questions get answered repeatedly",
-  "Training takes weeks",
+  "New teammates depend on you",
   "Owner cannot disconnect",
   "Knowledge leaves when employees leave",
 ];
@@ -155,7 +154,8 @@ const plans = [
       "Up to 5 employees",
       "Ask Opryn and employee Q&A",
       "Text, audio, documents, and Drive imports",
-      "Processes, roles, training, and knowledge gaps",
+      "External AI connections and secure API",
+      "Processes, roles, and knowledge gaps",
     ],
   },
   {
@@ -179,7 +179,7 @@ export function Pricing() {
         <SectionIntro
           label="Pricing"
           title="Get your time back."
-          copy="Choose how much of the teaching, answering, and training you want Opryn to handle."
+          copy="Choose how much of the teaching and answering you want Opryn to handle."
           center
         />
         <div className="mx-auto mt-14 grid max-w-4xl items-stretch gap-5 lg:grid-cols-2">
@@ -298,7 +298,6 @@ export function FAQ() {
 }
 
 export function FinalCTA() {
-  const { openEarlyAccess } = useEarlyAccess();
   return (
     <section className="bg-[#0d1729] py-24 text-white">
       <div className="container-shell relative overflow-hidden rounded-[28px] border border-white/10 bg-[#14213a] px-6 py-16 text-center sm:px-12">
@@ -314,20 +313,15 @@ export function FinalCTA() {
             Build the systems today that let someone else help you tomorrow.
           </p>
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-            <button
-              type="button"
-              onClick={openEarlyAccess}
-              className="button button-primary"
-            >
-              Get Early Access <ArrowRight size={15} />
-            </button>
-            <button
-              type="button"
-              onClick={openEarlyAccess}
+            <Link href="/signup" className="button button-primary">
+              Start Building <ArrowRight size={15} />
+            </Link>
+            <Link
+              href="/pricing"
               className="button border border-white/15 bg-white/5 text-white hover:bg-white/10"
             >
-              I&apos;m Hiring Soon
-            </button>
+              View Pricing
+            </Link>
           </div>
           <p className="mt-5 text-xs text-[#778397]">
             No credit card required.

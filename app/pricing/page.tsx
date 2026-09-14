@@ -1,6 +1,5 @@
-import type { Metadata } from "next";
+import { publicMetadata } from "@/lib/marketing/metadata";
 import { AuthProvider } from "@/components/auth";
-import { EarlyAccessProvider } from "@/components/early-access";
 import { Footer, Navbar } from "@/components/navigation";
 import { PricingPage } from "@/components/pricing-page";
 import { getOptionalAppContext } from "@/lib/app-context";
@@ -9,22 +8,25 @@ import {
   billingConfigured,
 } from "@/lib/billing/stripe";
 
-export const metadata: Metadata = {
-  title: "Pricing — Opryn Core and Premium",
-  description:
-    "Choose Opryn Core for company knowledge and employee answers, or Premium for video and call learning.",
-};
+export const metadata = publicMetadata(
+  "/pricing",
+  "Pricing — Opryn Core and Premium",
+  "Compare company knowledge for your team and API-connected systems with Premium call/video learning and supported remote MCP clients.",
+);
 
 export default async function PublicPricingPage({
   searchParams,
 }: {
   searchParams: Promise<{ checkout?: string }>;
 }) {
-  const context = await getOptionalAppContext();
-  const requested = (await searchParams).checkout;
+  const [context, params] = await Promise.all([
+    getOptionalAppContext(),
+    searchParams,
+  ]);
+  const requested = params.checkout;
   return (
-    <AuthProvider>
-      <EarlyAccessProvider>
+    <AuthProvider initialUser={context?.authUser ?? null}>
+      <div className="knowledge-public-site">
         <Navbar />
         <PricingPage
           signedIn={Boolean(context)}
@@ -38,7 +40,7 @@ export default async function PublicPricingPage({
           }
         />
         <Footer />
-      </EarlyAccessProvider>
+      </div>
     </AuthProvider>
   );
 }

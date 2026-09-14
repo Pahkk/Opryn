@@ -2,11 +2,17 @@ import { NextResponse } from "next/server";
 import { apiError, getRequestContext } from "@/lib/api";
 import { getOrganizationPlan } from "@/lib/billing/subscription";
 import { getAppUrl, getStripe } from "@/lib/billing/stripe";
+import { rejectCrossOrigin } from "@/lib/request-origin";
 
 export const runtime = "nodejs";
 
-export async function POST() {
-  const context = await getRequestContext({ admin: true });
+export async function POST(request: Request) {
+  const originError = rejectCrossOrigin(request);
+  if (originError) return originError;
+  const context = await getRequestContext({
+    admin: true,
+    allowBillingSetup: true,
+  });
   if ("error" in context) return context.error;
   try {
     const subscription = await getOrganizationPlan(
@@ -20,7 +26,7 @@ export async function POST() {
       );
     const session = await getStripe().billingPortal.sessions.create({
       customer: subscription.stripeCustomerId,
-      return_url: `${getAppUrl()}/app/settings`,
+      return_url: `${getAppUrl()}/app/settings/billing`,
     });
     return NextResponse.json({ url: session.url });
   } catch (error) {

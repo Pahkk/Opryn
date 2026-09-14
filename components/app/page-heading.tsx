@@ -10,23 +10,21 @@ export function PageHeading({
   actions?: React.ReactNode;
 }) {
   return (
-    <header className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-      <div className="min-w-0">
-        {eyebrow ? (
-          <p className="mb-2 text-[11px] font-bold uppercase tracking-[.12em] text-[#3158d8]">
-            {eyebrow}
-          </p>
-        ) : null}
-        <h1 className="text-[28px] font-semibold tracking-[-.04em] sm:text-[32px]">
-          {title}
-        </h1>
-        {description ? (
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-[#69758a]">
-            {description}
-          </p>
+    <header className="opryn-page-heading mb-8">
+      <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+        <div className="opryn-page-heading__copy min-w-0">
+          {eyebrow ? <p className="opryn-page-kicker mb-3">{eyebrow}</p> : null}
+          <h1 className="opryn-page-title">{title}</h1>
+          {description ? (
+            <p className="opryn-page-description mt-3 max-w-2xl">
+              {description}
+            </p>
+          ) : null}
+        </div>
+        {actions ? (
+          <div className="opryn-page-heading__actions shrink-0">{actions}</div>
         ) : null}
       </div>
-      {actions ? <div className="shrink-0">{actions}</div> : null}
     </header>
   );
 }
@@ -43,15 +41,20 @@ export function EmptyState({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border border-dashed border-[#ccd5e0] bg-white px-6 py-14 text-center">
-      <div className="mx-auto grid size-11 place-items-center rounded-xl bg-[#edf2ff] text-[#3158d8]">
-        {icon}
-      </div>
-      <h2 className="mt-5 text-lg font-semibold tracking-[-.02em]">{title}</h2>
-      <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#718095]">
-        {description}
-      </p>
-      {action ? <div className="mt-6">{action}</div> : null}
+    <div className="opryn-empty-state">
+      {icon ? (
+        <span
+          aria-hidden="true"
+          className="grid size-12 place-items-center rounded-[14px] border border-[#d7e3f3] bg-[#eff5fd] text-[var(--opryn-blue)] [&_svg]:size-5"
+        >
+          {icon}
+        </span>
+      ) : null}
+      <h2>{title}</h2>
+      <p>{description}</p>
+      {action ? (
+        <div className="opryn-empty-state__action">{action}</div>
+      ) : null}
     </div>
   );
 }

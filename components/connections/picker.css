@@ -1,0 +1,31 @@
+/* Google appends Picker to body; keep it above the app and in the viewport. */
+.picker-dialog {
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  z-index: 2147483647 !important;
+  max-width: calc(100vw - 16px) !important;
+  max-height: calc(100dvh - 24px) !important;
+}
+.picker-dialog-bg {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2147483646 !important;
+}
+.picker-dialog-content {
+  max-width: 100%;
+}
+.picker-dialog iframe {
+  max-width: 100%;
+}
+@media (max-width: 600px) {
+  .picker-dialog {
+    width: calc(100vw - 16px) !important;
+    min-width: 0 !important;
+  }
+  .picker-dialog-content,
+  .picker-dialog iframe {
+    width: 100% !important;
+  }
+}

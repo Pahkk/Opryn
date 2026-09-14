@@ -50,7 +50,7 @@ export function SectionIntro({
 }) {
   return (
     <div
-      className={`${center ? "mx-auto max-w-[760px] text-center" : "max-w-[680px]"}`}
+      className={`text-reveal-group reveal ${center ? "mx-auto max-w-[760px] text-center" : "max-w-[680px]"}`}
     >
       {label && (
         <div className={`section-label ${center ? "before:hidden" : ""}`}>
@@ -113,7 +113,7 @@ export function Progress({
   const colors = {
     blue: "bg-[#3158d8]",
     green: "bg-[#1b8b69]",
-    amber: "bg-[#d28b2c]",
+    amber: "bg-[#756b9a]",
     red: "bg-[#c14c55]",
   };
   return (

@@ -124,17 +124,17 @@ export function AuthForm({ mode }: { mode: Mode }) {
   }
 
   return (
-    <main className="min-h-screen bg-[#f7f9fc] px-4 py-8 sm:py-14">
+    <main className="opryn-auth-page min-h-screen px-4 py-8 sm:py-14">
       <div className="mx-auto w-full max-w-[440px]">
         <Link
           href="/"
-          className="mb-8 flex items-center justify-center"
+          className="opryn-auth-logo mb-8 flex items-center justify-center"
           aria-label="Opryn home"
         >
           <OprynLogo size="large" priority />
         </Link>
         <section
-          className="rounded-[22px] border border-[#dfe5ed] bg-white p-6 shadow-[0_22px_60px_rgba(24,39,75,.08)] sm:p-8"
+          className="opryn-auth-card rounded-[22px] border border-[#dfe5ed] bg-white p-6 shadow-[0_22px_60px_rgba(24,39,75,.08)] sm:p-8"
           aria-labelledby="auth-heading"
         >
           <h1
@@ -150,7 +150,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
               {message}
             </div>
           ) : null}
-          <form onSubmit={submit} className="mt-7 space-y-4">
+          <form onSubmit={submit} className="opryn-auth-form mt-7 space-y-4">
             {mode === "signup" ? (
               <Field
                 label="Full name"
@@ -275,6 +275,11 @@ export function AuthForm({ mode }: { mode: Mode }) {
             ) : null}
           </p>
         </section>
+        <div className="opryn-auth-loop" aria-label="The Opryn learning loop">
+          <span>Teach it once</span>
+          <i aria-hidden="true" />
+          <strong>Get the answer next time</strong>
+        </div>
       </div>
     </main>
   );
@@ -296,7 +301,7 @@ function Field({
   required?: boolean;
 }) {
   return (
-    <label className="block text-sm font-medium text-[#354157]">
+    <label className="opryn-auth-field block text-sm font-medium text-[#354157]">
       {label}
       <input
         className="mt-2 h-11 w-full rounded-xl border border-[#d9e0e9] bg-white px-3.5 outline-none transition focus:border-[#7190ee] focus:ring-4 focus:ring-[#3158d8]/10"

@@ -1,0 +1,12 @@
+.git/
+.next/
+node_modules/
+.env*
+supabase/.temp/
+artifacts/
+graphify-out/
+test-results/
+playwright-report/
+coverage/
+*.tsbuildinfo
+.DS_Store

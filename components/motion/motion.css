@@ -1,0 +1,137 @@
+/* Shared motion owns these entries; don't layer old CSS effects over GSAP. */
+.opryn-app .needs-you-count strong .motion-number-value {
+  font: inherit;
+  color: inherit;
+}
+.opryn-app .home-reveal,
+.opryn-app .owner-dashboard-heading,
+.opryn-app .owner-command-card,
+.opryn-app .dashboard-metric,
+.opryn-dialog .dialog-content,
+.opryn-dialog .needs-you-sheet,
+.opryn-app .integration-provider-row,
+.opryn-app .integration-results,
+.opryn-app .float-card,
+.opryn-app .float-card-delayed,
+.opryn-app .status-pulse {
+  animation: none;
+}
+/* Brand marks and source paths stay stable; the shared FlowLine draws once. */
+.opryn-app .opryn-connector__signal,
+.opryn-onboarding .opryn-connector__signal {
+  animation: none;
+  stroke-dasharray: none;
+}
+.opryn-app .opryn-mark-path,
+.opryn-app .opryn-thinking .opryn-progress-mark {
+  animation: none;
+  stroke-dashoffset: 0;
+}
+[data-motion-region],
+[data-motion-list] > [data-motion-row] {
+  /* GSAP alone owns transforms here; CSS must not lag behind its updates. */
+  transition-property: color, background-color, border-color;
+}
+.opryn-flow-line {
+  display: inline-block;
+  flex-shrink: 0;
+  vertical-align: middle;
+  color: var(--opryn-blue);
+}
+.teach-loop {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.teach-source-rows > button[aria-pressed="true"] {
+  background: var(--opryn-blue-surface);
+  color: var(--opryn-blue);
+}
+.connection-success-state {
+  display: grid;
+  gap: 20px;
+}
+.headline-mask {
+  display: block;
+  overflow: clip;
+  padding-bottom: 0.08em;
+  margin-bottom: -0.08em;
+}
+.selection-track {
+  position: relative;
+  overflow: clip;
+}
+.selection-indicator {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  background: var(--opryn-blue, #245fc9);
+  transform-origin: left center;
+  pointer-events: none;
+}
+.headline-mask > span {
+  display: block;
+}
+.pointer-surface {
+  min-width: 0;
+  display: grid;
+}
+.pointer-plane, .pointer-plane > article {
+  height: 100%;
+}
+.signature-story {
+  min-width: 0;
+}
+.editorial-home .distribution-path {
+  width: 58px;
+  height: 28px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: var(--editorial-brand, #536b82);
+  stroke-width: 1.25;
+}
+.editorial-home .distribution-destination {
+  color: inherit;
+  font: inherit;
+}
+.opryn-app .decision-receipt {
+  min-height: 0;
+  padding: 16px 20px;
+  border-left: 2px solid var(--opryn-blue);
+}
+.opryn-app .needs-you-card {
+  transition:
+    background-color 180ms,
+    border-color 180ms;
+}
+.public-nav > .container-shell {
+  transition: height 210ms ease-out;
+}
+.public-nav.is-scrolled > .container-shell {
+  height: 64px;
+}
+@media (min-width: 1024px) and (min-height: 700px) {
+  .editorial-update-layout > header {
+    position: sticky;
+    top: 110px;
+    align-self: start;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .public-nav > .container-shell {
+    transition: none;
+  }
+}
+@media (max-width: 430px) {
+  .teach-loop .opryn-flow-line {
+    width: 24px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .opryn-flow-line path {
+    stroke-dashoffset: 0 !important;
+    stroke-dasharray: none !important;
+  }
+}

@@ -1,11 +1,14 @@
 import { cache } from "react";
+import type { User } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getAccountSettings } from "@/lib/account-settings-server";
 
 export type PermissionLevel = "owner" | "admin" | "employee";
 
 export type AppContext = {
+  authUser: User;
   user: {
     id: string;
     email: string;
@@ -17,6 +20,7 @@ export type AppContext = {
     name: string;
     industry: string;
     employeeCount: number;
+    logoUrl: string | null;
   };
   membership: {
     id: string;
@@ -37,11 +41,12 @@ export const getOptionalAppContext = cache(
     const { data: memberships, error } = await supabase
       .from("organization_members")
       .select(
-        "id, organization_id, permission_level, role_id, organizations!inner(id, name, industry, employee_count)",
+        "id, organization_id, permission_level, role_id, organizations!inner(id, name, industry, employee_count, logo_path)",
       )
       .eq("user_id", authUser.id);
 
     if (error || !memberships?.length) return null;
+    const account = await getAccountSettings(authUser.id);
     const cookieStore = await cookies();
     const requestedId = cookieStore.get("opryn-organization")?.value;
     const active =
@@ -55,28 +60,43 @@ export const getOptionalAppContext = cache(
       name: string;
       industry: string;
       employee_count: number;
+      logo_path: string | null;
     };
 
+    const logoUrl = organization.logo_path
+      ? ((
+          await supabase.storage
+            .from("organization-logos")
+            .createSignedUrl(organization.logo_path, 3600)
+        ).data?.signedUrl ?? null)
+      : null;
+
     return {
+      authUser,
       user: {
         id: authUser.id,
         email: authUser.email ?? "",
         fullName: String(
-          authUser.user_metadata.full_name ??
+          account.display_name ??
+            authUser.user_metadata.full_name ??
             authUser.user_metadata.name ??
             authUser.email?.split("@")[0] ??
             "Account",
         ),
-        avatarUrl:
-          typeof authUser.user_metadata.avatar_url === "string"
-            ? authUser.user_metadata.avatar_url
-            : null,
+        avatarUrl: account.avatar_hidden
+          ? null
+          : account.avatar_path
+            ? `/api/account/avatar?v=${account.revision}`
+            : typeof authUser.user_metadata.avatar_url === "string"
+              ? authUser.user_metadata.avatar_url
+              : null,
       },
       organization: {
         id: organization.id,
         name: organization.name,
         industry: organization.industry,
         employeeCount: organization.employee_count,
+        logoUrl,
       },
       membership: {
         id: active.id,

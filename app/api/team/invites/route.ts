@@ -1,7 +1,9 @@
 import { createHash, randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { getRequestContext } from "@/lib/api";
+import { createInviteCode } from "@/lib/invite-code";
 import { deliverWorkspaceInvite } from "@/lib/invitations";
 import { getTeamLimit } from "@/lib/billing/plans";
 import { getOrganizationPlan } from "@/lib/billing/subscription";
@@ -76,8 +78,8 @@ export async function POST(request: Request) {
         { status: 409 },
       );
   }
-  const token = randomBytes(32).toString("base64url");
-  const tokenHash = createHash("sha256").update(token).digest("hex");
+  const accessCode = createInviteCode(randomBytes(8));
+  const tokenHash = createHash("sha256").update(accessCode).digest("hex");
   const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
   const { error: revokeError } = await context.supabase
     .from("organization_invites")
@@ -113,11 +115,21 @@ export async function POST(request: Request) {
       },
       { status: 400 },
     );
-  const inviteUrl = `${new URL(request.url).origin}/invite/${token}`;
-  const delivery = await deliverWorkspaceInvite({ email, inviteUrl });
+  const inviteUrl = inviteLink(request, accessCode);
+  const organizationName = await getOrganizationName(
+    context.supabase,
+    organizationId,
+  );
+  const delivery = await deliverWorkspaceInvite({
+    email,
+    inviteUrl,
+    accessCode,
+    organizationName,
+  });
   return NextResponse.json({
     ...data,
     inviteUrl,
+    accessCode,
     delivered: delivery.delivered,
   });
 }
@@ -145,8 +157,8 @@ export async function PATCH(request: Request) {
       { error: "This invitation is no longer pending." },
       { status: 404 },
     );
-  const token = randomBytes(32).toString("base64url");
-  const tokenHash = createHash("sha256").update(token).digest("hex");
+  const accessCode = createInviteCode(randomBytes(8));
+  const tokenHash = createHash("sha256").update(accessCode).digest("hex");
   const expiresAt = new Date(
     Date.now() + 7 * 24 * 60 * 60 * 1000,
   ).toISOString();
@@ -160,16 +172,44 @@ export async function PATCH(request: Request) {
       { error: "Unable to renew this invitation." },
       { status: 400 },
     );
-  const inviteUrl = `${new URL(request.url).origin}/invite/${token}`;
+  const inviteUrl = inviteLink(request, accessCode);
+  const organizationName = await getOrganizationName(
+    context.supabase,
+    organizationId,
+  );
   const delivery = await deliverWorkspaceInvite({
     email: invite.email,
     inviteUrl,
+    accessCode,
+    organizationName,
   });
   return NextResponse.json({
     inviteUrl,
+    accessCode,
     expiresAt,
     delivered: delivery.delivered,
   });
+}
+
+function inviteLink(request: Request, accessCode: string) {
+  const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(
+    /\/$/,
+    "",
+  );
+  const baseUrl = configured || new URL(request.url).origin;
+  return `${baseUrl}/join/${encodeURIComponent(accessCode)}`;
+}
+
+async function getOrganizationName(
+  supabase: SupabaseClient,
+  organizationId: string,
+) {
+  const { data } = await supabase
+    .from("organizations")
+    .select("name")
+    .eq("id", organizationId)
+    .maybeSingle();
+  return data?.name || "your team";
 }
 
 export async function DELETE(request: Request) {

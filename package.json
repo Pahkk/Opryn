@@ -10,18 +10,35 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:guide": "node scripts/verify-guide-server.mjs && node scripts/verify-guide.mjs",
+    "test:external-ai": "node scripts/verify-external-ai.mjs",
+    "test:twilio": "node scripts/verify-twilio.mjs",
+    "test:communication": "node scripts/verify-communication.mjs",
+    "test:mcp": "node scripts/verify-mcp.mjs",
+    "test:mcp:authenticated": "node scripts/verify-mcp-authenticated.mjs"
   },
   "dependencies": {
+    "@chat-adapter/slack": "^4.39.0",
+    "@chat-adapter/teams": "^4.39.0",
+    "@gsap/react": "^2.1.2",
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@nangohq/frontend": "^0.71.7",
     "@supabase/ssr": "^0.12.5",
     "@supabase/supabase-js": "^2.112.4",
+    "chat": "^4.39.0",
+    "driver.js": "^1.8.0",
     "ffmpeg-static": "^5.3.0",
+    "gsap": "^3.15.0",
     "lucide-react": "^0.468.0",
-    "next": "^16.1.6",
+    "next": "^16.3.5",
     "openai": "^7.5.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
+    "react-icons": "^5.7.0",
+    "sharp": "^0.35.4",
     "stripe": "^22.5.0",
+    "twilio": "^6.1.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -34,7 +51,8 @@
     "eslint-config-next": "^16.1.6",
     "prettier": "^3.9.6",
     "tailwindcss": "^4.1.18",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vercel": "59.16.0"
   },
   "allowScripts": {
     "ffmpeg-static@5.3.0": true

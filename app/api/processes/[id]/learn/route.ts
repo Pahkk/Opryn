@@ -23,7 +23,10 @@ import {
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
-const schema = z.object({ mediaId: z.string().uuid() });
+const schema = z.object({
+  mediaId: z.string().uuid(),
+  markedSeconds: z.array(z.number().int().min(0).max(3600)).max(20).default([]),
+});
 type ProcessingStage =
   | "uploaded"
   | "extracting_audio"
@@ -236,6 +239,7 @@ export async function POST(
           sourceBuffer,
           media.mime_type,
           8,
+          parsed.data.markedSeconds,
         );
         const analyzed = await analyzeVideoFrames(
           transcript.transcript_text,

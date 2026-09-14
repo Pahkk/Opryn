@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ExtractedProcess } from "@/lib/ai/schemas";
+import { classifyKnowledge } from "@/lib/knowledge-library";
 
 export async function replaceExtractedProcess(
   supabase: SupabaseClient,
@@ -23,6 +24,18 @@ export async function replaceExtractedProcess(
     .eq("id", processId)
     .eq("organization_id", organizationId);
   if (updateError) throw updateError;
+  // Classify new/uncategorized findings only; preserve a reviewer's choice.
+  const category = classifyKnowledge(extracted.title);
+  if (category !== "uncategorized") {
+    const { error } = await supabase
+      .from("processes")
+      .update({ library_category: category })
+      .eq("id", processId)
+      .eq("organization_id", organizationId)
+      .eq("library_category", "uncategorized")
+      .eq("library_revision", 1);
+    if (error) throw error;
+  }
   const tables = [
     "process_steps",
     "process_rules",

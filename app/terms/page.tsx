@@ -5,7 +5,7 @@ import { LegalDocument, LegalSection } from "../../components/legal-document";
 export const metadata: Metadata = {
   title: "Terms of Service | Opryn",
   description:
-    "Terms governing access to the Opryn website, early-access program, and services.",
+    "Terms governing access to the Opryn website, application, and services.",
   alternates: { canonical: "https://www.opryn.app/terms" },
 };
 
@@ -23,9 +23,9 @@ export default function TermsPage() {
           terms on its behalf.
         </p>
         <p>
-          Opryn is currently preparing for early access. Features may be
-          incomplete, change without notice, or be unavailable while we test and
-          improve the service.
+          Opryn is an evolving service. Features may change without notice or
+          occasionally be unavailable while we test, maintain, and improve the
+          product.
         </p>
       </LegalSection>
 
@@ -70,8 +70,9 @@ export default function TermsPage() {
           Opryn and its licensors retain all rights in the service, software,
           design, branding, and documentation, excluding your content. These
           terms give you a limited, non-exclusive, non-transferable right to use
-          the service for your internal business purposes while your access
-          remains active.
+          the service for your authorized business use, including permitted
+          employee and external AI integrations, while your access remains
+          active.
         </p>
       </LegalSection>
 
@@ -85,6 +86,19 @@ export default function TermsPage() {
 
       <LegalSection title="7. Pricing and subscriptions">
         <p>
+          Onboarding offers a 5-day Premium trial for organizations that have
+          not previously used it. Core does not include that trial. Checkout
+          shows payment requirements and renewal amounts; cancel before the
+          trial ends to avoid the next charge. Existing subscriptions are
+          managed through the billing portal.
+        </p>
+        <p>
+          Core includes up to 5 employee seats and Premium up to 20, in addition
+          to one owner. Pending invitations count toward the limit. Standard
+          checkout does not sell extra seats. Contact us before purchasing for a
+          larger team.
+        </p>
+        <p>
           Paid Opryn plans renew automatically at the billing interval shown
           during checkout until canceled. Prices, included usage, and plan
           features are shown before purchase. You can manage supported payment,
@@ -96,9 +110,17 @@ export default function TermsPage() {
 
       <LegalSection title="8. Third-party services">
         <p>
-          Opryn relies on third-party services, including Google, Supabase, and
-          Vercel. We are not responsible for third-party services outside our
-          control, and their separate terms and privacy policies may apply.
+          You are responsible for authorizing connections and ensuring that
+          recordings comply with applicable notice and consent requirements.
+          Connected AI tools remain external systems: Opryn supplies permitted
+          context, not model retraining or a guarantee of their final answers.
+          Review and approve company policy before relying on it.
+        </p>
+        <p>
+          Opryn relies on third-party hosting, storage, AI processing, payment,
+          email, and connected services. We are not responsible for third-party
+          services outside our control, and their separate terms and privacy
+          policies may apply.
         </p>
       </LegalSection>
 
@@ -145,9 +167,9 @@ export default function TermsPage() {
 
       <LegalSection title="13. Contact">
         <p>
-          For questions about these terms, submit a message through the
-          early-access form on the <Link href="/">Opryn homepage</Link> and
-          identify it as a terms question.
+          For questions about these terms, use{" "}
+          <Link href="/contact">Contact and Support</Link> and identify the
+          message as a terms question.
         </p>
       </LegalSection>
     </LegalDocument>

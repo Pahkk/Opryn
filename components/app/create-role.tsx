@@ -48,14 +48,14 @@ export function CreateRole() {
       }
       {open ? (
         <div
-          className="fixed inset-0 z-[100] grid place-items-center bg-[#0d1729]/45 p-4 backdrop-blur-sm"
+          className="mobile-sheet-overlay fixed inset-0 z-[100] grid place-items-center bg-[#0d1729]/45 p-4 backdrop-blur-sm"
           onMouseDown={(event) =>
             event.target === event.currentTarget && setOpen(false)
           }
         >
           <form
             onSubmit={submit}
-            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"
+            className="mobile-sheet-panel w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"
           >
             <div className="flex justify-between">
               <div>
@@ -63,7 +63,7 @@ export function CreateRole() {
                   New role
                 </p>
                 <h2 className="mt-2 text-2xl font-semibold tracking-[-.03em]">
-                  Who are you training?
+                  Who is this role for?
                 </h2>
               </div>
               <button

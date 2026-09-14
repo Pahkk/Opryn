@@ -49,7 +49,7 @@ export function RoleEditor({ role, processes, assigned }: Props) {
       const body = await response.json();
       if (!response.ok) throw new Error(body.error ?? "Unable to save role.");
       setData(cleaned);
-      setMessage("Role saved and training assignments updated.");
+      setMessage("Role and knowledge access saved.");
       router.refresh();
     } catch (caught) {
       setError(
@@ -165,7 +165,7 @@ export function RoleEditor({ role, processes, assigned }: Props) {
       <section className="rounded-2xl border border-[#dfe5ed] bg-white p-5 sm:p-7">
         <h2 className="font-semibold">Assigned processes</h2>
         <p className="mt-1 text-xs text-[#7a8698]">
-          Employees in this role receive these as training.
+          Employees in this role can access these approved processes.
         </p>
         <div className="mt-5 grid gap-2 sm:grid-cols-2">
           {processes.map((process) => (

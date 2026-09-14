@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { OPENAI_MODELS } from "@/lib/ai/config";
 import {
   prepareTranscriptionAudio,
@@ -14,6 +14,7 @@ import {
   FeatureUnavailableError,
   requireFeature,
 } from "@/lib/billing/subscription";
+import { processTwilioRecording } from "@/lib/twilio/processing";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -39,6 +40,24 @@ export async function POST(
         { error: "Call recording not found." },
         { status: 404 },
       );
+    if (call.provider === "twilio") {
+      if (!["received", "failed"].includes(call.status))
+        return NextResponse.json(
+          {
+            error:
+              call.status === "needs_review" || call.status === "approved"
+                ? "This call has already been analyzed."
+                : "Opryn is already processing this Twilio recording.",
+            status: call.status,
+          },
+          { status: 409 },
+        );
+      after(() => processTwilioRecording(id));
+      return NextResponse.json(
+        { callId: id, status: "received" },
+        { status: 202 },
+      );
+    }
     if (!["uploaded", "failed"].includes(call.status))
       return NextResponse.json(
         {
@@ -102,20 +121,18 @@ export async function POST(
       .neq("status", "approved");
     if (removeError) throw removeError;
     if (learned.findings.length) {
-      const { error } = await context.supabase
-        .from("call_findings")
-        .insert(
-          learned.findings.map((finding) => ({
-            organization_id: organizationId,
-            call_id: id,
-            finding_type: finding.type,
-            title: finding.title,
-            content: finding.content,
-            evidence: finding.evidence,
-            confidence: finding.confidence,
-            status: finding.needs_clarification ? "unknown" : "observed",
-          })),
-        );
+      const { error } = await context.supabase.from("call_findings").insert(
+        learned.findings.map((finding) => ({
+          organization_id: organizationId,
+          call_id: id,
+          finding_type: finding.type,
+          title: finding.title,
+          content: finding.content,
+          evidence: finding.evidence,
+          confidence: finding.confidence,
+          status: finding.needs_clarification ? "unknown" : "observed",
+        })),
+      );
       if (error) throw error;
     }
     const { error: finalError } = await context.supabase

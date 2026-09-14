@@ -1,139 +1,199 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { LegalDocument, LegalSection } from "../../components/legal-document";
-
+import { LegalDocument, LegalSection } from "@/components/legal-document";
 export const metadata: Metadata = {
   title: "Privacy Policy | Opryn",
   description:
-    "How Opryn collects, uses, and protects information through its website, early-access program, and services.",
+    "Information Opryn processes for company knowledge, training, connected AI, and supported integrations.",
   alternates: { canonical: "https://www.opryn.app/privacy" },
 };
-
 export default function PrivacyPage() {
   return (
     <LegalDocument
       title="Privacy Policy"
-      description="This policy explains what information Opryn collects, why we collect it, and the choices available to you."
+      description="How Opryn handles information across its website, application, company knowledge, and supported connections."
     >
-      <LegalSection title="1. Information we collect">
+      <LegalSection title="1. Information you provide">
         <p>
-          We collect information you provide directly, including when you
-          request early access, contact us, or create an account. This may
-          include your name, work email, business name, industry, team size,
-          hiring plans, optional phone number, and details about work you want
-          to delegate.
+          We collect account and organization information such as your name,
+          email, business name, role, and workspace settings. Your organization
+          may provide documents, processes, company rules, training materials,
+          employee questions, feedback, owner or expert answers, and other
+          business knowledge.
         </p>
         <p>
-          If you sign in with Google, we receive the basic account information
-          needed to authenticate you, such as your name, email address, profile
-          image, and Google account identifier. Opryn does not request access to
-          your Gmail, Google Drive, contacts, calendar, or files.
-        </p>
-        <p>
-          We and our service providers may also collect limited technical
-          information, such as browser type, device information, IP address,
-          timestamps, authentication events, and diagnostic logs. We may process
-          the audio, video, authorized call recordings, documents, instructions,
-          business procedures, questions, and answers you intentionally provide.
-          Payment details are handled by our payment processor rather than
-          stored directly by Opryn.
+          We also process technical and service information such as IP
+          addresses, device and browser information, timestamps, authentication
+          events, usage events, and diagnostic logs. Payment card details are
+          handled by Stripe rather than stored directly by Opryn.
         </p>
       </LegalSection>
-
-      <LegalSection title="2. How we use information">
+      <LegalSection title="2. Connected services">
         <p>
-          We use information to operate and secure Opryn, authenticate accounts,
-          respond to early-access requests, provide requested features, improve
-          the product, communicate about onboarding and service changes, prevent
-          abuse, troubleshoot problems, and comply with legal obligations.
+          Google sign-in provides the basic identity information needed to
+          authenticate you; it does not itself authorize access to your Drive or
+          other Google services. Manual Drive and Docs imports read accessible
+          document links you provide or downloaded files you upload. Where the
+          authorized Drive connection is enabled, Opryn can browse and read
+          files covered by your Google consent. Only files you explicitly choose
+          are imported; connecting does not automatically import your Drive.
+          Imported content is stored and processed as company knowledge and
+          findings require review.
         </p>
         <p>
-          Google account information is used only to create and secure your
-          Opryn account and provide the sign-in experience you requested.
-        </p>
-      </LegalSection>
-
-      <LegalSection title="3. Browser storage and authentication">
-        <p>
-          Opryn may use cookies or similar browser storage to keep you signed
-          in, maintain security, remember interface state, and store a local
-          copy of an early-access submission. You can clear this information
-          through your browser settings, although doing so may sign you out or
-          reset saved preferences.
-        </p>
-      </LegalSection>
-
-      <LegalSection title="4. How information is shared">
-        <p>
-          We do not sell your personal information. We may share information
-          with vendors that help us provide the service, including Supabase for
-          authentication and data storage, Vercel for website hosting, and
-          Google for account authentication. These providers process information
-          on our behalf under their own contractual and security obligations.
+          When an authorized person connects Slack, Microsoft Teams, Twilio, or
+          another supported service, Opryn may receive account or tenant
+          identifiers, authorization tokens, messages, call metadata,
+          recordings, and other information required by that connection. The
+          permission screen and implemented workflow determine what is
+          available. Slack interactions include supported direct messages,
+          mentions, and commands; Teams setup includes Microsoft identity and
+          tenant information. These connections do not imply unrestricted access
+          to all messaging history.
         </p>
         <p>
-          We may also disclose information when required by law, to protect
-          Opryn or others from harm, in connection with a corporate transaction,
-          or when you direct us to share it.
+          Some setup flows store customer-provided integration credentials.
+          Saving credentials is not a promise that every provider’s data can be
+          imported. Use supported capabilities and review the access you
+          authorize.
         </p>
-      </LegalSection>
-
-      <LegalSection title="5. Data retention and security">
         <p>
-          We keep information for as long as reasonably necessary to provide the
-          service, maintain legitimate business records, resolve disputes,
-          enforce agreements, and meet legal requirements. We use reasonable
-          administrative, technical, and organizational safeguards, but no
-          online service can guarantee absolute security.
+          For connections managed through Nango, Nango handles authorization,
+          credential storage and token refresh. Opryn stores connection
+          identifiers, organization ownership and status, and makes authorized
+          provider requests through Nango. Disconnecting stops Opryn from using
+          that connection; previously imported knowledge is not automatically
+          deleted. You may also revoke provider-side access in the connected
+          service’s account settings.
         </p>
       </LegalSection>
-
-      <LegalSection title="6. Your choices">
+      <LegalSection title="3. Connected AI tools">
         <p>
-          You may choose not to provide optional information, clear local
-          browser storage, or revoke Opryn&apos;s Google access from your Google
-          Account. You may also ask to access, correct, or delete personal
-          information, subject to applicable legal exceptions.
+          Authorized ChatGPT, Claude, MCP clients, and external AI systems may
+          receive Opryn knowledge, source information, and responses according
+          to their connection permissions. Those systems may also send queries
+          and relevant context you intentionally ask them to share. Opryn does
+          not gain unrestricted access to your ChatGPT or Claude history through
+          an MCP connection.
         </p>
         <p>
-          To make a privacy request, use the early-access contact form on the{" "}
-          <Link href="/">Opryn homepage</Link> and begin your message with
-          “Privacy request.” We may need to verify your identity before
-          completing a request.
-        </p>
-      </LegalSection>
-
-      <LegalSection title="7. Children">
-        <p>
-          Opryn is a business service and is not directed to children under 13.
-          We do not knowingly collect personal information from children under
-          13.
+          Information received by an external AI tool is also subject to that
+          tool’s policies and your configuration. Revoking its Opryn access does
+          not erase copies it has already received.
         </p>
       </LegalSection>
-
-      <LegalSection title="8. International use">
+      <LegalSection title="4. Calls, audio, and video">
         <p>
-          Your information may be processed in countries other than the country
-          where you live. Those countries may have different data-protection
-          laws. We use appropriate safeguards where required by applicable law.
+          Opryn accepts selected audio and video uploads and authorized business
+          call recordings. Processing may include transcription, extraction of
+          selected video frames, analysis, and creation of reviewable findings.
+          Recordings, transcripts, and derived knowledge can be retained
+          separately.
+        </p>
+        <p>
+          Configured Twilio call learning can process eligible recorded calls
+          automatically according to the business’s settings. Twilio
+          audio-retention settings support removal after processing or 7, 30, or
+          90 days. Cleanup requires successful processing and maintenance
+          execution; it does not remove transcripts, derived knowledge, or
+          recordings retained by Twilio. Other uploaded recordings do not have
+          this same automatic expiry.
+        </p>
+        <p>
+          Businesses are responsible for the notices, rights, and consent
+          required by applicable recording and privacy laws before recording or
+          submitting a conversation. Opryn’s acknowledgment screen does not
+          obtain consent from call participants.
         </p>
       </LegalSection>
-
-      <LegalSection title="9. Changes to this policy">
+      <LegalSection title="5. How we use information">
         <p>
-          We may update this policy as Opryn develops. We will post the revised
-          policy here and update its effective date. If a change materially
-          affects how we use personal information, we will provide additional
-          notice when appropriate.
+          We use information to provide and secure Opryn, authenticate users,
+          organize and retrieve knowledge, generate answers and training
+          guidance, route questions, record approvals, deliver notifications,
+          manage billing, support users, troubleshoot, understand product use,
+          prevent abuse, and meet legal obligations.
+        </p>
+        <p>
+          Company information may be sent to configured AI/model providers,
+          currently including OpenAI, as needed for transcription, analysis,
+          embeddings, and generated responses. Provider processing and retention
+          depend on their applicable terms and account configuration. We do not
+          promise zero retention, local-only processing, or that no third party
+          sees submitted content.
         </p>
       </LegalSection>
-
-      <LegalSection title="10. Contact">
+      <LegalSection title="6. Sharing and service providers">
         <p>
-          For questions about this policy or Opryn&apos;s privacy practices,
-          submit a message through the early-access form on the{" "}
-          <Link href="/">Opryn homepage</Link> and identify it as a privacy
-          question.
+          We do not sell your personal information. Service providers support
+          hosting and delivery (Vercel), authentication, database and file
+          storage (Supabase), AI processing (OpenAI), payment processing
+          (Stripe), and email delivery (Resend where configured). Connected
+          services also receive information when you authorize their workflows.
+        </p>
+        <p>
+          Organization administrators and permitted members may access workspace
+          information according to their roles. We may disclose information when
+          required by law, to protect rights or safety, or in connection with a
+          business transfer. Our providers and connected tools operate under
+          their applicable agreements and policies.
+        </p>
+      </LegalSection>
+      <LegalSection title="7. Browser storage and usage information">
+        <p>
+          Cookies and browser storage maintain sign-in, security, preferences,
+          and onboarding progress. Opryn records product activity and usage for
+          service operation and product improvement. Clearing browser storage
+          may sign you out or reset local preferences; it does not delete
+          company records held by Opryn.
+        </p>
+      </LegalSection>
+      <LegalSection title="8. Retention and removal">
+        <p>
+          We retain information as needed to provide the service, support
+          workspace history, meet legal obligations, resolve disputes, and
+          maintain legitimate business records. There is no single automatic
+          deletion period for all company knowledge, questions, uploads, or
+          audit records.
+        </p>
+        <p>
+          Authorized users can remove supported items in the app. Disconnecting
+          an integration or deleting a process does not necessarily remove
+          associated stored files, audit history, backups, or third-party
+          copies. For account, organization, or stored-media removal, make a{" "}
+          <Link href="/contact">privacy request</Link>. We may verify identity
+          and organization authority and explain any legal or technical
+          retention limitations.
+        </p>
+      </LegalSection>
+      <LegalSection title="9. Security and your choices">
+        <p>
+          We use access checks and organization-scoped processing, but no online
+          service is perfectly secure. See{" "}
+          <Link href="/security">Security and Data Handling</Link> for
+          implemented protections and limitations. You can limit submitted
+          information, manage supported connections, revoke authorized access,
+          and request access, correction, or deletion of personal information.
+          Workspace members may also need to contact their organization
+          administrator.
+        </p>
+      </LegalSection>
+      <LegalSection title="10. International use and children">
+        <p>
+          Information may be processed outside your country by Opryn and its
+          providers, where privacy laws may differ. Opryn is a business service
+          for adult account holders and is not directed to children. Do not
+          submit children’s personal information without appropriate authority
+          and a lawful basis.
+        </p>
+      </LegalSection>
+      <LegalSection title="11. Changes and contact">
+        <p>
+          We will post policy updates here and update the effective date.
+          Material changes may also be communicated through the service. For
+          questions or rights requests, visit{" "}
+          <Link href="/contact">Contact and Support</Link> and identify your
+          message as a privacy request.
         </p>
       </LegalSection>
     </LegalDocument>

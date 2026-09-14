@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { normalizeInviteCredential } from "@/lib/invite-code";
 import { createClient } from "@/lib/supabase/server";
-const schema = z.object({ token: z.string().min(20).max(500) });
+const schema = z.object({ token: z.string().trim().min(8).max(500) });
 export async function POST(request: Request) {
   const parsed = schema.safeParse(await request.json().catch(() => null));
   if (!parsed.success)
@@ -17,7 +18,7 @@ export async function POST(request: Request) {
       { status: 401 },
     );
   const { data, error } = await supabase.rpc("accept_organization_invite", {
-    raw_token: parsed.data.token,
+    raw_token: normalizeInviteCredential(parsed.data.token),
   });
   if (error)
     return NextResponse.json({ error: error.message }, { status: 400 });

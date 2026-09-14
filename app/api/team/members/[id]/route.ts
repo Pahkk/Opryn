@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { apiError, getRequestContext } from "@/lib/api";
+import { rejectCrossOrigin } from "@/lib/request-origin";
 const schema = z.object({
   roleId: z.string().uuid().nullable(),
   permissionLevel: z.enum(["owner", "admin", "employee"]),
@@ -9,6 +10,8 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const originError = rejectCrossOrigin(request);
+  if (originError) return originError;
   const context = await getRequestContext({ admin: true });
   if ("error" in context) return context.error;
   const { id } = await params;
@@ -90,9 +93,11 @@ export async function PATCH(
   return NextResponse.json({ ok: true, member: updated });
 }
 export async function DELETE(
-  _: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const originError = rejectCrossOrigin(request);
+  if (originError) return originError;
   const context = await getRequestContext({ admin: true });
   if ("error" in context) return context.error;
   const { id } = await params;
@@ -107,11 +112,39 @@ export async function DELETE(
       { error: "The workspace owner cannot be removed." },
       { status: 400 },
     );
-  const { error } = await context.supabase
-    .from("organization_members")
-    .delete()
-    .eq("id", id);
+  const { error } = await context.supabase.rpc("remove_workspace_member", {
+    workspace_id: context.membership.organization_id,
+    member_id: id,
+  });
   return error
-    ? apiError(error, "Unable to remove this member.")
+    ? NextResponse.json(
+        {
+          error:
+            error.code === "23503"
+              ? "Resolve assigned questions, reassign expertise, and disconnect or transfer their connections before removing this person."
+              : "This member could not be removed. Reload and try again.",
+        },
+        { status: 409 },
+      )
     : NextResponse.json({ ok: true });
+}
+export async function GET(
+  _: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const context = await getRequestContext({ admin: true });
+  if ("error" in context) return context.error;
+  const { id } = await params;
+  if (!z.string().uuid().safeParse(id).success)
+    return NextResponse.json({ error: "Member not found." }, { status: 404 });
+  const { data, error } = await context.supabase.rpc("member_removal_impact", {
+    workspace_id: context.membership.organization_id,
+    member_id: id,
+  });
+  return error
+    ? NextResponse.json(
+        { error: "Member responsibilities could not be loaded." },
+        { status: 404 },
+      )
+    : NextResponse.json({ impact: data });
 }

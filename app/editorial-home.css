@@ -1,0 +1,986 @@
+/* Public editorial system. No authenticated application selectors. */
+.knowledge-public-site .editorial-home,
+.public-nav,
+.editorial-footer {
+  color: var(--editorial-ink);
+}
+.knowledge-public-site .editorial-home {
+  --story-paper: var(--editorial-page);
+  --story-ink: var(--editorial-ink);
+  --story-copy: var(--editorial-copy);
+  --story-blue: var(--editorial-brand);
+  --story-line: var(--editorial-line);
+  background: var(--editorial-page);
+}
+.knowledge-public-site .editorial-home > section {
+  padding-block: 88px;
+}
+.editorial-home .story-shell {
+  max-width: 1280px;
+  width: calc(100% - 96px);
+}
+.editorial-home :is(h2, h3) {
+  font-weight: 550;
+  color: var(--editorial-ink);
+}
+.editorial-home h2 {
+  font-size: clamp(36px, 4vw, 56px);
+  letter-spacing: -0.045em;
+  line-height: 1.06;
+}
+.editorial-home p {
+  text-wrap: pretty;
+}
+.editorial-home
+  :is(
+    header > p:not(.editorial-label),
+    .editorial-people-layout > div > p:not(.editorial-label)
+  ) {
+  color: var(--editorial-copy);
+  font-size: 19px;
+  line-height: 1.65;
+  margin-top: 24px;
+  max-width: 52ch;
+}
+.editorial-home .editorial-label {
+  font:
+    12px/1.5 ui-monospace,
+    SFMono-Regular,
+    Consolas,
+    monospace;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--editorial-copy);
+  margin-bottom: 24px;
+}
+.editorial-home .editorial-note {
+  color: var(--editorial-copy);
+  font-size: 14px;
+  line-height: 1.7;
+  max-width: 85ch;
+}
+.editorial-home .directional-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 20px;
+  min-height: 44px;
+  color: var(--editorial-brand);
+  font-size: 16px;
+  font-weight: 550;
+  text-decoration: none;
+  margin-top: 20px;
+}
+.directional-arrow {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  transition: transform 180ms ease;
+}
+.directional-link:hover .directional-arrow {
+  transform: translateX(4px);
+}
+.editorial-home .story-button {
+  border-radius: 9px;
+  font-size: 16px;
+  min-height: 50px;
+  padding: 14px 24px;
+  transition:
+    transform 160ms ease,
+    background-color 160ms ease;
+}
+.knowledge-public-site .editorial-home .story-button-primary,
+.public-nav .button-primary {
+  background: var(--editorial-brand);
+  color: var(--editorial-surface);
+  box-shadow: none;
+}
+.knowledge-public-site .editorial-home .story-button-primary:hover,
+.public-nav .button-primary:hover {
+  background: var(--editorial-deep);
+}
+.knowledge-public-site .editorial-home .story-button-secondary {
+  border-color: var(--editorial-line);
+  background: transparent;
+  color: var(--editorial-ink);
+}
+.editorial-home .story-button:hover {
+  transform: translateY(-1px);
+}
+.editorial-home .story-button:active {
+  transform: translateY(1px);
+}
+.knowledge-public-site .editorial-home > .editorial-hero {
+  padding-top: 148px;
+  padding-bottom: 0;
+}
+.editorial-hero-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 64px;
+}
+.knowledge-public-site .editorial-home .knowledge-hero-heading {
+  font-size: clamp(56px, 5.8vw, 84px);
+  letter-spacing: -0.055em;
+  line-height: 1.02;
+  font-weight: 550;
+  max-width: 11ch;
+}
+.editorial-hero-subhead {
+  margin-top: 28px;
+  font-weight: 450;
+}
+.knowledge-public-site
+  .editorial-home
+  :is(.knowledge-rotator, .knowledge-static) {
+  font-size: clamp(28px, 2.8vw, 40px);
+  line-height: 1.17;
+  color: var(--editorial-brand);
+  letter-spacing: -0.03em;
+  margin: 0;
+}
+.editorial-home .knowledge-motion-control {
+  font-size: 12px;
+  color: var(--editorial-copy);
+  margin: 8px 0 12px;
+  min-height: 44px;
+}
+.editorial-home .editorial-lede {
+  color: var(--editorial-copy);
+  font-size: 19px;
+  line-height: 1.65;
+  max-width: 47ch;
+  margin-bottom: 28px;
+}
+.editorial-home .story-actions {
+  gap: 12px;
+  margin-top: 0;
+}
+.editorial-hero-baseline {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 28px 0;
+  margin-top: 60px;
+  border-top: 1px solid var(--editorial-line);
+  font-size: 14px;
+  color: var(--editorial-copy);
+}
+.editorial-hero-baseline a {
+  color: var(--editorial-brand);
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  gap: 16px;
+}
+.editorial-hero-baseline > span {
+  align-content: center;
+}
+.editorial-home .editorial-demo {
+  border: 0;
+  border-radius: 12px;
+  background: var(--editorial-surface);
+  box-shadow: none;
+}
+.editorial-home .editorial-demo > header {
+  padding: 8px 28px;
+  border-color: var(--editorial-line);
+  color: var(--editorial-copy);
+}
+.editorial-demo > header > span {
+  font:
+    11px/1.5 ui-monospace,
+    SFMono-Regular,
+    Consolas,
+    monospace;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+.editorial-home .shared-policy {
+  padding: 24px 28px 0;
+}
+.editorial-source-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--editorial-copy);
+}
+.editorial-approved {
+  color: var(--editorial-success);
+  font-weight: 600;
+}
+.editorial-home .shared-policy h2 {
+  font-size: 24px;
+  margin: 18px 0 12px;
+}
+.editorial-home .shared-policy p {
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--editorial-ink);
+}
+.editorial-demo-path {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  color: var(--editorial-brand);
+  padding: 14px 28px 6px;
+  font-size: 22px;
+}
+.editorial-demo-path span {
+  height: 1px;
+  background: var(--editorial-line);
+  flex: 1;
+}
+.editorial-home .shared-consumers {
+  padding: 6px 24px;
+  gap: 8px;
+}
+.editorial-home .shared-consumers button {
+  color: var(--editorial-copy);
+  font-size: 14px;
+  border-radius: 6px;
+}
+.knowledge-public-site
+  .editorial-home
+  .shared-consumers
+  button[aria-pressed="true"] {
+  color: var(--editorial-brand);
+  background: var(--editorial-tint);
+}
+.editorial-home .shared-answer-stack {
+  padding: 16px 28px 28px;
+}
+.editorial-home .shared-answer-stack .shared-question {
+  font-size: 15px;
+  color: var(--editorial-copy);
+}
+.editorial-home .shared-answer-stack h3 {
+  font-size: 24px;
+  margin: 18px 0 12px;
+}
+.editorial-home .shared-answer-stack article > p:not(.shared-question) {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--editorial-copy);
+}
+.editorial-home .shared-answer-stack article > span {
+  color: var(--editorial-brand);
+  font-size: 12px;
+}
+.editorial-home .editorial-demo > footer {
+  background: var(--editorial-tint);
+  color: var(--editorial-brand);
+  padding: 18px 28px;
+}
+.knowledge-public-site .editorial-home > .editorial-use-cases {
+  padding-top: 40px;
+}
+.editorial-panels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+.editorial-feature {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 52px;
+  border-radius: 8px;
+  background: var(--editorial-surface);
+}
+.editorial-feature-sage {
+  background: var(--editorial-tint);
+}
+.editorial-home .editorial-feature h2 {
+  font-size: clamp(40px, 4.5vw, 60px);
+  max-width: 8ch;
+}
+.editorial-feature > p {
+  font-size: 21px;
+  line-height: 1.5;
+  margin: 28px 0 40px;
+  max-width: 32ch;
+}
+.editorial-home .editorial-feature .directional-link {
+  margin-top: auto;
+  padding-top: 12px;
+}
+.editorial-feature .directional-arrow {
+  background: var(--editorial-brand);
+  color: var(--editorial-surface);
+  border: 0;
+}
+.editorial-section-heading {
+  max-width: 800px;
+}
+.editorial-flow {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 32px;
+  margin: 56px 0 32px;
+}
+.editorial-flow li {
+  display: grid;
+  grid-template-rows: auto 64px 1fr auto;
+  gap: 16px;
+  min-width: 0;
+}
+.flow-step-number {
+  font:
+    12px ui-monospace,
+    SFMono-Regular,
+    Consolas,
+    monospace;
+  color: var(--editorial-brand);
+  border-top: 1px solid var(--editorial-brand);
+  padding-top: 20px;
+}
+.editorial-flow h3 {
+  font-size: 24px;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+  max-width: 13ch;
+}
+.editorial-flow p {
+  color: var(--editorial-copy);
+  font-size: 16px;
+  line-height: 1.65;
+}
+.editorial-flow-path {
+  font:
+    11px ui-monospace,
+    SFMono-Regular,
+    Consolas,
+    monospace;
+  color: var(--editorial-brand);
+  margin-top: 20px;
+}
+.editorial-flow-path svg {
+  display: block;
+  width: 100%;
+  height: 24px;
+  margin-top: 8px;
+}
+.editorial-flow-path path {
+  stroke: currentColor;
+  stroke-width: 1.3;
+  fill: none;
+  vector-effect: non-scaling-stroke;
+}
+.editorial-people-layout {
+  display: grid;
+  grid-template-columns: 1fr 0.9fr;
+  gap: 80px;
+  align-items: center;
+}
+.editorial-home .editorial-image {
+  max-width: none;
+}
+.editorial-home .editorial-image img {
+  border-radius: 8px;
+}
+.knowledge-public-site .editorial-home > .editorial-people {
+  padding-top: 32px;
+}
+.editorial-update {
+  background: var(--editorial-tint);
+}
+.editorial-update-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 80px;
+}
+.editorial-update-source {
+  border-bottom: 1px solid var(--editorial-brand);
+  padding: 0 0 24px;
+}
+.editorial-update-source > span {
+  color: var(--editorial-brand);
+  font-size: 13px;
+}
+.editorial-update-source h3 {
+  font-size: 26px;
+  margin: 12px 0;
+  letter-spacing: -0.03em;
+}
+.editorial-update-source p {
+  font-size: 17px;
+  line-height: 1.6;
+}
+.editorial-update-diagram ul {
+  list-style: none;
+  margin: 0 0 24px 14px;
+  padding: 20px 0;
+  border-left: 1px solid var(--editorial-brand);
+}
+.editorial-update-diagram li {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  font-size: 17px;
+  padding: 8px 0;
+}
+.editorial-update-diagram li span {
+  color: var(--editorial-brand);
+  font-size: 22px;
+  line-height: 1;
+  margin-left: -1px;
+}
+.editorial-update-result {
+  display: block;
+  font-weight: 550;
+  font-size: 17px;
+  margin-bottom: 12px;
+}
+.editorial-trust-rows {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 48px;
+  margin-top: 48px;
+}
+.editorial-trust-rows > div {
+  border-top: 1px solid var(--editorial-line);
+  padding-top: 24px;
+}
+.editorial-trust-rows h3 {
+  font-size: 24px;
+  letter-spacing: -0.025em;
+  margin-bottom: 14px;
+}
+.editorial-trust-rows p {
+  color: var(--editorial-copy);
+  font-size: 17px;
+  line-height: 1.65;
+}
+.editorial-trust-bottom {
+  margin-top: 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+}
+.editorial-trust-bottom p {
+  font-size: 16px;
+}
+.editorial-home .editorial-trust-bottom .directional-link {
+  margin: 0;
+}
+.editorial-integrations {
+  background: var(--editorial-surface);
+}
+.editorial-integrations-layout {
+  display: grid;
+  grid-template-columns: 0.85fr 1.15fr;
+  gap: 80px;
+}
+.editorial-home .integration-ledger-row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  column-gap: 20px;
+  row-gap: 12px;
+  padding: 22px 0;
+  border-color: var(--editorial-line);
+}
+.editorial-home .integration-ledger-row > div span {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--editorial-copy);
+}
+.editorial-home .integration-ledger-row > div strong {
+  font-size: 18px;
+}
+.editorial-home .integration-status {
+  color: var(--editorial-copy);
+  font-size: 11px;
+  white-space: normal;
+  max-width: 9ch;
+}
+.editorial-home .launch-pricing {
+  background: var(--editorial-page);
+}
+.editorial-home .launch-pricing h2 {
+  max-width: 19ch;
+}
+.editorial-home .launch-pricing h3 {
+  font-size: 28px;
+}
+.editorial-home .launch-pricing article {
+  padding-top: 32px;
+}
+.editorial-home .launch-pricing p:not(.launch-fine) {
+  font-size: 17px;
+}
+.editorial-home .launch-price {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 56px;
+  letter-spacing: -0.04em;
+}
+.editorial-home .launch-price small {
+  font-size: 16px;
+  letter-spacing: normal;
+  white-space: nowrap;
+}
+.editorial-home .launch-pricing a {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+.editorial-home .launch-fine a {
+  display: inline;
+}
+.editorial-final {
+  background: var(--editorial-tint);
+}
+.editorial-final h2 {
+  max-width: 24ch;
+}
+.editorial-final p:not(.editorial-label) {
+  color: var(--editorial-copy);
+  font-size: 20px;
+  line-height: 1.65;
+  margin: 28px 0;
+}
+.editorial-home .editorial-final .story-actions {
+  align-items: center;
+  gap: 28px;
+}
+.editorial-home .editorial-final .directional-link {
+  margin: 0;
+}
+.knowledge-public-site .public-nav,
+.knowledge-public-site .public-nav.is-scrolled,
+.knowledge-public-site .public-mobile-menu {
+  background: var(--editorial-page) !important;
+  border-color: var(--editorial-line) !important;
+  box-shadow: none;
+}
+.public-nav .nav-link {
+  color: var(--editorial-copy);
+  font-size: 14px;
+}
+.public-nav .nav-link::after {
+  display: none;
+}
+.public-nav .button {
+  border-radius: 8px;
+  min-height: 44px;
+}
+.knowledge-public-site .editorial-footer {
+  background: var(--editorial-page) !important;
+  padding: 64px 0 32px;
+  border-color: var(--editorial-line) !important;
+}
+.editorial-footer-brand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  padding-bottom: 48px;
+  border-bottom: 1px solid var(--editorial-line);
+}
+.editorial-footer-brand .brand-wordmark {
+  width: 240px;
+  height: 71px;
+}
+.editorial-footer-brand p {
+  font-size: 24px;
+  line-height: 1.4;
+  letter-spacing: -0.025em;
+  color: var(--editorial-copy);
+}
+.editorial-footer .launch-footer {
+  grid-template-columns: repeat(4, 1fr);
+  padding-top: 40px;
+  gap: 32px;
+}
+.editorial-footer nav strong {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--editorial-copy);
+}
+.editorial-footer nav a {
+  color: var(--editorial-ink);
+  font-size: 15px;
+}
+.editorial-footer .launch-footer-note {
+  margin-top: 16px;
+  padding-top: 24px;
+  border-top: 1px solid var(--editorial-line);
+}
+.editorial-home.story-reveal-enabled [data-story-reveal] {
+  transition:
+    opacity 400ms ease,
+    transform 400ms ease;
+  transform: translateY(16px);
+}
+.editorial-home.story-reveal-enabled [data-story-reveal][data-visible="true"] {
+  transform: none;
+}
+.editorial-flow[data-visible="true"] path {
+  animation: editorial-path 650ms ease backwards;
+}
+@keyframes editorial-path {
+  from {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 0;
+  }
+}
+@media (max-width: 1100px) {
+  .editorial-home .story-shell {
+    width: calc(100% - 64px);
+  }
+  .editorial-hero-layout {
+    gap: 36px;
+  }
+  .editorial-feature {
+    padding: 40px;
+  }
+  .editorial-people-layout,
+  .editorial-update-layout,
+  .editorial-integrations-layout {
+    gap: 48px;
+  }
+}
+@media (max-width: 900px) {
+  .editorial-hero-layout {
+    grid-template-columns: 1fr;
+    gap: 48px;
+  }
+  .knowledge-public-site .editorial-home .knowledge-hero-heading {
+    font-size: 72px;
+    max-width: 14ch;
+  }
+  .editorial-hero-copy {
+    max-width: 640px;
+  }
+  .editorial-home #product {
+    width: 100%;
+    max-width: 640px;
+  }
+  .editorial-hero-baseline {
+    margin-top: 40px;
+  }
+  .editorial-panels {
+    gap: 16px;
+  }
+  .editorial-feature {
+    padding: 32px;
+  }
+  .editorial-feature > p {
+    font-size: 19px;
+  }
+  .editorial-flow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 32px;
+  }
+  .editorial-people-layout,
+  .editorial-update-layout,
+  .editorial-integrations-layout {
+    grid-template-columns: 1fr;
+  }
+  .editorial-people-layout {
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+  }
+  .editorial-trust-bottom {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .editorial-trust-rows {
+    gap: 28px;
+  }
+}
+@media (max-width: 600px) {
+  .editorial-home .story-shell {
+    width: calc(100% - 40px);
+  }
+  .knowledge-public-site .editorial-home > section {
+    padding-block: 52px;
+  }
+  .knowledge-public-site .editorial-home > .editorial-hero {
+    padding-top: 112px;
+    padding-bottom: 0;
+  }
+  .knowledge-public-site .editorial-home .knowledge-hero-heading {
+    font-size: clamp(40px, 10.9vw, 48px);
+    max-width: 12ch;
+  }
+  .editorial-hero-subhead {
+    margin-top: 20px;
+  }
+  .knowledge-public-site
+    .editorial-home
+    :is(.knowledge-rotator, .knowledge-static) {
+    font-size: 28px;
+    line-height: 1.2;
+  }
+  .editorial-home .editorial-lede {
+    font-size: 18px;
+    line-height: 1.6;
+  }
+  .editorial-home .story-button {
+    padding: 14px 18px;
+    font-size: 14px;
+  }
+  .editorial-hero-baseline {
+    flex-direction: column;
+    gap: 4px;
+    padding-block: 20px;
+    margin-top: 32px;
+  }
+  .editorial-hero-baseline > span {
+    font-size: 13px;
+  }
+  .editorial-home .editorial-demo > header {
+    padding-inline: 20px;
+  }
+  .editorial-home .shared-policy {
+    padding: 20px 20px 0;
+  }
+  .editorial-home .shared-policy p {
+    font-size: 16px;
+  }
+  .editorial-home .shared-consumers {
+    padding-inline: 16px;
+  }
+  .editorial-home .shared-answer-stack {
+    padding: 16px 20px 24px;
+  }
+  .editorial-home .shared-answer-stack h3 {
+    font-size: 24px;
+  }
+  .editorial-home .editorial-demo > footer {
+    padding-inline: 20px;
+  }
+  .editorial-panels {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .editorial-feature {
+    padding: 32px 28px;
+  }
+  .editorial-home .editorial-feature h2 {
+    font-size: 44px;
+    max-width: 8ch;
+  }
+  .editorial-feature > p {
+    font-size: 19px;
+    margin: 24px 0 28px;
+  }
+  .editorial-home h2 {
+    font-size: 36px;
+    line-height: 1.08;
+  }
+  .editorial-home
+    :is(
+      header > p:not(.editorial-label),
+      .editorial-people-layout > div > p:not(.editorial-label)
+    ) {
+    font-size: 18px;
+    margin-top: 20px;
+  }
+  .editorial-home .editorial-label {
+    font-size: 11px;
+    margin-bottom: 18px;
+  }
+  .editorial-flow {
+    grid-template-columns: 1fr;
+    gap: 20px;
+    margin-top: 36px;
+  }
+  .editorial-flow li {
+    position: relative;
+    grid-template-columns: 28px 1fr;
+    grid-template-rows: auto auto auto;
+    column-gap: 18px;
+    row-gap: 8px;
+    padding-bottom: 16px;
+  }
+  .flow-step-number {
+    border: 0;
+    padding-top: 7px;
+    grid-row: 1/3;
+  }
+  .editorial-flow h3 {
+    font-size: 24px;
+    max-width: none;
+  }
+  .editorial-flow p {
+    grid-column: 2;
+  }
+  .editorial-flow-path {
+    grid-column: 2;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 8px;
+  }
+  .editorial-flow-path svg {
+    width: 52px;
+    height: 24px;
+    transform: rotate(90deg);
+    order: -1;
+    margin: 12px 0;
+  }
+  .editorial-people-layout {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  .editorial-home .editorial-people .editorial-image {
+    order: 2;
+  }
+  .editorial-update-layout,
+  .editorial-integrations-layout {
+    gap: 40px;
+  }
+  .editorial-trust-rows {
+    grid-template-columns: 1fr;
+    gap: 28px;
+    margin-top: 32px;
+  }
+  .editorial-trust-rows > div {
+    padding-top: 20px;
+  }
+  .editorial-home .integration-ledger-row {
+    grid-template-columns: 44px minmax(0, 1fr);
+    column-gap: 16px;
+    row-gap: 8px;
+  }
+  .editorial-home .integration-status {
+    grid-column: 2;
+    max-width: none;
+  }
+  .editorial-footer-brand {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 24px;
+    padding-bottom: 32px;
+  }
+  .editorial-footer-brand .brand-wordmark {
+    width: 200px;
+    height: 59px;
+  }
+  .editorial-footer-brand p {
+    font-size: 21px;
+  }
+  .editorial-footer .launch-footer {
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .editorial-home .knowledge-rotator,
+  .editorial-home .knowledge-motion-control {
+    display: none;
+  }
+  .editorial-home .knowledge-static {
+    display: block;
+  }
+  .editorial-home.story-reveal-enabled [data-story-reveal] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .editorial-home .editorial-flow path,
+  .editorial-home .shared-answer-stack article,
+  .editorial-home .directional-arrow {
+    animation: none;
+    transition: none;
+    transform: none;
+  }
+}
+
+/* Secondary public surfaces share the same identity without changing account UI. */
+.knowledge-public-site .pricing-experience {
+  --opryn-line: var(--editorial-line);
+  --opryn-blue-surface: var(--editorial-secondary);
+  --opryn-blue: var(--editorial-brand);
+}
+.knowledge-public-site
+  :is(.public-info-page, .pricing-experience)
+  :is(a, button):focus-visible,
+.legal-document :is(a, button):focus-visible {
+  outline: 2px solid var(--editorial-deep);
+  outline-offset: 4px;
+}
+.knowledge-public-site .pricing-plan:hover {
+  transform: translateY(-1px);
+  box-shadow: none;
+}
+.knowledge-public-site .pricing-value-flow {
+  color: var(--editorial-copy);
+}
+.knowledge-public-site .pricing-value-flow .opryn-connector {
+  color: var(--editorial-brand);
+}
+.knowledge-public-site .public-nav > div > button {
+  color: var(--editorial-deep);
+  background: var(--editorial-surface);
+  border-color: var(--editorial-line);
+}
+.knowledge-public-site .integration-ledger-row:hover {
+  transform: translateX(2px);
+  background: var(--editorial-active);
+}
+.knowledge-public-site .editorial-trust-rows > div:first-child h3 {
+  color: var(--editorial-success);
+}
+.knowledge-public-site .editorial-trust-rows > div:nth-child(2) h3 {
+  color: var(--editorial-review);
+}
+
+.knowledge-public-site .editorial-hero {
+  background: var(--editorial-page);
+  border-color: var(--editorial-line);
+}
+.knowledge-public-site .editorial-home .distribution-path {
+  stroke: var(--editorial-brand);
+}
+.legal-document#top {
+  --ink: var(--editorial-ink);
+  --muted: var(--editorial-copy);
+  --blue: var(--editorial-brand);
+  --blue-dark: var(--editorial-deep);
+  --line: var(--editorial-line);
+  background: var(--editorial-page) !important;
+}
+.legal-document .legal-nav {
+  background: var(--editorial-page) !important;
+  border-color: var(--editorial-line) !important;
+}
+.legal-document .legal-copy {
+  color: var(--editorial-copy);
+}
+.legal-document .legal-copy a {
+  color: var(--editorial-deep);
+  text-decoration-color: currentColor;
+}
+/* Small slate text uses the deeper shade on tinted surfaces (AA contrast). */
+.knowledge-public-site .editorial-home .editorial-demo > footer,
+.knowledge-public-site
+  .editorial-home
+  .shared-consumers
+  button[aria-pressed="true"],
+.knowledge-public-site .editorial-feature-sage .directional-link,
+.knowledge-public-site .editorial-final .directional-link {
+  color: var(--editorial-deep);
+}
+.knowledge-public-site .editorial-update-source > span {
+  color: var(--editorial-success);
+}

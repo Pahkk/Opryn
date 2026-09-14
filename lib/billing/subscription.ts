@@ -1,4 +1,5 @@
 import "server-only";
+import { billingBoundary } from "./access";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
@@ -18,6 +19,8 @@ export type OrganizationPlan = {
   stripeCustomerId: string | null;
   stripeSubscriptionId: string | null;
   trialUsed: boolean;
+  trialEnd: string | null;
+  activationCompletedAt: string | null;
 };
 
 const premiumAccessStatuses = new Set(["active", "trialing"]);
@@ -29,13 +32,15 @@ export async function getOrganizationPlan(
   const { data, error } = await supabase
     .from("organization_subscriptions")
     .select(
-      "plan,status,billing_interval,current_period_end,cancel_at_period_end,stripe_customer_id,stripe_subscription_id,trial_used",
+      "plan,status,billing_interval,current_period_end,cancel_at_period_end,stripe_customer_id,stripe_subscription_id,trial_used,trial_end,activation_completed_at",
     )
     .eq("organization_id", organizationId)
     .maybeSingle();
   if (error) throw error;
   const subscribedPlan: PlanId = data?.plan === "premium" ? "premium" : "core";
-  const status = data?.status ?? "active";
+  const status = data?.stripe_subscription_id
+    ? (data.status ?? "incomplete")
+    : "not_subscribed";
   return {
     plan:
       subscribedPlan === "premium" && premiumAccessStatuses.has(status)
@@ -49,6 +54,8 @@ export async function getOrganizationPlan(
     stripeCustomerId: data?.stripe_customer_id ?? null,
     stripeSubscriptionId: data?.stripe_subscription_id ?? null,
     trialUsed: data?.trial_used ?? false,
+    trialEnd: data?.trial_end ?? null,
+    activationCompletedAt: data?.activation_completed_at ?? null,
   };
 }
 
@@ -68,6 +75,10 @@ export async function requireFeature(
   feature: PlanFeature,
 ) {
   const subscription = await getOrganizationPlan(supabase, organizationId);
+  if (await billingBoundary(supabase, organizationId, false))
+    throw new Error(
+      "An active workspace plan is required for this connection.",
+    );
   if (!hasFeature(subscription.plan, feature))
     throw new FeatureUnavailableError(feature);
   return subscription;

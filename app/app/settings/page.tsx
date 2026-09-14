@@ -1,55 +1,46 @@
-import { PageHeading } from "@/components/app/page-heading";
-import { BillingSettings } from "@/components/app/billing-settings";
-import { SettingsForm } from "@/components/app/settings-form";
-import { requireAdminContext } from "@/lib/app-context";
-import { billingConfigured } from "@/lib/billing/stripe";
-import { getOrganizationPlan } from "@/lib/billing/subscription";
-import { createClient } from "@/lib/supabase/server";
-export default async function SettingsPage({
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { ArrowRight } from "lucide-react";
+import { requireAppContext } from "@/lib/app-context";
+import { settingsSections } from "@/lib/settings-navigation";
+export default async function Page({
   searchParams,
 }: {
   searchParams: Promise<{ billing?: string }>;
 }) {
-  const context = await requireAdminContext();
-  const supabase = await createClient();
-  const [{ data: settings }, subscription, query] = await Promise.all([
-    supabase
-      .from("organization_settings")
-      .select("employees_can_ask,allow_escalations,confidence_threshold")
-      .eq("organization_id", context.organization.id)
-      .single(),
-    getOrganizationPlan(supabase, context.organization.id),
-    searchParams,
-  ]);
+  const context = await requireAppContext();
+  const query = await searchParams;
+  if (query.billing)
+    redirect(
+      `/app/settings/billing?billing=${encodeURIComponent(query.billing)}`,
+    );
   return (
     <>
-      <PageHeading
-        title="Settings"
-        description="Manage your business and how Opryn handles company questions."
-      />
-      <div className="mx-auto max-w-3xl space-y-5">
-        <BillingSettings
-          plan={subscription.plan}
-          interval={subscription.billingInterval}
-          status={subscription.status}
-          periodEnd={subscription.currentPeriodEnd}
-          cancelAtPeriodEnd={subscription.cancelAtPeriodEnd}
-          hasStripeCustomer={Boolean(subscription.stripeCustomerId)}
-          billingReady={billingConfigured()}
-          success={query.billing === "success"}
-        />
-        <SettingsForm
-          initial={{
-            name: context.organization.name,
-            industry: context.organization.industry,
-            employeeCount: context.organization.employeeCount,
-            employeesCanAsk: settings?.employees_can_ask ?? true,
-            allowEscalations: settings?.allow_escalations ?? true,
-            confidenceThreshold: settings?.confidence_threshold ?? 0.72,
-          }}
-          isOwner={context.membership.permissionLevel === "owner"}
-        />
-      </div>
+      {["account", "workspace"].map((group) => {
+        const sections = settingsSections(context.isAdmin).filter(
+          (item) => item.group === group,
+        );
+        return sections.length ? (
+          <section key={group} className="settings-section">
+            <h2 className="text-base font-semibold">
+              {group === "account" ? "Your account" : context.organization.name}
+            </h2>
+            {sections.map((item) => (
+              <Link
+                key={item.id}
+                href={`/app/settings/${item.id}`}
+                className="settings-index-link"
+              >
+                <span>
+                  <strong>{item.title}</strong>
+                  <small>{item.description}</small>
+                </span>
+                <ArrowRight size={18} />
+              </Link>
+            ))}
+          </section>
+        ) : null;
+      })}
     </>
   );
 }

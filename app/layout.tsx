@@ -7,18 +7,20 @@ const mono = Geist_Mono({ variable: "--font-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://opryn.app"),
-  title: "Opryn — Build a Business That Doesn't Depend on You",
+  title: "Opryn — Teach Your Business Once. Knowledge for People and AI.",
   description:
-    "Opryn learns how you run your business, trains the people you hire, and answers the questions that used to interrupt you.",
+    "One approved source of company knowledge for employees, new hires, ChatGPT, Claude, and the AI tools you already use.",
   openGraph: {
-    title: "Opryn — Build a Business That Doesn't Depend on You",
+    title: "Opryn — Teach Your Business Once. Knowledge for People and AI.",
     description:
-      "Turn how you work into the systems your team needs to run the business without you.",
+      "Teach Opryn once. Give your team and connected tools trusted company answers without constant owner interruptions.",
     type: "website",
   },
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default function RootLayout({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
       <body className={`${geist.variable} ${mono.variable}`}>{children}</body>

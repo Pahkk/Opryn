@@ -1,13 +1,19 @@
-import { CaptureProcess } from "@/components/app/capture-process";
+import { TeachWorkspace } from "@/components/app/teach-workspace";
 import { PageHeading } from "@/components/app/page-heading";
 import { requireAdminContext } from "@/lib/app-context";
 import { safeAppReturnPath } from "@/lib/return-path";
 import { getOrganizationPlan } from "@/lib/billing/subscription";
 import { createClient } from "@/lib/supabase/server";
+import { summarizeQuestionTitle } from "@/lib/question-title";
 export default async function NewProcessPage({
   searchParams,
 }: {
-  searchParams: Promise<{ recommendation?: string; returnTo?: string }>;
+  searchParams: Promise<{
+    recommendation?: string;
+    returnTo?: string;
+    source?: string;
+    prompt?: string;
+  }>;
 }) {
   const context = await requireAdminContext();
   const supabase = await createClient();
@@ -15,7 +21,12 @@ export default async function NewProcessPage({
     supabase,
     context.organization.id,
   );
-  const { recommendation: recommendationId, returnTo } = await searchParams;
+  const {
+    recommendation: recommendationId,
+    returnTo,
+    source,
+    prompt,
+  } = await searchParams;
   const returnPath = safeAppReturnPath(
     returnTo,
     recommendationId ? "/app/getting-started" : "/app/processes",
@@ -38,13 +49,17 @@ export default async function NewProcessPage({
   return (
     <>
       <PageHeading
-        eyebrow="Capture process"
-        title="Don't write a manual. Just do your job."
-        description="Upload a recording or explain the work naturally. Opryn will prepare a structured process for you to review before your team sees it."
+        eyebrow="Teach Opryn"
+        title="Teach Opryn."
+        description="Start with information you already have. Opryn prepares findings for you to review."
       />
-      <CaptureProcess
+      <TeachWorkspace
+        organizationId={context.organization.id}
+        organizationName={context.organization.name}
+        initialSource={source}
         roles={roles ?? []}
         plan={subscription.plan}
+        key={source ?? "text"}
         returnTo={returnPath}
         initial={
           recommendation
@@ -54,7 +69,14 @@ export default async function NewProcessPage({
                 coachingPrompt: recommendation.suggested_prompt,
                 recommendationId: recommendation.id,
               }
-            : undefined
+            : prompt
+              ? {
+                  title: summarizeQuestionTitle(prompt),
+                  description:
+                    "Your team has asked about this. Explain the answer once so Opryn can help next time.",
+                  coachingPrompt: prompt.slice(0, 4000),
+                }
+              : undefined
         }
       />
     </>

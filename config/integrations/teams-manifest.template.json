@@ -1,0 +1,29 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.17",
+  "version": "1.0.0",
+  "id": "MICROSOFT_CLIENT_ID",
+  "packageName": "app.opryn.teams",
+  "developer": {
+    "name": "Opryn",
+    "websiteUrl": "https://www.opryn.app",
+    "privacyUrl": "https://www.opryn.app/privacy",
+    "termsOfUseUrl": "https://www.opryn.app/terms"
+  },
+  "name": { "short": "Opryn", "full": "Opryn Everywhere" },
+  "description": {
+    "short": "Ask Opryn from Microsoft Teams.",
+    "full": "Get answers from your company's approved Opryn knowledge and route unknown questions to the right expert."
+  },
+  "accentColor": "#146BFF",
+  "bots": [
+    {
+      "botId": "MICROSOFT_CLIENT_ID",
+      "scopes": ["personal", "team", "groupChat"],
+      "supportsFiles": false,
+      "isNotificationOnly": false
+    }
+  ],
+  "permissions": ["identity"],
+  "validDomains": ["www.opryn.app"]
+}

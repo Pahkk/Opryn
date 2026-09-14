@@ -1,20 +1,24 @@
 "use client";
 
 import NextImage from "next/image";
-import Link from "next/link";
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, useRef, useState } from "react";
 import {
   ArrowUp,
-  BookOpen,
-  CheckCircle2,
   ChevronRight,
   CircleAlert,
   ImagePlus,
   LoaderCircle,
   Send,
+  TriangleAlert,
   X,
 } from "lucide-react";
 import { showAppToast } from "@/lib/client-toast";
+import { OprynArc } from "@/components/opryn/opryn-arc";
+import { OprynSourceChip } from "@/components/opryn/opryn-source-chip";
+import { OprynStatus } from "@/components/opryn/opryn-status";
+import { AnswerText } from "@/components/app/answer-text";
+import { AnswerSources } from "@/components/app/answer-sources";
+import { AskIcon, UnknownIcon } from "@/components/opryn-icons/opryn-icons";
 
 type Prompt = { category: string; text: string };
 type AttachedImage = {
@@ -30,10 +34,18 @@ type Message = {
   headline?: string;
   steps?: string[];
   importantNote?: string;
-  type?: "answer" | "unknown";
+  type?: "answer" | "unknown" | "error";
   questionId?: string;
   canEscalate?: boolean;
   sent?: boolean;
+  expertName?: string;
+  critical?: boolean;
+  requiresApproval?: boolean;
+  approvalReason?: string;
+  related?: {
+    content: string;
+    source: { id: string; label: string; href: string | null } | null;
+  } | null;
   imageUrl?: string;
   sources?: Array<{
     id: string;
@@ -59,45 +71,23 @@ export function AskOpryn({
   const [imageBusy, setImageBusy] = useState(false);
   const [imageError, setImageError] = useState("");
   const [promptPage, setPromptPage] = useState(0);
-  const [promptsVisible, setPromptsVisible] = useState(true);
-  const promptTimer = useRef<number | null>(null);
+  const [conversationId] = useState(() => crypto.randomUUID());
   const inputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const pages = Math.max(1, Math.ceil(prompts.length / 4));
-  const visiblePrompts = Array.from({ length: 4 }, (_, index) =>
-    prompts.length
-      ? prompts[(promptPage * 4 + index) % prompts.length]
-      : undefined,
-  ).filter((prompt): prompt is Prompt => Boolean(prompt));
-
-  useEffect(() => {
-    if (pages <= 1) return;
-    const interval = window.setInterval(() => {
-      setPromptsVisible(false);
-      promptTimer.current = window.setTimeout(() => {
-        setPromptPage((current) => (current + 1) % pages);
-        setPromptsVisible(true);
-      }, 280);
-    }, 5000);
-    return () => {
-      window.clearInterval(interval);
-      if (promptTimer.current) window.clearTimeout(promptTimer.current);
-    };
-  }, [pages]);
+  const visiblePrompts = prompts.slice(promptPage * 4, promptPage * 4 + 4);
 
   function changePromptPage(index: number) {
-    if (index === promptPage) return;
-    if (promptTimer.current) window.clearTimeout(promptTimer.current);
-    setPromptsVisible(false);
-    promptTimer.current = window.setTimeout(() => {
-      setPromptPage(index);
-      setPromptsVisible(true);
-    }, 280);
+    setPromptPage(index);
   }
 
   async function ask(event?: FormEvent, prompt?: string) {
     event?.preventDefault();
     const selectedImage = image;
+    const history = messages.slice(-6).map((message) => ({
+      role: message.role,
+      text: message.text.slice(0, 1200),
+    }));
     const value =
       (prompt ?? question).trim() ||
       (selectedImage
@@ -122,7 +112,12 @@ export function AskOpryn({
       const response = await fetch("/api/ask", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ question: value, image: selectedImage }),
+        body: JSON.stringify({
+          question: value,
+          image: selectedImage,
+          conversationId,
+          history,
+        }),
       });
       const body = await response.json();
       if (!response.ok)
@@ -137,6 +132,8 @@ export function AskOpryn({
               text: body.answer,
               steps: body.steps,
               importantNote: body.importantNote,
+              requiresApproval: body.requiresApproval,
+              approvalReason: body.approvalReason,
               type: "answer",
               questionId: body.questionId,
               sources: body.sources,
@@ -144,18 +141,28 @@ export function AskOpryn({
           : {
               id: crypto.randomUUID(),
               role: "opryn",
-              text: "I couldn't find enough approved company knowledge to answer safely.",
+              text: body.closest
+                ? "I found related guidance, but not an approved answer to this situation."
+                : "I don't have an approved answer to this situation yet.",
               type: "unknown",
               questionId: body.questionId,
               canEscalate: body.canEscalate,
+              expertName: body.expert?.name,
+              critical: body.critical,
+              related: body.closest
+                ? { content: body.closest.content, source: body.closest.source }
+                : null,
             },
       ]);
     } catch (caught) {
+      setQuestion(value);
+      setImage(selectedImage);
       setMessages((current) => [
         ...current,
         {
           id: crypto.randomUUID(),
           role: "opryn",
+          type: "error",
           text:
             caught instanceof Error ? caught.message : "Something went wrong.",
         },
@@ -188,9 +195,9 @@ export function AskOpryn({
     const response = await fetch(`/api/questions/${id}/escalate`, {
       method: "POST",
     });
-    if (!response.ok) return;
+    if (!response.ok) throw new Error();
     showAppToast(
-      "Question sent to the owner!",
+      "Question sent!",
       "You’ll get an answer here after they respond.",
     );
     setMessages((current) =>
@@ -201,75 +208,73 @@ export function AskOpryn({
   }
 
   return (
-    <div className="mx-auto flex min-h-[calc(100vh-180px)] max-w-5xl flex-col overflow-hidden rounded-2xl border border-[#dfe5ed] bg-white shadow-[0_18px_50px_rgba(24,39,75,.06)]">
-      <div className="flex-1 overflow-y-auto bg-[linear-gradient(180deg,#fbfcfe_0%,#fff_28%)] p-4 sm:p-7">
+    <div
+      className={`ask-workspace mx-auto flex max-w-5xl flex-col overflow-hidden rounded-[24px] border border-[var(--opryn-line)] bg-white shadow-[var(--opryn-shadow-sm)] ${messages.length ? "has-messages" : ""}`}
+    >
+      <div className="flex-1 overflow-y-auto bg-white p-4 sm:p-7">
         {!messages.length ? (
-          <div className="flex min-h-[500px] flex-col items-center justify-center text-center">
-            <span className="grid size-14 place-items-center rounded-2xl bg-[#3158d8] text-white shadow-[0_14px_35px_rgba(49,88,216,.25)]">
-              <BookOpen className="size-6" />
+          <div className="ask-empty flex flex-col">
+            <span className="grid size-12 place-items-center rounded-xl border border-[#d8e3f4] bg-[var(--opryn-blue-surface)] text-[var(--opryn-blue)]">
+              <AskIcon size={22} />
             </span>
-            <p className="mt-5 text-[11px] font-bold uppercase tracking-[.12em] text-[#3158d8]">
+            <p className="mt-5 text-[11px] font-semibold tracking-[.07em] text-[var(--opryn-blue)]">
               Your company knowledge
             </p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-[-.035em] sm:text-3xl">
-              What do you need to know?
+            <h2 className="mt-2 text-2xl font-semibold tracking-[-.04em] text-[var(--opryn-navy)] sm:text-3xl">
+              Start with what Opryn knows.
             </h2>
-            <p className="mt-2 max-w-lg text-sm leading-6 text-[#718095]">
-              Ask about a process, decision, approval, role, exception, or what
-              to learn next. Opryn answers from approved knowledge and shows the
-              source.
+            <p className="mt-2 max-w-lg text-sm leading-6 text-[var(--opryn-muted)]">
+              Ask how your company handles something. Opryn gives you the
+              approved answer and shows where it came from.
             </p>
-            {hasKnowledge ? (
+            {hasKnowledge && prompts.length ? (
               <div className="mt-8 w-full max-w-3xl">
                 <div className="mb-3 flex items-center justify-between">
-                  <p className="text-left text-xs font-semibold text-[#718095]">
-                    Questions picked for your company
+                  <p className="text-left text-xs font-semibold text-[var(--opryn-muted)]">
+                    Start with approved knowledge
                   </p>
-                  <div className="flex gap-1" aria-label="Question set">
-                    {Array.from({ length: pages }, (_, index) => (
-                      <button
-                        key={index}
-                        onClick={() => changePromptPage(index)}
-                        aria-label={`Show question set ${index + 1}`}
-                        className={`h-1.5 rounded-full transition-all ${index === promptPage ? "w-5 bg-[#3158d8]" : "w-1.5 bg-[#ccd3de]"}`}
-                      />
-                    ))}
-                  </div>
+                  {pages > 1 ? (
+                    <div className="flex gap-1" aria-label="Question set">
+                      {Array.from({ length: pages }, (_, index) => (
+                        <button
+                          key={index}
+                          onClick={() => changePromptPage(index)}
+                          aria-label={`Show question set ${index + 1}`}
+                          aria-pressed={index === promptPage}
+                          className={`grid size-11 place-items-center rounded-xl text-sm ${index === promptPage ? "bg-[var(--opryn-blue-surface)] text-[var(--opryn-blue)]" : "text-[var(--opryn-muted)]"}`}
+                        >
+                          {index + 1}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
-                <div
-                  aria-live="polite"
-                  className={`grid min-h-[292px] content-start gap-2 transition-all duration-300 ease-out sm:min-h-[138px] sm:grid-cols-2 ${promptsVisible ? "translate-y-0 opacity-100" : "translate-y-1 opacity-0"}`}
-                >
+                <div className="ask-suggestions grid content-start gap-2 sm:grid-cols-2">
                   {visiblePrompts.map((prompt) => (
                     <button
                       key={`${prompt.category}-${prompt.text}`}
                       onClick={() => void ask(undefined, prompt.text)}
-                      className="group min-h-[67px] rounded-xl border border-[#e0e5ec] bg-white p-3.5 text-left transition hover:-translate-y-0.5 hover:border-[#9aace4] hover:bg-[#f7f9ff] hover:shadow-sm"
+                      className="group min-h-[67px] border-b border-[var(--opryn-line)] p-3.5 text-left hover:bg-[var(--opryn-blue-surface)] sm:odd:border-r"
                     >
-                      <span className="text-[10px] font-bold uppercase tracking-[.09em] text-[#8290a4]">
+                      <span className="text-[10px] font-semibold tracking-[.06em] text-[var(--opryn-faint)]">
                         {prompt.category}
                       </span>
                       <span className="mt-1.5 flex items-start justify-between gap-3 text-sm font-medium leading-5 text-[#3f4d63]">
                         {prompt.text}
-                        <ChevronRight className="mt-0.5 size-4 shrink-0 text-[#9ba6b5] transition group-hover:translate-x-0.5 group-hover:text-[#3158d8]" />
+                        <ChevronRight className="mt-0.5 size-4 shrink-0 text-[#9ba6b5] group-hover:translate-x-0.5 group-hover:text-[var(--opryn-blue)]" />
                       </span>
                     </button>
                   ))}
                 </div>
-                {pages > 1 ? (
-                  <p className="mt-3 text-[10px] text-[#9aa3b0]">
-                    New ideas appear every 5 seconds.
-                  </p>
-                ) : null}
               </div>
-            ) : (
-              <div className="mt-7 rounded-xl border border-[#eddfbd] bg-[#fffaf0] p-4 text-sm text-[#81631e]">
+            ) : !hasKnowledge ? (
+              <div className="mt-7 rounded-xl border border-[#d9d4e7] bg-[var(--opryn-amber-surface)] p-4 text-sm text-[#645b87]">
                 <strong>Opryn needs some company knowledge first.</strong>
                 <br />
-                Add or approve a process before employees start asking
+                Add or accept useful information before employees start asking
                 questions.
               </div>
-            )}
+            ) : null}
           </div>
         ) : (
           <div className="mx-auto max-w-4xl space-y-7">
@@ -277,7 +282,7 @@ export function AskOpryn({
               message.role === "user" ? (
                 <div
                   key={message.id}
-                  className="ml-auto max-w-[86%] overflow-hidden rounded-2xl rounded-br-md bg-[#3158d8] text-sm leading-6 text-white shadow-[0_8px_20px_rgba(49,88,216,.16)]"
+                  className="ml-auto max-w-[86%] overflow-hidden border-r-2 border-[var(--opryn-blue)] bg-[var(--opryn-blue-surface)] text-sm leading-6 text-[var(--opryn-navy)]"
                 >
                   {message.imageUrl ? (
                     <NextImage
@@ -289,8 +294,17 @@ export function AskOpryn({
                       className="max-h-72 w-full object-cover"
                     />
                   ) : null}
-                  <p className="px-4 py-3">{message.text}</p>
+                  <p className="px-4 py-3.5">{message.text}</p>
                 </div>
+              ) : message.type === "error" ? (
+                <p
+                  key={message.id}
+                  role="alert"
+                  className="rounded-xl border border-[#eed5d7] bg-[#fff4f4] p-4 text-sm leading-6 text-[#99424b]"
+                >
+                  {message.text} Your question is still in the input so you can
+                  retry.
+                </p>
               ) : (
                 <AnswerCard
                   key={message.id}
@@ -300,16 +314,16 @@ export function AskOpryn({
               ),
             )}
             {loading ? (
-              <div className="flex items-center gap-3 rounded-xl border border-[#e4e8ee] bg-[#fafbfd] p-4 text-sm text-[#718095]">
-                <span className="grid size-8 place-items-center rounded-lg bg-[#edf2ff] text-[#3158d8]">
+              <div className="opryn-thinking flex items-center gap-3 border-y border-[var(--opryn-line)] bg-[var(--opryn-blue-surface)] p-4 text-sm text-[var(--opryn-muted)]">
+                <span className="grid size-9 place-items-center text-[var(--opryn-blue)]">
                   <LoaderCircle className="size-4 animate-spin" />
                 </span>
                 <div>
                   <p className="font-medium text-[#48566c]">
-                    Checking company knowledge
+                    Checking approved company knowledge…
                   </p>
                   <p className="mt-0.5 text-xs">
-                    Finding the most relevant approved sources
+                    Checking approved processes and rules
                   </p>
                 </div>
               </div>
@@ -319,9 +333,9 @@ export function AskOpryn({
       </div>
       <form
         onSubmit={(event) => void ask(event)}
-        className="border-t border-[#e2e7ed] bg-white p-3 sm:p-4"
+        className="ask-composer border-t border-[var(--opryn-line)] bg-[#fbfcfd] p-3 sm:p-4"
       >
-        <div className="mx-auto max-w-4xl rounded-xl border border-[#cfd7e2] bg-white p-2 shadow-[0_4px_18px_rgba(24,39,75,.04)] focus-within:border-[#718ee7] focus-within:ring-4 focus-within:ring-[#3158d8]/10">
+        <div className="mx-auto max-w-4xl rounded-[13px] border border-[#c8d2df] bg-white p-2 shadow-[0_4px_18px_rgba(24,39,75,.04)] focus-within:border-[var(--opryn-blue)] focus-within:ring-4 focus-within:ring-[#146bff]/10">
           {image ? (
             <div className="mb-2 flex items-center gap-3 rounded-lg bg-[#f4f7fb] p-2 pr-3">
               <NextImage
@@ -377,16 +391,18 @@ export function AskOpryn({
             </button>
             <input
               ref={inputRef}
+              data-guide="ask.question"
+              aria-label="Your company question"
               type="text"
               value={question}
               onChange={(event) => setQuestion(event.target.value)}
-              placeholder="Ask Opryn or add a photo"
-              className="h-10 min-w-0 flex-1 bg-transparent px-1 text-sm outline-none"
+              placeholder="Ask how your company handles something..."
+              className="h-12 min-w-0 flex-1 bg-transparent px-1 text-base outline-none placeholder:text-[#9aa4b2]"
             />
             <button
               disabled={(!question.trim() && !image) || loading || imageBusy}
               aria-label="Ask Opryn"
-              className="grid size-10 shrink-0 place-items-center rounded-lg bg-[#3158d8] text-white transition hover:bg-[#2446b8] disabled:bg-[#c5ccda]"
+              className="grid size-10 shrink-0 place-items-center rounded-[8px] bg-[var(--opryn-blue)] text-white hover:bg-[var(--opryn-blue-hover)] disabled:bg-[#c5ccda]"
             >
               <ArrowUp className="size-4" />
             </button>
@@ -400,9 +416,8 @@ export function AskOpryn({
             {imageError}
           </p>
         ) : null}
-        <p className="mt-2 text-center text-[10px] text-[#909aa8]">
-          Opryn only answers from approved company knowledge. If it is not
-          documented, Opryn asks instead of guessing.
+        <p className="mt-3 text-center text-xs text-[var(--opryn-muted)]">
+          Grounded in approved company knowledge.
         </p>
       </form>
     </div>
@@ -481,49 +496,138 @@ function AnswerCard({
   onEscalate: (id: string) => Promise<void>;
 }) {
   const unknown = message.type === "unknown";
+  const [showDetails, setShowDetails] = useState(false);
+  const [feedback, setFeedback] = useState<"helpful" | "not_right" | null>(
+    null,
+  );
+  const [showReasons, setShowReasons] = useState(false);
+  const [feedbackError, setFeedbackError] = useState("");
+  const [feedbackBusy, setFeedbackBusy] = useState(false);
+
+  async function submitFeedback(
+    feedbackType: "helpful" | "not_right",
+    reason?: string,
+  ) {
+    if (!message.questionId || feedbackBusy) return;
+    setFeedbackBusy(true);
+    setFeedbackError("");
+    try {
+      const response = await fetch(
+        `/api/questions/${message.questionId}/feedback`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ feedbackType, reason }),
+        },
+      );
+      if (!response.ok) throw new Error("Feedback was not saved.");
+      setFeedback(feedbackType);
+      setShowReasons(false);
+      showAppToast(
+        feedbackType === "helpful"
+          ? "Thanks for the feedback."
+          : "Sent for review.",
+        feedbackType === "helpful"
+          ? "This helps Opryn understand what is useful."
+          : "Approved knowledge will not change until an owner or expert checks it.",
+      );
+    } catch {
+      setFeedbackError("Your feedback was not saved. Please try again.");
+    } finally {
+      setFeedbackBusy(false);
+    }
+  }
   return (
-    <div className="max-w-[94%]">
-      <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-[#3158d8]">
-        <span className="grid size-7 place-items-center rounded-lg bg-[#3158d8] text-[11px] font-bold text-white">
-          O
+    <div className="max-w-[96%]">
+      <div className="mb-3 flex items-center gap-2 text-xs font-semibold text-[var(--opryn-blue)]">
+        <span className="relative grid size-7 place-items-center">
+          <OprynArc
+            size={27}
+            progress={unknown ? 55 : 100}
+            state={unknown ? "unknown" : "approved"}
+          />
         </span>
-        Opryn
+        {unknown ? "Opryn needs help" : "Opryn answered"}
         {!unknown && message.type === "answer" ? (
-          <span className="inline-flex items-center gap-1 rounded-full bg-[#eaf7f1] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[.07em] text-[#177257]">
-            <CheckCircle2 className="size-3" /> Approved sources
-          </span>
+          <OprynStatus kind="approved" label="Based on approved knowledge" />
         ) : null}
       </div>
       <article
-        className={`overflow-hidden rounded-2xl rounded-tl-md border ${unknown ? "border-[#ead9ae] bg-[#fffdf7]" : "border-[#dfe5ed] bg-white shadow-[0_10px_30px_rgba(24,39,75,.05)]"}`}
+        className={`overflow-hidden rounded-[22px] border bg-white shadow-[0_6px_24px_rgba(25,52,86,.04)] ${unknown ? "border-[#ded8e9]" : "border-[#dce5f1]"}`}
       >
         <div className="p-5 sm:p-6">
           {unknown ? (
             <div className="flex items-start gap-3">
-              <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[#fff4d8] text-[#9a681b]">
-                <CircleAlert className="size-4" />
+              <span className="grid size-9 shrink-0 place-items-center text-[#9a681b]">
+                {message.critical ? (
+                  <TriangleAlert size={20} />
+                ) : (
+                  <UnknownIcon size={20} />
+                )}
               </span>
               <div>
                 <h3 className="font-semibold text-[#263348]">
-                  I don&apos;t know this yet.
+                  {message.critical
+                    ? "Owner guidance required."
+                    : "Opryn doesn't have an approved answer yet."}
                 </h3>
                 <p className="mt-1 text-sm leading-6 text-[#6a7484]">
-                  {message.text}
+                  {message.critical
+                    ? "Opryn won't guess about this important company policy."
+                    : message.text}
                 </p>
+                {message.related ? (
+                  <div className="mt-4 border-y border-[#e4e8ee] bg-[var(--opryn-blue-surface)] p-3.5">
+                    <p className="text-[10px] font-semibold tracking-[.06em] text-[#758195]">
+                      Related information
+                    </p>
+                    <p className="mt-2 text-sm leading-6 text-[#56647a]">
+                      {message.related.content}
+                    </p>
+                    {message.related.source ? (
+                      <div className="mt-3">
+                        <OprynSourceChip
+                          label={message.related.source.label}
+                          href={message.related.source.href}
+                        />
+                      </div>
+                    ) : null}
+                    <p className="mt-2 text-xs text-[#7b8798]">
+                      Opryn can confirm this part, but not the full answer.
+                    </p>
+                  </div>
+                ) : null}
               </div>
             </div>
           ) : (
             <>
-              <p className="text-[10px] font-bold uppercase tracking-[.1em] text-[#3158d8]">
-                Company answer
+              <p className="text-[10px] font-semibold tracking-[.07em] text-[var(--opryn-blue)]">
+                Answer
               </p>
-              <h3 className="mt-2 text-lg font-semibold tracking-[-.02em] text-[#263348]">
+              <h3 className="mt-2 text-xl font-semibold tracking-[-.025em] text-[var(--opryn-navy)]">
                 {message.headline || "Here’s what your company knowledge says"}
               </h3>
-              <p className="mt-3 text-sm leading-6 text-[#56647a]">
-                {message.text}
-              </p>
-              {message.steps?.length ? (
+              <AnswerText text={message.text} />
+              {message.requiresApproval && message.approvalReason ? (
+                <div className="mt-4 rounded-xl border border-[#d9d4e7] bg-[var(--opryn-amber-surface)] p-4">
+                  <p className="text-xs font-semibold text-[#645b87]">
+                    Approval needed
+                  </p>
+                  <p className="mt-1 text-sm leading-5 text-[#74613e]">
+                    {message.approvalReason}
+                  </p>
+                </div>
+              ) : null}
+              {message.steps?.length || message.importantNote ? (
+                <button
+                  type="button"
+                  onClick={() => setShowDetails((current) => !current)}
+                  className="mt-4 text-xs font-semibold text-[#3158d8] hover:underline"
+                >
+                  {showDetails ? "Hide details" : "Show details"}
+                </button>
+              ) : null}
+              {showDetails && message.steps?.length ? (
                 <div className="mt-5 rounded-xl bg-[#f7f9fc] p-4">
                   <p className="text-[10px] font-bold uppercase tracking-[.09em] text-[#758195]">
                     What to do
@@ -543,11 +647,11 @@ function AnswerCard({
                   </ol>
                 </div>
               ) : null}
-              {message.importantNote ? (
-                <div className="mt-4 flex gap-3 rounded-xl border border-[#eadfbe] bg-[#fffaf0] p-4">
+              {showDetails && message.importantNote ? (
+                <div className="mt-4 flex gap-3 rounded-xl border border-[#d9d4e7] bg-[var(--opryn-amber-surface)] p-4">
                   <CircleAlert className="mt-0.5 size-4 shrink-0 text-[#9a681b]" />
                   <div>
-                    <p className="text-xs font-semibold text-[#72511b]">
+                    <p className="text-xs font-semibold text-[#645b87]">
                       Important
                     </p>
                     <p className="mt-1 text-sm leading-5 text-[#74613e]">
@@ -562,41 +666,76 @@ function AnswerCard({
             <button
               disabled={message.sent}
               onClick={() => void onEscalate(message.questionId!)}
-              className="mt-5 inline-flex items-center gap-2 rounded-lg bg-[#3158d8] px-3.5 py-2 text-xs font-semibold text-white disabled:bg-[#7b8dcc]"
+              className="opryn-action mt-5 disabled:bg-[#7b8dcc]"
             >
-              {message.sent ? "Sent to owner" : "Ask Owner"}
+              {message.sent
+                ? `Sent to ${message.expertName || "owner"}`
+                : `Ask ${message.expertName || "Owner"}`}
               <Send className="size-3.5" />
             </button>
           ) : null}
         </div>
         {message.sources?.length ? (
-          <div className="border-t border-[#e1e6ed] bg-[#fafbfd] px-5 py-4 sm:px-6">
-            <p className="mb-2 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[.1em] text-[#758195]">
-              <BookOpen className="size-3.5" /> Sources used
-            </p>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {message.sources.map((source) =>
-                source.href ? (
-                  <Link
-                    key={source.id}
-                    href={source.href}
-                    className="group rounded-lg border border-[#e1e6ed] bg-white px-3 py-2.5 text-xs font-semibold text-[#3158d8] hover:border-[#aab9e8]"
-                  >
-                    <span className="flex items-center justify-between gap-2">
-                      {source.label}
-                      <ChevronRight className="size-3.5 transition group-hover:translate-x-0.5" />
-                    </span>
-                  </Link>
-                ) : (
-                  <span
-                    key={source.id}
-                    className="rounded-lg border border-[#e1e6ed] bg-white px-3 py-2.5 text-xs font-semibold text-[#3158d8]"
-                  >
-                    {source.label}
-                  </span>
-                ),
-              )}
-            </div>
+          <AnswerSources sources={message.sources} />
+        ) : null}
+        {!unknown && message.type === "answer" && message.questionId ? (
+          <div className="border-t border-[#e1e6ed] px-5 py-3 sm:px-6">
+            {feedbackError ? (
+              <p role="alert" className="mb-2 text-sm text-[#99424b]">
+                {feedbackError}
+              </p>
+            ) : null}
+            {feedback ? (
+              <p className="text-xs font-medium text-[#177257]">
+                {feedback === "helpful"
+                  ? "Marked helpful."
+                  : "Sent for review."}
+              </p>
+            ) : showReasons ? (
+              <div>
+                <p className="text-xs font-semibold text-[#536176]">
+                  What was wrong?
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {[
+                    ["outdated", "Outdated"],
+                    ["wrong_policy", "Wrong policy"],
+                    ["missing_information", "Missing information"],
+                    ["didnt_answer", "Didn't answer my question"],
+                    ["other", "Other"],
+                  ].map(([reason, label]) => (
+                    <button
+                      key={reason}
+                      type="button"
+                      onClick={() => void submitFeedback("not_right", reason)}
+                      className="min-h-9 rounded-lg border border-[#d8dfe8] bg-white px-3 text-xs font-medium text-[#536176] hover:border-[#9aace4]"
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-xs text-[#718095]">
+                <span>Was this useful?</span>
+                <button
+                  type="button"
+                  disabled={feedbackBusy}
+                  onClick={() => void submitFeedback("helpful")}
+                  className="min-h-11 rounded-lg border border-[#dfe5ed] px-3 font-medium hover:bg-[#f6f8fb]"
+                >
+                  👍 Helpful
+                </button>
+                <button
+                  type="button"
+                  disabled={feedbackBusy}
+                  onClick={() => void submitFeedback("not_right", "other")}
+                  className="min-h-11 rounded-lg border border-[#dfe5ed] px-3 font-medium hover:bg-[#f6f8fb]"
+                >
+                  👎 Not Right
+                </button>
+              </div>
+            )}
           </div>
         ) : null}
       </article>

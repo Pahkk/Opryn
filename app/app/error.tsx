@@ -1,5 +1,6 @@
 "use client";
-import { AlertTriangle } from "lucide-react";
+
+import { OprynArc } from "@/components/opryn/opryn-arc";
 export default function AppError({
   reset,
 }: {
@@ -8,20 +9,15 @@ export default function AppError({
 }) {
   return (
     <div className="grid min-h-[60vh] place-items-center">
-      <div className="max-w-md text-center">
-        <span className="mx-auto grid size-12 place-items-center rounded-xl bg-[#fff0f1] text-[#a9434c]">
-          <AlertTriangle className="size-5" />
-        </span>
-        <h1 className="mt-5 text-2xl font-semibold tracking-[-.03em]">
+      <div className="opryn-surface max-w-md p-8 text-center sm:p-10">
+        <OprynArc size={52} progress={45} state="unknown" className="mx-auto" />
+        <h1 className="mt-5 text-2xl font-semibold tracking-[-.03em] text-[var(--opryn-navy)]">
           This page couldn&apos;t load.
         </h1>
-        <p className="mt-2 text-sm leading-6 text-[#718095]">
+        <p className="mt-2 text-sm leading-6 text-[var(--opryn-muted)]">
           Your company data is safe. Try loading the page again.
         </p>
-        <button
-          onClick={reset}
-          className="mt-6 min-h-11 rounded-xl bg-[#3158d8] px-5 text-sm font-semibold text-white"
-        >
+        <button onClick={reset} className="opryn-action mt-6">
           Try Again
         </button>
       </div>

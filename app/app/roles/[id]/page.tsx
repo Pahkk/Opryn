@@ -60,7 +60,7 @@ export default async function RolePage({
       <PageHeading
         eyebrow="Role Builder"
         title={role.name}
-        description="Define the work, approvals, and training this person needs."
+        description="Define the work, approval boundaries, and company knowledge this person can access."
       />
       <RoleEditor
         role={{ ...role, responsibilities }}

@@ -49,26 +49,31 @@ test("email auth pages are complete and responsive", async ({ page }) => {
   ).toBeVisible();
 });
 
-test("invite flow preserves the secure token through authentication", async ({
+test("invite flow stays on Opryn and preserves the access code", async ({
   page,
 }) => {
-  const token = "this-is-a-development-invitation-token";
-  await page.goto(`/invite/${token}`);
+  const code = "OPRYN-7K3M-9Q2D";
+  await page.goto(`/join/${code}`);
   await expect(
-    page.getByRole("heading", { name: "Join your company workspace" }),
+    page.getByRole("heading", { name: "Join your Opryn workspace." }),
   ).toBeVisible();
-  const signIn = page.getByRole("link", { name: "Sign in to continue" });
+  await expect(page.getByText(code, { exact: true })).toBeVisible();
+  const next = `/onboarding?mode=join&code=${encodeURIComponent(code)}`;
+  const signIn = page.getByRole("link", { name: "Sign in and join" });
   await expect(signIn).toHaveAttribute(
     "href",
-    `/login?next=%2Finvite%2F${token}`,
+    `/login?next=${encodeURIComponent(next)}`,
   );
-  await signIn.click();
-  await expect(page).toHaveURL(new RegExp(`/login\\?next=.*invite`));
-  const createAccount = page.getByRole("link", { name: "Create an account" });
+  const createAccount = page.getByRole("link", {
+    name: "Create account and join",
+  });
   await expect(createAccount).toHaveAttribute(
     "href",
-    `/signup?next=%2Finvite%2F${token}`,
+    `/signup?next=${encodeURIComponent(next)}`,
   );
+
+  await page.goto(`/invite/${code}`);
+  await expect(page).toHaveURL(new RegExp(`/join/${code}$`));
 });
 
 test("product APIs reject unauthenticated requests without leaking details", async ({
@@ -90,8 +95,25 @@ test("product APIs reject unauthenticated requests without leaking details", asy
       },
     ],
     [
+      "/api/onboarding/industry-search",
+      { query: "we install security cameras for homes" },
+    ],
+    [
+      "/api/onboarding/tool-search",
+      { query: "the place where our developers store code" },
+    ],
+    [
       "/api/processes",
       { title: "Test", inputType: "text", explanation: "First do the work." },
+    ],
+    [
+      "/api/processes/00000000-0000-4000-8000-000000000000/training-media",
+      {
+        name: "training.png",
+        type: "image/png",
+        size: 1000,
+        caption: "Example training image",
+      },
     ],
     ["/api/ask", { question: "What is our refund policy?" }],
     [
@@ -103,7 +125,39 @@ test("product APIs reject unauthenticated requests without leaking details", asy
       },
     ],
     ["/api/team/invites", { email: "employee@example.com" }],
+    [
+      "/api/team/experts",
+      {
+        userId: "00000000-0000-4000-8000-000000000000",
+        category: "Refunds",
+        canApprove: false,
+      },
+    ],
+    [
+      "/api/learning-inbox",
+      {
+        action: "confirm_knowledge",
+        knowledgeId: "00000000-0000-4000-8000-000000000000",
+      },
+    ],
+    [
+      "/api/questions/00000000-0000-4000-8000-000000000000/feedback",
+      { feedbackType: "not_right", reason: "wrong_policy" },
+    ],
+    [
+      "/api/notifications/read",
+      { ids: ["00000000-0000-4000-8000-000000000000"] },
+    ],
     ["/api/billing/checkout", { plan: "premium", interval: "month" }],
+    [
+      "/api/ai-connections",
+      {
+        name: "Website Support Agent",
+        provider: "custom_agent",
+        scopes: ["knowledge:read"],
+        access: [],
+      },
+    ],
     [
       "/api/calls",
       {
@@ -141,4 +195,40 @@ test("product APIs reject unauthenticated requests without leaking details", asy
   });
   expect(training.status()).toBe(401);
   expect(await training.json()).toEqual({ error: "Please sign in again." });
+});
+
+test("external agent endpoints require a valid Opryn agent key", async ({
+  request,
+}) => {
+  const requests = [
+    ["/api/v1/answer", { question: "What is our refund policy?" }],
+    ["/api/v1/knowledge/search", { query: "refund policy", limit: 5 }],
+    ["/api/v1/escalations", { question: "Can this refund be approved?" }],
+  ] as const;
+  for (const [url, data] of requests) {
+    const response = await request.post(url, { data });
+    expect(response.status()).toBe(401);
+    expect(await response.json()).toEqual({ error: "invalid_api_key" });
+  }
+});
+
+test("communication webhooks reject unverified provider requests", async ({
+  request,
+}) => {
+  const slack = await request.post("/api/webhooks/slack", {
+    data: {
+      type: "event_callback",
+      team_id: "T_FAKE",
+      event: { type: "app_mention", user: "U_FAKE", text: "hello" },
+    },
+  });
+  expect(slack.status()).toBeGreaterThanOrEqual(400);
+
+  const teams = await request.post("/api/webhooks/teams", {
+    data: { type: "message", id: "fake", text: "hello" },
+  });
+  expect(teams.status()).toBeGreaterThanOrEqual(400);
+
+  const cron = await request.get("/api/cron/communication-messages");
+  expect(cron.status()).toBe(401);
 });

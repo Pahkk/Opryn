@@ -1,16 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import {
-  ArrowDown,
-  ArrowUp,
-  Check,
-  LoaderCircle,
-  Plus,
-  Trash2,
-} from "lucide-react";
+import Link from "next/link";
+import { useLayoutEffect, useRef, useState } from "react";
+import { ArrowDown, ArrowUp, Check, Plus, Trash2 } from "lucide-react";
 import { showAppToast } from "@/lib/client-toast";
+import { WorkspaceNotice } from "@/components/app/workspace-context";
+import { KnowledgeClassification } from "./knowledge-classification";
+import type { KnowledgeCategory } from "@/lib/knowledge-library";
 
 type Step = { id?: string; title: string; description: string };
 type Rule = {
@@ -26,11 +23,17 @@ type Clarification = {
   suggestedRule: string;
 };
 type ProcessData = {
+  libraryCategory?: KnowledgeCategory;
+  libraryTags?: string[];
+  libraryRevision?: number;
   id: string;
   title: string;
   summary: string;
   purpose: string;
   status: string;
+  roleId: string | null;
+  expertId: string | null;
+  criticality: "normal" | "critical";
   steps: Step[];
   rules: Rule[];
   exceptions: Array<{ text: string }>;
@@ -40,61 +43,95 @@ type ProcessData = {
 export function ProcessReview({
   initial,
   returnTo,
+  roleOptions,
+  expertOptions,
+  nextReview,
+  onApproved,
 }: {
   initial: ProcessData;
   returnTo: string;
+  roleOptions: Array<{ id: string; label: string }>;
+  expertOptions: Array<{ id: string; label: string }>;
+  nextReview?: { id: string; title: string } | null;
+  onApproved?: () => void;
 }) {
   const router = useRouter();
   const [data, setData] = useState(initial);
   const [saving, setSaving] = useState<"save" | "approve" | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const inFlight = useRef(false);
+  const [approved, setApproved] = useState(false);
   async function save() {
+    if (inFlight.current) return false;
+    inFlight.current = true;
     setSaving("save");
     setError("");
-    const response = await fetch(`/api/processes/${data.id}`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    const body = await response.json();
-    setSaving(null);
-    if (!response.ok) {
-      setError(body.error ?? "Unable to save.");
+    setMessage("");
+    try {
+      const response = await fetch(`/api/processes/${data.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setError(body.error ?? "Unable to save.");
+        return false;
+      }
+      setMessage("Draft saved");
+      router.refresh();
+      return true;
+    } catch {
+      setError(
+        "Your changes couldn't be saved. Check your connection and try again.",
+      );
       return false;
+    } finally {
+      inFlight.current = false;
+      setSaving(null);
     }
-    setMessage("Draft saved");
-    router.refresh();
-    return true;
   }
   async function approve() {
+    if (inFlight.current) return;
+    inFlight.current = true;
     setSaving("approve");
     setError("");
-    const saved = await fetch(`/api/processes/${data.id}`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    const savedBody = await saved.json();
-    if (!saved.ok) {
-      setError(savedBody.error ?? "Unable to save.");
+    setMessage("");
+    try {
+      const saved = await fetch(`/api/processes/${data.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      const savedBody = await saved.json().catch(() => ({}));
+      if (!saved.ok) {
+        setError(savedBody.error ?? "Unable to save.");
+        return;
+      }
+      const response = await fetch(`/api/processes/${data.id}/approve`, {
+        method: "POST",
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setError(body.error ?? "Unable to approve.");
+        return;
+      }
+      showAppToast(
+        "Process approved!",
+        "Your team can now use it when they ask Opryn questions.",
+      );
+      setApproved(true);
+      onApproved?.();
+      router.refresh();
+    } catch {
+      setError(
+        "Opryn couldn't finish approval. Your changes are still here; please try again.",
+      );
+    } finally {
+      inFlight.current = false;
       setSaving(null);
-      return;
     }
-    const response = await fetch(`/api/processes/${data.id}/approve`, {
-      method: "POST",
-    });
-    const body = await response.json();
-    setSaving(null);
-    if (!response.ok) {
-      setError(body.error ?? "Unable to approve.");
-      return;
-    }
-    showAppToast(
-      "Process approved!",
-      "Your team can now use it when they ask Opryn questions.",
-    );
-    router.replace(returnTo);
   }
   function move(index: number, direction: -1 | 1) {
     const target = index + direction;
@@ -103,8 +140,48 @@ export function ProcessReview({
     [steps[index], steps[target]] = [steps[target], steps[index]];
     setData({ ...data, steps });
   }
+  if (approved)
+    return (
+      <section
+        role="status"
+        className="rounded-2xl border border-[#d4e3f6] bg-[#f3f7ff] p-7"
+      >
+        <h2 className="text-xl font-semibold text-[#17345f]">Approved</h2>
+        <p className="mt-2 text-sm text-[#52627a]">
+          Your team and connected AI can use this process now.
+        </p>
+        <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+          {nextReview ? (
+            <Link
+              href={`/app/processes/${nextReview.id}?review=true&returnTo=%2Fapp%2Fprocesses`}
+              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#245fc9] px-5 text-sm font-semibold text-white"
+            >
+              Review Next: {nextReview.title}
+            </Link>
+          ) : null}
+          <Link
+            href={returnTo}
+            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#cbd8e8] bg-white px-5 text-sm font-semibold text-[#245fc9]"
+          >
+            Back to Knowledge
+          </Link>
+        </div>
+      </section>
+    );
   return (
-    <div className="space-y-5">
+    <fieldset
+      disabled={Boolean(saving)}
+      aria-busy={Boolean(saving)}
+      className="process-review min-w-0 space-y-5"
+    >
+      {initial.libraryRevision && (
+        <KnowledgeClassification
+          id={initial.id}
+          initialCategory={initial.libraryCategory || "uncategorized"}
+          initialTags={initial.libraryTags || []}
+          initialRevision={initial.libraryRevision}
+        />
+      )}
       <section className="rounded-2xl border border-[#dfe5ed] bg-white p-5 sm:p-7">
         <p className="text-xs font-bold uppercase tracking-[.12em] text-[#3158d8]">
           Opryn learned this process
@@ -130,6 +207,56 @@ export function ProcessReview({
             value={data.purpose}
             onChange={(purpose) => setData({ ...data, purpose })}
           />
+        </div>
+        <div className="mt-5 grid gap-4 border-t border-[#edf0f4] pt-5 sm:grid-cols-3">
+          <label className="text-xs font-semibold text-[#667184]">
+            Team role
+            <select
+              value={data.roleId ?? ""}
+              onChange={(event) =>
+                setData({ ...data, roleId: event.target.value || null })
+              }
+              className="mt-2 h-12 w-full rounded-xl border border-[#d9e0e9] bg-white px-3 text-base outline-none focus:border-[#7190ee] sm:text-sm"
+            >
+              <option value="">All roles</option>
+              {roleOptions.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="text-xs font-semibold text-[#667184]">
+            Expert
+            <select
+              value={data.expertId ?? ""}
+              onChange={(event) =>
+                setData({ ...data, expertId: event.target.value || null })
+              }
+              className="mt-2 h-12 w-full rounded-xl border border-[#d9e0e9] bg-white px-3 text-base outline-none focus:border-[#7190ee] sm:text-sm"
+            >
+              <option value="">No expert assigned</option>
+              {expertOptions.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex min-h-12 items-center gap-3 self-end rounded-xl border border-[#d9e0e9] px-3.5 text-sm font-semibold text-[#52627a]">
+            <input
+              type="checkbox"
+              checked={data.criticality === "critical"}
+              onChange={(event) =>
+                setData({
+                  ...data,
+                  criticality: event.target.checked ? "critical" : "normal",
+                })
+              }
+              className="size-5 accent-[#3158d8]"
+            />
+            Critical knowledge
+          </label>
         </div>
       </section>
       <section className="rounded-2xl border border-[#dfe5ed] bg-white p-5 sm:p-7">
@@ -157,12 +284,13 @@ export function ProcessReview({
           {data.steps.map((step, index) => (
             <div
               key={step.id ?? `new-${index}`}
-              className="grid gap-3 rounded-xl border border-[#e2e7ed] p-4 sm:grid-cols-[34px_1fr_auto]"
+              id={step.id ? `step-${step.id}` : undefined}
+              className="grid scroll-mt-28 gap-3 rounded-xl border border-[#e2e7ed] p-4 target:border-[#3158d8] target:bg-[#f4f7ff] target:ring-4 target:ring-[#3158d8]/10 sm:grid-cols-[34px_1fr_auto]"
             >
               <span className="grid size-8 place-items-center rounded-lg bg-[#edf2ff] text-xs font-bold text-[#3158d8]">
                 {index + 1}
               </span>
-              <div className="space-y-2">
+              <div className="min-w-0 space-y-2">
                 <input
                   aria-label={`Step ${index + 1} title`}
                   value={step.title}
@@ -174,7 +302,7 @@ export function ProcessReview({
                   placeholder="Step title"
                   className="h-9 w-full rounded-lg border border-[#dfe5ed] px-3 text-sm font-semibold outline-none focus:border-[#7190ee]"
                 />
-                <textarea
+                <GrowingTextarea
                   aria-label={`Step ${index + 1} description`}
                   value={step.description}
                   onChange={(event) => {
@@ -184,7 +312,7 @@ export function ProcessReview({
                   }}
                   placeholder="What should the employee do?"
                   rows={2}
-                  className="w-full rounded-lg border border-[#dfe5ed] px-3 py-2 text-sm leading-5 outline-none focus:border-[#7190ee]"
+                  className="w-full overflow-hidden rounded-lg border border-[#dfe5ed] px-3 py-2 text-sm leading-5 outline-none focus:border-[#7190ee]"
                 />
               </div>
               <div className="flex gap-1 sm:flex-col">
@@ -212,7 +340,7 @@ export function ProcessReview({
           ))}
         </div>
       </section>
-      <section className="grid gap-5 xl:grid-cols-2">
+      <section className="grid grid-cols-1 gap-5 xl:grid-cols-2">
         <EditableList
           title="Company rules"
           items={data.rules}
@@ -223,9 +351,13 @@ export function ProcessReview({
             })
           }
           render={(rule, index) => (
-            <div className="rounded-xl border border-[#e2e7ed] p-4">
+            <div
+              id={rule.id ? `rule-${rule.id}` : undefined}
+              className="scroll-mt-28 rounded-xl border border-[#e2e7ed] p-4 target:border-[#3158d8] target:bg-[#f4f7ff] target:ring-4 target:ring-[#3158d8]/10"
+            >
               <div className="flex gap-2">
                 <input
+                  aria-label={`Rule ${index + 1} title`}
                   value={rule.title}
                   onChange={(event) => {
                     const rules = [...data.rules];
@@ -246,7 +378,8 @@ export function ProcessReview({
                   <Trash2 className="size-3.5" />
                 </IconButton>
               </div>
-              <textarea
+              <GrowingTextarea
+                aria-label={`Rule ${index + 1} wording`}
                 value={rule.text}
                 onChange={(event) => {
                   const rules = [...data.rules];
@@ -254,7 +387,7 @@ export function ProcessReview({
                   setData({ ...data, rules });
                 }}
                 rows={3}
-                className="mt-2 w-full rounded-lg border border-[#dfe5ed] p-3 text-sm leading-5"
+                className="mt-2 w-full overflow-hidden rounded-lg border border-[#dfe5ed] p-3 text-sm leading-5"
               />
             </div>
           )}
@@ -267,7 +400,8 @@ export function ProcessReview({
           }
           render={(item, index) => (
             <div className="flex gap-2 rounded-xl border border-[#e2e7ed] p-4">
-              <textarea
+              <GrowingTextarea
+                aria-label={`Exception ${index + 1}`}
                 value={item.text}
                 onChange={(event) => {
                   const exceptions = [...data.exceptions];
@@ -275,7 +409,7 @@ export function ProcessReview({
                   setData({ ...data, exceptions });
                 }}
                 rows={3}
-                className="min-w-0 flex-1 rounded-lg border border-[#dfe5ed] p-3 text-sm leading-5"
+                className="min-w-0 flex-1 overflow-hidden rounded-lg border border-[#dfe5ed] p-3 text-sm leading-5"
               />
               <IconButton
                 label="Remove exception"
@@ -309,7 +443,8 @@ export function ProcessReview({
                 className="rounded-xl border border-[#eadfbe] bg-white p-4"
               >
                 <p className="text-sm font-semibold">{item.question}</p>
-                <textarea
+                <GrowingTextarea
+                  aria-label={item.question}
                   value={item.answer}
                   onChange={(event) => {
                     const clarifications = [...data.clarifications];
@@ -321,7 +456,7 @@ export function ProcessReview({
                   }}
                   placeholder="Answer in your own words…"
                   rows={3}
-                  className="mt-3 w-full rounded-lg border border-[#dfe5ed] p-3 text-sm"
+                  className="mt-3 w-full overflow-hidden rounded-lg border border-[#dfe5ed] p-3 text-sm"
                 />
                 <input
                   value={item.suggestedRule}
@@ -355,30 +490,42 @@ export function ProcessReview({
           {message}
         </p>
       ) : null}
-      <div className="sticky bottom-4 flex justify-end gap-3 rounded-2xl border border-[#dfe5ed] bg-white/95 p-3 shadow-[0_12px_40px_rgba(24,39,75,.12)] backdrop-blur">
+      <div
+        aria-label="Process review actions"
+        className="process-review-actions fixed inset-x-0 z-30 grid grid-cols-2 gap-3 border-t border-[#dfe5ed] bg-white/96 p-3 shadow-[0_-10px_28px_rgba(7,27,61,.08)] backdrop-blur sm:static sm:flex sm:flex-wrap sm:justify-end sm:rounded-2xl sm:border sm:p-4 sm:shadow-none"
+      >
+        <div className="col-span-2 mr-auto text-sm leading-6 text-[var(--opryn-muted)]">
+          <WorkspaceNotice action="Reviewing for" />
+          Accept makes this available to people and AI connections with access.
+        </div>
+        {saving !== "approve" ? (
+          <button
+            type="button"
+            disabled={Boolean(saving)}
+            onClick={() => void save()}
+            className="min-h-12 rounded-xl border border-[#d5dce6] px-3 text-sm font-semibold disabled:opacity-60 sm:min-h-11 sm:px-5"
+          >
+            {saving === "save"
+              ? "Saving…"
+              : data.status === "approved"
+                ? "Save Changes"
+                : "Save Draft"}
+          </button>
+        ) : null}
         <button
-          disabled={Boolean(saving)}
-          onClick={() => void save()}
-          className="min-h-11 rounded-xl border border-[#d5dce6] px-5 text-sm font-semibold disabled:opacity-60"
-        >
-          {saving === "save" ? "Saving…" : "Save Draft"}
-        </button>
-        <button
+          type="button"
           disabled={Boolean(saving)}
           onClick={() => void approve()}
-          className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#3158d8] px-5 text-sm font-semibold text-white disabled:opacity-60"
+          className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#3158d8] px-3 text-sm font-semibold text-white disabled:opacity-60 sm:min-h-11 sm:min-w-40 sm:px-5"
         >
-          {saving === "approve" ? (
-            <LoaderCircle className="size-4 animate-spin" />
-          ) : null}
           {saving === "approve"
-            ? "Approving…"
+            ? "Accepting…"
             : data.status === "approved"
-              ? "Reapprove Process"
-              : "Approve Process"}
+              ? "Accept Changes"
+              : "Accept Process"}
         </button>
       </div>
-    </div>
+    </fieldset>
   );
 }
 function TextArea({
@@ -393,15 +540,46 @@ function TextArea({
   return (
     <label className="block text-xs font-semibold text-[#667184]">
       {label}
-      <textarea
+      <GrowingTextarea
         value={value}
         onChange={(event) => onChange(event.target.value)}
         rows={4}
-        className="mt-2 w-full rounded-xl border border-[#d9e0e9] p-3.5 text-sm leading-6 outline-none focus:border-[#7190ee]"
+        className="mt-2 w-full overflow-hidden rounded-xl border border-[#d9e0e9] p-3.5 text-base leading-6 outline-none focus:border-[#7190ee] sm:text-sm"
       />
     </label>
   );
 }
+
+function GrowingTextarea({
+  value,
+  onChange,
+  ...props
+}: React.TextareaHTMLAttributes<HTMLTextAreaElement> & {
+  value: string;
+}) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useLayoutEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    textarea.style.height = "auto";
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  }, [value]);
+
+  return (
+    <textarea
+      {...props}
+      ref={textareaRef}
+      value={value}
+      onChange={(event) => {
+        event.currentTarget.style.height = "auto";
+        event.currentTarget.style.height = `${event.currentTarget.scrollHeight}px`;
+        onChange?.(event);
+      }}
+    />
+  );
+}
+
 function IconButton({
   label,
   onClick,
@@ -417,7 +595,7 @@ function IconButton({
       onClick={onClick}
       aria-label={label}
       title={label}
-      className="grid size-8 place-items-center rounded-lg text-[#748094] hover:bg-[#f0f3f7] hover:text-[#3158d8]"
+      className="grid size-11 shrink-0 place-items-center rounded-lg text-[#59697d] hover:bg-[#f0f3f7] hover:text-[#3158d8]"
     >
       {children}
     </button>

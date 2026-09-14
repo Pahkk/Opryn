@@ -8,9 +8,9 @@ type Props = {
 };
 
 const sizes = {
-  small: "h-7 w-[108px]",
-  default: "h-9 w-[142px]",
-  large: "h-11 w-[174px]",
+  small: "h-8 w-[108px]",
+  default: "h-[42px] w-[142px]",
+  large: "h-[50px] w-[174px]",
 };
 
 export function OprynLogo({
@@ -33,7 +33,7 @@ export function OprynLogo({
         sizes={
           size === "large" ? "174px" : size === "small" ? "108px" : "142px"
         }
-        className={`object-cover object-center ${inverse ? "brightness-0 invert" : ""}`}
+        className={`pointer-events-none object-cover object-[center_49%] ${inverse ? "brightness-0 invert" : ""}`}
       />
     </span>
   );

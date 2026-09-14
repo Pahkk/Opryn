@@ -104,6 +104,7 @@ export async function extractVideoFrames(
   buffer: Buffer,
   mimeType: string,
   maxFrames = 8,
+  markedSeconds: number[] = [],
 ) {
   if (!buffer.length || !VIDEO_MIME_TYPES.has(mimeType) || !ffmpegPath)
     throw new UnsupportedRecordingError();
@@ -114,21 +115,49 @@ export async function extractVideoFrames(
   );
   try {
     await writeFile(inputPath, buffer);
-    await runFfmpeg([
-      "-hide_banner",
-      "-loglevel",
-      "error",
-      "-nostdin",
-      "-i",
-      inputPath,
-      "-vf",
-      "select='gt(scene,0.22)',scale=960:-2",
-      "-vsync",
-      "vfr",
-      "-frames:v",
-      String(Math.min(maxFrames, 12)),
-      path.join(workingDirectory, "frame-%02d.jpg"),
-    ]);
+    const uniqueMarkers = [...new Set(markedSeconds)]
+      .filter((second) => Number.isFinite(second) && second >= 0)
+      .slice(0, Math.min(maxFrames, 12));
+    for (const [index, second] of uniqueMarkers.entries()) {
+      await runFfmpeg([
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-nostdin",
+        "-ss",
+        String(second),
+        "-i",
+        inputPath,
+        "-frames:v",
+        "1",
+        "-vf",
+        "scale=960:-2",
+        path.join(
+          workingDirectory,
+          `marked-${String(index).padStart(2, "0")}.jpg`,
+        ),
+      ]);
+    }
+    const remainingFrames = Math.max(
+      0,
+      Math.min(maxFrames, 12) - uniqueMarkers.length,
+    );
+    if (remainingFrames)
+      await runFfmpeg([
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-nostdin",
+        "-i",
+        inputPath,
+        "-vf",
+        "select='gt(scene,0.22)',scale=960:-2",
+        "-vsync",
+        "vfr",
+        "-frames:v",
+        String(remainingFrames),
+        path.join(workingDirectory, "scene-%02d.jpg"),
+      ]);
     let names = (await readdir(workingDirectory))
       .filter((name) => name.endsWith(".jpg"))
       .sort();

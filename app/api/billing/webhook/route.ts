@@ -56,9 +56,31 @@ export async function POST(request: Request) {
     if (
       event.type === "customer.subscription.created" ||
       event.type === "customer.subscription.updated" ||
-      event.type === "customer.subscription.deleted"
+      event.type === "customer.subscription.deleted" ||
+      event.type === "customer.subscription.trial_will_end"
     )
-      await syncSubscription(service, event.data.object as Stripe.Subscription);
+      // Retrieve current state so an older delivered event cannot restore an old plan.
+      await syncSubscription(
+        service,
+        await getStripe().subscriptions.retrieve(
+          (event.data.object as Stripe.Subscription).id,
+        ),
+      );
+
+    if (
+      event.type === "invoice.paid" ||
+      event.type === "invoice.payment_failed"
+    ) {
+      const invoice = event.data.object as Stripe.Invoice;
+      const subscription = invoice.parent?.subscription_details?.subscription;
+      if (subscription)
+        await syncSubscription(
+          service,
+          await getStripe().subscriptions.retrieve(
+            typeof subscription === "string" ? subscription : subscription.id,
+          ),
+        );
+    }
 
     await service
       .from("stripe_webhook_events")
@@ -103,6 +125,21 @@ async function syncSubscription(
     organizationId = data?.organization_id;
   }
   if (!organizationId) throw new Error("Subscription organization not found.");
+  const deleted = await service
+    .from("deleted_workspaces")
+    .select("organization_id")
+    .eq("organization_id", organizationId)
+    .maybeSingle();
+  if (deleted.error) throw deleted.error;
+  if (deleted.data) {
+    // A checkout completed after the owner confirmed workspace deletion.
+    if (!["canceled", "incomplete_expired"].includes(subscription.status))
+      await getStripe().subscriptions.cancel(subscription.id, {
+        invoice_now: false,
+        prorate: false,
+      });
+    return;
+  }
   const item = subscription.items.data[0];
   const mapped = planFromStripePrice(item?.price.id);
   if (!mapped)
@@ -110,9 +147,19 @@ async function syncSubscription(
   const status = normalizeStatus(subscription.status);
   const { data: existing } = await service
     .from("organization_subscriptions")
-    .select("trial_used")
+    .select("trial_used,stripe_customer_id,stripe_subscription_id")
     .eq("organization_id", organizationId)
     .maybeSingle();
+  if (
+    existing?.stripe_customer_id &&
+    existing.stripe_customer_id !== customerId
+  )
+    throw new Error("Subscription customer does not match workspace.");
+  if (existing?.stripe_subscription_id && existing.stripe_subscription_id !== subscription.id) {
+    const current = await getStripe().subscriptions.retrieve(existing.stripe_subscription_id);
+    // A late event from a previous subscription cannot replace its active successor.
+    if (!["canceled", "incomplete_expired"].includes(current.status)) return;
+  }
   const { error } = await service.from("organization_subscriptions").upsert(
     {
       organization_id: organizationId,
@@ -128,7 +175,10 @@ async function syncSubscription(
         ? new Date(item.current_period_end * 1000).toISOString()
         : null,
       cancel_at_period_end: subscription.cancel_at_period_end,
-      trial_used: existing?.trial_used || mapped.plan === "premium",
+      trial_used: Boolean(existing?.trial_used || subscription.trial_start),
+      trial_end: subscription.trial_end
+        ? new Date(subscription.trial_end * 1000).toISOString()
+        : null,
     },
     { onConflict: "organization_id" },
   );

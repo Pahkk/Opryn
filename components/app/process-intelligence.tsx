@@ -408,7 +408,7 @@ function groupChunks(chunks: KnowledgeChunk[]) {
   const copy: Record<string, { label: string; color: string }> = {
     process_summary: { label: "Overview", color: "bg-[#3158d8]" },
     process_step: { label: "Steps", color: "bg-[#35a27c]" },
-    rule: { label: "Rules", color: "bg-[#d29133]" },
+    rule: { label: "Rules", color: "bg-[#756b9a]" },
     exception: { label: "Exceptions", color: "bg-[#c45c64]" },
     owner_answer: { label: "Owner answers", color: "bg-[#7c61c9]" },
     role_instruction: { label: "Role guidance", color: "bg-[#4f86ba]" },
