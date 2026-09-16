@@ -10,7 +10,6 @@ import {
   ArrowRight,
   BookOpenText,
   Building2,
-  CircleHelp,
   LogOut,
   Menu,
   Search,
@@ -37,13 +36,15 @@ const OprynGuide = dynamic(
   { ssr: false },
 );
 import {
-  ApprovedIcon,
   AskIcon,
   ConnectionIcon,
+  HelpIcon,
   HomeIcon,
   KnowledgeIcon,
+  NeedsYouIcon,
   SettingsIcon,
   TeamIcon,
+  TeachIcon,
   type OprynIconProps,
 } from "@/components/opryn-icons/opryn-icons";
 import {
@@ -68,14 +69,14 @@ const navigationGroups: NavigationGroup[] = [
       {
         href: "/app/processes/new",
         label: "Teach Opryn",
-        icon: BookOpenText,
+        icon: TeachIcon,
         admin: true,
       },
       { href: "/app/processes", label: "Knowledge", icon: KnowledgeIcon },
       {
         href: "/app/needs-you",
         label: "Needs You",
-        icon: ApprovedIcon,
+        icon: NeedsYouIcon,
         admin: true,
       },
       { href: "/app/team", label: "Team", icon: TeamIcon, admin: true },
@@ -95,7 +96,7 @@ const navigationGroups: NavigationGroup[] = [
         label: "Settings",
         icon: SettingsIcon,
       },
-      { href: "/app/help", label: "Help", icon: CircleHelp },
+      { href: "/app/help", label: "Help", icon: HelpIcon },
     ],
   },
 ];
@@ -162,7 +163,7 @@ export function AppShell({
                       {
                         href: "/app/needs-you",
                         label: "Needs You",
-                        icon: ApprovedIcon,
+                        icon: NeedsYouIcon,
                       },
                     ]
                   : []),
@@ -176,7 +177,7 @@ export function AppShell({
                   label: "Settings",
                   icon: SettingsIcon,
                 },
-                { href: "/app/help", label: "Help", icon: CircleHelp },
+                { href: "/app/help", label: "Help", icon: HelpIcon },
               ],
             },
           ]
@@ -488,7 +489,7 @@ export function AppShell({
                   prefetch={false}
                   className="opryn-action app-header-teach mr-1"
                 >
-                  <BookOpenText size={16} /> Teach Opryn
+                  <TeachIcon size={16} /> Teach Opryn
                 </Link>
               ) : null}
               <NotificationBell
@@ -811,7 +812,7 @@ function MobileBottomNavigation({
           href: "/app/processes/new",
           label: "Teach Opryn",
           shortLabel: "Teach",
-          icon: BookOpenText,
+          icon: TeachIcon,
         },
       ]
     : [

@@ -7,6 +7,7 @@ import {
   nangoRequest,
   readNangoConnection,
 } from "@/lib/integrations/nango";
+import { NOTION_VERSION } from "@/lib/integrations/notion";
 
 export async function requireNangoCapability(
   db: SupabaseClient,
@@ -62,6 +63,23 @@ export async function driveRequest(
     headers: {
       "Provider-Config-Key": connection.provider_config_key,
       "Connection-Id": connection.external_connection_id,
+    },
+  });
+}
+
+/** Only called by the Notion adapter with fixed API paths, never a browser URL. */
+export async function notionRequest(
+  connection: Awaited<ReturnType<typeof requireNangoCapability>>,
+  path: string,
+  init: RequestInit = {},
+) {
+  return nangoRequest(`/proxy/v1/${path}`, {
+    ...init,
+    headers: {
+      ...init.headers,
+      "Provider-Config-Key": connection.provider_config_key,
+      "Connection-Id": connection.external_connection_id,
+      "Notion-Version": NOTION_VERSION,
     },
   });
 }

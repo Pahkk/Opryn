@@ -21,40 +21,73 @@ function IconFrame({ size = 20, children, ...props }: OprynIconProps) {
   );
 }
 
+function BrandIconFrame({ size = 20, children, ...props }: OprynIconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 32 32"
+      fill="none"
+      aria-hidden="true"
+      {...props}
+    >
+      {children}
+    </svg>
+  );
+}
+
 export function HomeIcon(props: OprynIconProps) {
   return (
-    <IconFrame {...props}>
-      <path d="M4 10.3 12 4l8 6.3v8.2a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5z" />
-      <path d="M9 20v-6h6v6" />
-    </IconFrame>
+    <BrandIconFrame {...props}>
+      <path d="m3 14 13-11 13 11-4 4-9-8-9 8Z" fill="#285ED0" />
+      <path d="M7 17 16 9v20H7Z" fill="#AFC9F2" />
+      <path d="m16 9 9 8v12h-9Z" fill="#6B99E3" />
+      <path d="M13 21h6v8h-6Z" fill="#16366B" />
+      <path d="m3 14 4 4 9-8V3Z" fill="#285ED0" />
+      <path d="m16 3 13 11-4 4-9-8Z" fill="#3E79DA" />
+    </BrandIconFrame>
   );
 }
 
 export function TeachIcon(props: OprynIconProps) {
   return (
-    <IconFrame {...props}>
-      <path d="M5.2 8.3a8 8 0 1 1 .1 7.5" />
-      <path d="M5.2 8.3V4.6M5.2 8.3h3.7" />
-      <path d="M12 8v8M8 12h8" />
-    </IconFrame>
+    <BrandIconFrame {...props}>
+      <path d="M3 6h9l4 3v21l-5-3H3Z" fill="#AFC9F2" />
+      <path d="m16 9 4-3h9v21h-8l-5 3Z" fill="#6B99E3" />
+      <path d="M3 23h8l5 3v4l-5-3H3Z" fill="#285ED0" />
+      <path d="m16 26 5-3h8v4h-8l-5 3Z" fill="#1649A1" />
+      <path d="m16 17 2-6 10-10 4 4-10 10Z" fill="#285ED0" />
+      <path d="m16 17 2-6 4 4Z" fill="#16366B" />
+      <path d="m26 3 2-2 4 4-2 2Z" fill="#6B99E3" />
+    </BrandIconFrame>
   );
 }
 
 export function AskIcon(props: OprynIconProps) {
   return (
-    <IconFrame {...props}>
-      <path d="M5 5.5h14v10H9l-4 3z" />
-      <path d="M9 9h6M9 12h4" />
-    </IconFrame>
+    <BrandIconFrame {...props}>
+      <path d="M12 12h17v13a3 3 0 0 1-3 3h-4l-5 4v-4h-5Z" fill="#AFC9F2" />
+      <path
+        d="M5 3h17a5 5 0 0 1 5 5v12a4 4 0 0 1-4 4H12l-8 6v-6H3V7a4 4 0 0 1 2-4Z"
+        fill="#285ED0"
+      />
+      <path d="M17 12h10v8a4 4 0 0 1-4 4h-6Z" fill="#1649A1" />
+      <path d="M9 10h11v2H9ZM9 16h8v2H9Z" fill="white" />
+    </BrandIconFrame>
   );
 }
 
 export function KnowledgeIcon(props: OprynIconProps) {
   return (
-    <IconFrame {...props}>
-      <path d="M4.5 5.5c2.7-.8 5.2-.2 7.5 1.7 2.3-1.9 4.8-2.5 7.5-1.7v13c-2.7-.8-5.2-.2-7.5 1.7-2.3-1.9-4.8-2.5-7.5-1.7z" />
-      <path d="M12 7.2v13" />
-    </IconFrame>
+    <BrandIconFrame {...props}>
+      <rect x="3" y="5" width="8" height="24" rx="1.5" fill="#285ED0" />
+      <rect x="12" y="3" width="8" height="26" rx="1.5" fill="#AFC9F2" />
+      <path d="m21 8 6-1 5 21-6 1Z" fill="#6B99E3" />
+      <path d="M3 22h8v7H4.5A1.5 1.5 0 0 1 3 27.5Z" fill="#1649A1" />
+      <path d="M12 22h8v7h-6.5a1.5 1.5 0 0 1-1.5-1.5Z" fill="#6B99E3" />
+      <path d="M6 10h2v7H6Z" fill="white" />
+      <path d="M15 8h2v7h-2Z" fill="#285ED0" />
+    </BrandIconFrame>
   );
 }
 
@@ -69,21 +102,29 @@ export function TrainingIcon(props: OprynIconProps) {
 
 export function TeamIcon(props: OprynIconProps) {
   return (
-    <IconFrame {...props}>
-      <circle cx="9" cy="8" r="3" />
-      <path d="M3.8 19c.4-3.3 2.1-5 5.2-5s4.8 1.7 5.2 5" />
-      <path d="M15.5 6.2a2.7 2.7 0 0 1 0 5.3M16.4 14c2.2.5 3.4 2.1 3.8 4.5" />
-    </IconFrame>
+    <BrandIconFrame {...props}>
+      <circle cx="24" cy="10" r="4.5" fill="#6B99E3" />
+      <path d="M17 29v-7a7 7 0 0 1 14 0v7Z" fill="#AFC9F2" />
+      <circle cx="12" cy="9" r="6" fill="#285ED0" />
+      <path d="M2 29v-5a10 10 0 0 1 20 0v5Z" fill="#285ED0" />
+      <path
+        d="M17 15.3A10 10 0 0 1 22 24v5h-5v-7a7 7 0 0 1 2-4.9Z"
+        fill="#1649A1"
+      />
+    </BrandIconFrame>
   );
 }
 
 export function NeedsYouIcon(props: OprynIconProps) {
   return (
-    <IconFrame {...props}>
-      <path d="M12 4a8 8 0 1 1-6.3 3.1" />
-      <path d="M5.7 7.1V3.8M5.7 7.1H9" />
-      <path d="M12 8.2v4.6M12 16h.01" />
-    </IconFrame>
+    <BrandIconFrame {...props}>
+      <path d="M7 4h15a3 3 0 0 1 3 3v23H4V7a3 3 0 0 1 3-3Z" fill="#AFC9F2" />
+      <path d="M9 2h11v6H9Z" fill="#285ED0" />
+      <path d="M9 13h11v2H9ZM9 19h8v2H9Z" fill="#6B99E3" />
+      <path d="M23 14a9 9 0 1 1 0 18 9 9 0 0 1 0-18Z" fill="#285ED0" />
+      <path d="M23 14v18a9 9 0 0 0 0-18Z" fill="#1649A1" />
+      <path d="M22 18h2v7h-2ZM22 27h2v2h-2Z" fill="white" />
+    </BrandIconFrame>
   );
 }
 
@@ -97,12 +138,15 @@ export function CallsIcon(props: OprynIconProps) {
 
 export function ConnectionIcon(props: OprynIconProps) {
   return (
-    <IconFrame {...props}>
-      <circle cx="6" cy="12" r="2.5" />
-      <circle cx="18" cy="7" r="2.5" />
-      <circle cx="18" cy="17" r="2.5" />
-      <path d="m8.3 11 7.3-3M8.3 13l7.3 3" />
-    </IconFrame>
+    <BrandIconFrame {...props}>
+      <path d="M9 14 23 5l2 4-14 9Z" fill="#6B99E3" />
+      <path d="m9 15 16 10-2 4L7 19Z" fill="#AFC9F2" />
+      <rect x="20" y="2" width="10" height="10" rx="2" fill="#285ED0" />
+      <rect x="20" y="22" width="10" height="10" rx="2" fill="#6B99E3" />
+      <rect x="2" y="10" width="14" height="14" rx="3" fill="#285ED0" />
+      <path d="M9 10h4a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H9Z" fill="#1649A1" />
+      <rect x="6" y="14" width="6" height="6" rx="1" fill="white" />
+    </BrandIconFrame>
   );
 }
 
@@ -117,10 +161,33 @@ export function IntegrationsIcon(props: OprynIconProps) {
 
 export function SettingsIcon(props: OprynIconProps) {
   return (
-    <IconFrame {...props}>
-      <circle cx="12" cy="12" r="3" />
-      <path d="M12 3.8v2M12 18.2v2M3.8 12h2M18.2 12h2M6.2 6.2l1.4 1.4M16.4 16.4l1.4 1.4M17.8 6.2l-1.4 1.4M7.6 16.4l-1.4 1.4" />
-    </IconFrame>
+    <BrandIconFrame {...props}>
+      <path
+        d="M13 2h6l1 4 3 2 4-1 3 5-3 3v3l3 3-3 5-4-1-3 2-1 4h-6l-1-4-3-2-4 1-3-5 3-3v-3l-3-3 3-5 4 1 3-2Z"
+        fill="#AFC9F2"
+      />
+      <path
+        d="M16 2h3l1 4 3 2 4-1 3 5-3 3v3l3 3-3 5-4-1-3 2-1 4h-3Z"
+        fill="#6B99E3"
+      />
+      <circle cx="16" cy="16.5" r="8" fill="#285ED0" />
+      <circle cx="16" cy="16.5" r="3.5" fill="white" />
+    </BrandIconFrame>
+  );
+}
+
+export function HelpIcon(props: OprynIconProps) {
+  return (
+    <BrandIconFrame {...props}>
+      <path d="M16 2a14 14 0 1 0 0 28Z" fill="#285ED0" />
+      <path d="M16 2a14 14 0 0 1 0 28Z" fill="#6B99E3" />
+      <path
+        d="M11 12a5 5 0 0 1 10 0c0 2.5-1.3 3.4-3 4.4-1.5.9-2 1.6-2 3.1"
+        stroke="white"
+        strokeWidth="2.5"
+      />
+      <circle cx="16" cy="24" r="1.5" fill="white" />
+    </BrandIconFrame>
   );
 }
 

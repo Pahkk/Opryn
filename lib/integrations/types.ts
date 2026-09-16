@@ -28,7 +28,10 @@ export type IntegrationCatalogItem = {
   premium: boolean;
   href?: string;
   availability?: "available" | "beta" | "request_only";
-  nango?: { integrationIdEnv: string; adapter: "google_drive" };
+  nango?: {
+    integrationIdEnv: string;
+    adapter: "google_drive" | "notion";
+  };
   permissions: {
     can: readonly string[];
     cannot: readonly string[];

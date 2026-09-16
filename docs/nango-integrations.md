@@ -1,6 +1,6 @@
 # Opryn connections / Nango rollout
 
-Status: locally implemented and verified with deterministic database/API tests and rendered UI fixtures; **not deployed and not live-OAuth verified**. Real OAuth requires the dashboard configuration below. Do not label a provider production-ready based on a fixture or successful build.
+Status: Google Workspace and Notion have capability adapters. Production readiness still requires the dashboard configuration and live checks below; do not label a provider ready based only on a successful build.
 
 ## Architecture
 
@@ -8,7 +8,7 @@ The existing `lib/integrations/catalog.ts` remains the provider registry. Its op
 
 1. Connections shows an Opryn consent sheet for the active business.
 2. `POST /api/integrations/nango/session` authenticates an owner/admin, checks active organization, rate limits, and reserves an attempt.
-3. The frontend SDK receives only a short-lived connect-session token, restricted to Google Workspace, and opens Google authorization directly in a popup. The customer never sees a setup URL or Nango provider picker.
+3. The frontend SDK receives only a short-lived, provider-restricted connect-session token and opens provider authorization directly in a popup. The customer never sees a setup URL or Nango provider picker.
 4. A signed auth webhook validates organization/attempt tags and retrieves current connection state server-side. A transactional RPC confirms the connection and records state transitions.
 5. The browser polls its own attempt; a browser success callback alone never marks a connection connected.
 6. Capability routes recheck ownership, persisted capabilities, registry adapter, environment and Nango tags. There is no arbitrary browser proxy endpoint.
@@ -22,7 +22,8 @@ The existing `lib/integrations/catalog.ts` remains the provider registry. Its op
 | Google Workspace                 | Nango OAuth + Google Picker when configured   | Select multiple Docs, Sheets, and Slides; source URL retained; findings need review. No whole-Drive import or automatic sync/update detection. |
 | Slack                            | Existing native OAuth / communication service | Existing Ask Opryn surface, not history ingestion. Not migrated to Nango.                                                                      |
 | Microsoft Teams                  | Existing communication setup                  | Existing implementation retained; validate tenant installation separately. Not migrated to Nango.                                              |
-| Notion / Confluence / SharePoint | Request integration                           | No new import adapter; no OAuth-only “working” claim.                                                                                          |
+| Notion                           | Nango OAuth + page selector when configured    | Select shared pages; import current page Markdown with its source URL; findings need review. No editing or automatic sync.                     |
+| Confluence / SharePoint          | Request integration                           | No import adapter; no OAuth-only “working” claim.                                                                                              |
 | HubSpot                          | Request integration                           | No customer-context adapter yet.                                                                                                               |
 | ChatGPT / Claude / custom AI     | Existing MCP/API                              | Existing permission-controlled approved knowledge access retained.                                                                             |
 | Twilio                           | Existing setup                                | Unchanged; not Nango-backed.                                                                                                                   |
@@ -37,6 +38,7 @@ Set these **server-only** variables (no `NEXT_PUBLIC_` prefix):
 - `NANGO_WEBHOOK_SECRET`: the dedicated signing key under Environment Settings → Webhooks. This is not the API key.
 - `NANGO_ENVIRONMENT`: exact environment identifier emitted in auth webhooks, e.g. `DEV` or `PROD`.
 - `NANGO_GOOGLE_DRIVE_INTEGRATION_ID`: exact Nango integration unique key.
+- `NANGO_NOTION_INTEGRATION_ID`: exact Nango Notion integration unique key.
 - `GOOGLE_PICKER_API_KEY`: Google Picker browser API key, restricted in Google Cloud to the approved Opryn HTTPS origins and the Picker API.
 - `GOOGLE_PICKER_APP_ID`: numeric Google Cloud project number used by Picker.
 
@@ -47,14 +49,15 @@ Production `PROD` connections are refused outside Vercel's production environmen
 ## Dashboard steps
 
 1. Create separate Nango development and production environments.
-2. Create Google Drive OAuth integrations. The Drive adapter uses Nango's proxy against Google Drive v3. Configure its API base URL as `https://www.googleapis.com` if needed by the chosen provider template.
+2. Create Google Drive and Notion OAuth integrations. The adapters use fixed Nango proxy operations; browser input cannot choose an arbitrary upstream URL.
 3. Development: Nango-managed OAuth credentials may be used **only where that provider/environment actually offers them**. No credential mode is assumed or claimed by Opryn.
 4. Production: configure Opryn-owned Google OAuth client credentials in Nango, correct redirect URI from Nango, approved consent-screen branding, and complete Google's required verification. Customers never supply developer credentials.
 5. Enable the Google Drive API and Google Picker API. Configure the narrow Google scopes required by the selected Nango template and Picker, including identity/email for the connected-account label and `drive.file` where the production flow supports user-selected file grants. Review the actual consent screen before launch; never claim narrower access than the configured scopes.
 6. Restrict the Picker API key by HTTPS referrer to Opryn's production and approved preview origins. Picker receives an access token only in authenticated browser memory; it is never placed in localStorage, analytics, logs, URLs, or Opryn's database.
-7. Set webhook URL to `https://www.opryn.app/api/webhooks/nango` only for the production deployment. Use an isolated reachable staging/dev endpoint for DEV.
-8. Enable auth creation, reauthorization, token-refresh failure/recovery, and deletion webhooks. Copy that environment's signing key into server configuration.
-9. Record which environment/provider uses managed versus Opryn-owned OAuth credentials in your private operations inventory. No real configuration has been verified in this workspace.
+7. In the Notion developer portal, enable read content and user information without email. Leave update/insert content and comments disabled. Nango's Notion scope field remains blank because Notion access is controlled by connection capabilities and the pages the user shares.
+8. Set webhook URL to `https://www.opryn.app/api/webhooks/nango` only for the production deployment. Use an isolated reachable staging/dev endpoint for DEV.
+9. Enable auth creation, reauthorization, token-refresh failure/recovery, and deletion webhooks. Copy that environment's signing key into server configuration.
+10. Record which environment/provider uses managed versus Opryn-owned OAuth credentials in your private operations inventory.
 
 Apply migrations in order. `20260911010000_nango_connections.sql` establishes the Nango model; `20260911020000_google_workspace_selection.sql` preserves selected Google files during reconnects. The second migration is pending production deployment and must not be applied until deployment is approved.
 

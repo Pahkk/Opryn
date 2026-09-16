@@ -3,9 +3,17 @@ import { z } from "zod";
 import { getRequestContext } from "@/lib/api";
 import {
   driveRequest,
+  notionRequest,
   requireNangoCapability,
 } from "@/lib/integrations/nango-capabilities";
 import { ConnectionError } from "@/lib/integrations/nango";
+import { getNangoProvider } from "@/lib/integrations/nango-providers";
+import {
+  NOTION_PAGE_ID,
+  notionPageSchema,
+  notionSearchSchema,
+  notionSelectedPage,
+} from "@/lib/integrations/notion";
 import { createServiceClient } from "@/lib/supabase/service";
 
 const GOOGLE_FILE_TYPES = {
@@ -29,7 +37,7 @@ const removalSchema = z
 type SelectedFile = {
   id: string;
   name: string;
-  mimeType: keyof typeof GOOGLE_FILE_TYPES;
+  mimeType: keyof typeof GOOGLE_FILE_TYPES | "text/markdown";
   type: string;
   modifiedTime?: string;
   webViewLink?: string;
@@ -52,6 +60,7 @@ function selectedFiles(configuration: unknown): SelectedFile[] {
           "application/vnd.google-apps.document",
           "application/vnd.google-apps.spreadsheet",
           "application/vnd.google-apps.presentation",
+          "text/markdown",
         ]),
         type: z.string(),
         modifiedTime: z.string().optional(),
@@ -65,7 +74,7 @@ function selectedFiles(configuration: unknown): SelectedFile[] {
 }
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const context = await getRequestContext({ admin: true });
@@ -78,8 +87,31 @@ export async function GET(
       id,
       "knowledge_import",
     );
+    const files = selectedFiles(connection.configuration);
+    if (
+      new URL(request.url).searchParams.get("available") === "1" &&
+      getNangoProvider(connection.provider).nango?.adapter === "notion"
+    ) {
+      const response = await notionRequest(connection, "search", {
+        method: "POST",
+        body: JSON.stringify({
+          filter: { property: "object", value: "page" },
+          sort: { direction: "descending", timestamp: "last_edited_time" },
+          page_size: 100,
+        }),
+      });
+      const search = notionSearchSchema.parse(await response.json());
+      const available = search.results.flatMap((result) => {
+        const page = notionPageSchema.safeParse(result);
+        return page.success ? [notionSelectedPage(page.data)] : [];
+      });
+      return NextResponse.json(
+        { files, available },
+        { headers: { "Cache-Control": "no-store" } },
+      );
+    }
     return NextResponse.json(
-      { files: selectedFiles(connection.configuration) },
+      { files },
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (error) {
@@ -107,8 +139,18 @@ export async function POST(
       id,
       "knowledge_import",
     );
+    const adapter = getNangoProvider(connection.provider).nango?.adapter;
     const files = await Promise.all(
       [...new Set(fileIds)].map(async (fileId): Promise<SelectedFile> => {
+        if (adapter === "notion") {
+          if (!NOTION_PAGE_ID.test(fileId))
+            throw new ConnectionError("Choose valid Notion pages.", 400);
+          const response = await notionRequest(
+            connection,
+            `pages/${encodeURIComponent(fileId)}`,
+          );
+          return notionSelectedPage(notionPageSchema.parse(await response.json()));
+        }
         const response = await driveRequest(
           connection,
           `files/${encodeURIComponent(fileId)}?fields=id,name,mimeType,modifiedTime,webViewLink`,
@@ -151,7 +193,7 @@ export async function POST(
     if (saved.error) throw new Error("Selection could not be saved");
     return NextResponse.json({ files: merged });
   } catch (error) {
-    return failure(error, "Could not save those Google files.");
+    return failure(error, "Could not save those sources.");
   }
 }
 
@@ -192,7 +234,7 @@ export async function DELETE(
     if (saved.error) throw new Error("Selection could not be updated");
     return NextResponse.json({ files });
   } catch (error) {
-    return failure(error, "Could not remove that file.");
+    return failure(error, "Could not remove that source.");
   }
 }
 
@@ -203,7 +245,7 @@ function failure(error: unknown, fallback: string) {
         error instanceof ConnectionError
           ? error.message
           : error instanceof z.ZodError
-            ? error.issues[0]?.message || "Choose valid Google files."
+            ? error.issues[0]?.message || "Choose valid sources."
             : fallback,
     },
     { status: error instanceof ConnectionError ? error.status : 400 },

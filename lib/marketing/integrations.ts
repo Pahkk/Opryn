@@ -12,6 +12,17 @@ export const marketingIntegrations = [
     href: "/signup",
   },
   {
+    id: "notion",
+    name: "Notion",
+    category: "Knowledge",
+    direction: "learn",
+    purpose: "Teach Opryn from selected Notion pages.",
+    status: "Ready to connect",
+    detail:
+      "Connect Notion, choose pages shared with the Opryn connection, then review the imported findings. Opryn does not edit pages or approve findings automatically.",
+    href: "/signup",
+  },
+  {
     id: "files",
     name: "Documents & images",
     category: "Knowledge",

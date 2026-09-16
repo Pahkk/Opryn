@@ -31,6 +31,35 @@ export const INTEGRATION_CATALOG: readonly IntegrationCatalogItem[] = [
     },
   },
   {
+    id: "notion",
+    nango: {
+      integrationIdEnv: "NANGO_NOTION_INTEGRATION_ID",
+      adapter: "notion",
+    },
+    name: "Notion",
+    category: "learn",
+    authMode: "native_oauth",
+    capabilities: ["knowledge_import"],
+    description: "Teach Opryn from the Notion pages you choose.",
+    aliases: ["wiki", "documents", "knowledge", "pages"],
+    setupTime: "About 1 minute",
+    premium: false,
+    permissions: {
+      can: [
+        "See pages you share with the Opryn connection",
+        "Read pages you explicitly choose for import",
+        "Keep the original Notion page attached as the source",
+      ],
+      cannot: [
+        "Edit or delete your Notion content",
+        "Read pages that are not shared with the connection",
+        "Automatically approve imported information",
+      ],
+      privacy:
+        "Opryn imports only selected pages available to the Notion connection. Findings remain subject to review before they become approved knowledge.",
+    },
+  },
+  {
     id: "slack",
     name: "Slack",
     category: "communication",
@@ -150,12 +179,6 @@ export const INTEGRATION_CATALOG: readonly IntegrationCatalogItem[] = [
 
 function guidedKnowledgeProviders(): IntegrationCatalogItem[] {
   return [
-    guided(
-      "notion",
-      "Notion",
-      "knowledge_import",
-      "Bring selected Notion knowledge into Opryn.",
-    ),
     guided(
       "confluence",
       "Confluence",

@@ -168,7 +168,10 @@ export default async function IntegrationsPage({
       nangoProviders.includes(provider.id)
         ? {
             ...provider,
-            description: "Choose authorized files Opryn can learn from.",
+            description:
+              provider.nango?.adapter === "notion"
+                ? "Choose authorized Notion pages Opryn can learn from."
+                : "Choose authorized files Opryn can learn from.",
           }
         : provider,
     ),
@@ -187,6 +190,7 @@ export default async function IntegrationsPage({
   const recommendedIds = [
     ...personalizedIds,
     "google_drive",
+    "notion",
     "slack",
     "chatgpt",
     "twilio",
