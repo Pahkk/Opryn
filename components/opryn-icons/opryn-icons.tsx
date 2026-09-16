@@ -1,7 +1,13 @@
 "use client";
 
-import { motion, useReducedMotion, type SVGMotionProps } from "motion/react";
-import type { SVGProps } from "react";
+import { hover } from "motion";
+import {
+  motion,
+  useAnimationControls,
+  useReducedMotion,
+  type SVGMotionProps,
+} from "motion/react";
+import { useEffect, useRef, type SVGProps } from "react";
 
 export type OprynIconProps = SVGProps<SVGSVGElement> & { size?: number };
 
@@ -31,21 +37,80 @@ function BrandIconFrame({
   ...props
 }: OprynIconProps) {
   const reduceMotion = useReducedMotion();
+  const controls = useAnimationControls();
+  const iconRef = useRef<SVGSVGElement>(null);
   const svgProps = props as unknown as SVGMotionProps<SVGSVGElement>;
+
+  useEffect(() => {
+    const icon = iconRef.current;
+    const parent = icon?.closest<HTMLElement>(
+      "[data-opryn-icon-hover], a, button, [role='button'], article",
+    );
+    if (!parent) return;
+
+    let hovered = false;
+    let focused = parent.matches(":focus-within");
+    const transition = { duration: 0.28, ease: [0.22, 1, 0.36, 1] } as const;
+    const sync = () => {
+      if (hovered || focused) {
+        void controls.start(
+          reduceMotion
+            ? { opacity: 0.78, transition }
+            : {
+                y: -2,
+                scale: 1.12,
+                rotate: [0, -3, 3, 0],
+                transition,
+              },
+        );
+      } else {
+        void controls.start({
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          rotate: 0,
+          transition,
+        });
+      }
+    };
+    const stopHover = hover(parent, () => {
+      hovered = true;
+      sync();
+      return () => {
+        hovered = false;
+        sync();
+      };
+    });
+    const onFocusIn = () => {
+      focused = parent.matches(":focus-within");
+      sync();
+    };
+    const onFocusOut = (event: globalThis.FocusEvent) => {
+      if (parent.contains(event.relatedTarget as Node | null)) return;
+      focused = false;
+      sync();
+    };
+    parent.addEventListener("focusin", onFocusIn);
+    parent.addEventListener("focusout", onFocusOut);
+    if (focused) sync();
+
+    return () => {
+      stopHover();
+      parent.removeEventListener("focusin", onFocusIn);
+      parent.removeEventListener("focusout", onFocusOut);
+    };
+  }, [controls, reduceMotion]);
+
   return (
     <motion.svg
+      ref={iconRef}
       width={size}
       height={size}
       viewBox="0 0 32 32"
       fill="none"
       aria-hidden="true"
       initial={false}
-      whileHover={
-        reduceMotion
-          ? { opacity: 0.78 }
-          : { y: -2, scale: 1.12, rotate: [0, -3, 3, 0] }
-      }
-      transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+      animate={controls}
       style={{ transformOrigin: "center", ...style }}
       {...svgProps}
     >
