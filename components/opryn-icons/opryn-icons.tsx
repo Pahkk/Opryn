@@ -1,3 +1,6 @@
+"use client";
+
+import { motion, useReducedMotion, type SVGMotionProps } from "motion/react";
 import type { SVGProps } from "react";
 
 export type OprynIconProps = SVGProps<SVGSVGElement> & { size?: number };
@@ -21,18 +24,33 @@ function IconFrame({ size = 20, children, ...props }: OprynIconProps) {
   );
 }
 
-function BrandIconFrame({ size = 20, children, ...props }: OprynIconProps) {
+function BrandIconFrame({
+  size = 20,
+  children,
+  style,
+  ...props
+}: OprynIconProps) {
+  const reduceMotion = useReducedMotion();
+  const svgProps = props as unknown as SVGMotionProps<SVGSVGElement>;
   return (
-    <svg
+    <motion.svg
       width={size}
       height={size}
       viewBox="0 0 32 32"
       fill="none"
       aria-hidden="true"
-      {...props}
+      initial={false}
+      whileHover={
+        reduceMotion
+          ? { opacity: 0.78 }
+          : { y: -2, scale: 1.12, rotate: [0, -3, 3, 0] }
+      }
+      transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+      style={{ transformOrigin: "center", ...style }}
+      {...svgProps}
     >
       {children}
-    </svg>
+    </motion.svg>
   );
 }
 
