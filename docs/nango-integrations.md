@@ -17,15 +17,17 @@ The existing `lib/integrations/catalog.ts` remains the provider registry. Its op
 
 ## Provider rollout
 
-| Provider                         | Current path                                  | Capability / limitation                                                                                                                        |
-| -------------------------------- | --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| Google Workspace                 | Nango OAuth + Google Picker when configured   | Select multiple Docs, Sheets, and Slides; source URL retained; findings need review. No whole-Drive import or automatic sync/update detection. |
-| Slack                            | Existing native OAuth / communication service | Existing Ask Opryn surface, not history ingestion. Not migrated to Nango.                                                                      |
-| Microsoft Teams                  | Existing communication setup                  | Existing implementation retained; validate tenant installation separately. Not migrated to Nango.                                              |
-| Notion / Confluence / SharePoint | Request integration                           | No new import adapter; no OAuth-only “working” claim.                                                                                          |
-| HubSpot                          | Request integration                           | No customer-context adapter yet.                                                                                                               |
-| ChatGPT / Claude / custom AI     | Existing MCP/API                              | Existing permission-controlled approved knowledge access retained.                                                                             |
-| Twilio                           | Existing setup                                | Unchanged; not Nango-backed.                                                                                                                   |
+| Provider                     | Current path                                  | Capability / limitation                                                                                                                        |
+| ---------------------------- | --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Google Workspace             | Nango OAuth + Google Picker when configured   | Select multiple Docs, Sheets, and Slides; source URL retained; findings need review. No whole-Drive import or automatic sync/update detection. |
+| Slack                        | Existing native OAuth / communication service | Existing Ask Opryn surface, not history ingestion. Not migrated to Nango.                                                                      |
+| Microsoft Teams              | Nango tenant OAuth + existing Teams bot       | Nango owns tenant authorization; the existing Teams app transports messages into the shared approved-answer and knowledge-gap pipeline.        |
+| Notion                       | Nango OAuth + Opryn source selector           | Selected pages/databases normalize into reviewable Opryn processes; bounded manual/scheduled update checks.                                    |
+| Confluence                   | Nango OAuth + Opryn source selector           | Selected pages/spaces normalize into reviewable processes; Atlassian user identity metadata is stripped before persistence.                    |
+| SharePoint                   | Request integration                           | No import adapter; no OAuth-only “working” claim.                                                                                              |
+| HubSpot                      | Request integration                           | No customer-context adapter yet.                                                                                                               |
+| ChatGPT / Claude / custom AI | Existing MCP/API                              | Existing permission-controlled approved knowledge access retained.                                                                             |
+| Twilio                       | Existing setup                                | Unchanged; not Nango-backed.                                                                                                                   |
 
 Existing saved credentials remain manageable/removable, never relabeled as verified integrations. If Drive has a legacy saved credential record, remove it through its existing management flow before enabling Nango for that organization.
 
@@ -37,6 +39,9 @@ Set these **server-only** variables (no `NEXT_PUBLIC_` prefix):
 - `NANGO_WEBHOOK_SECRET`: the dedicated signing key under Environment Settings → Webhooks. This is not the API key.
 - `NANGO_ENVIRONMENT`: exact environment identifier emitted in auth webhooks, e.g. `DEV` or `PROD`.
 - `NANGO_GOOGLE_DRIVE_INTEGRATION_ID`: exact Nango integration unique key.
+- `NANGO_NOTION_INTEGRATION_ID`: exact Nango Notion integration unique key.
+- `NANGO_CONFLUENCE_INTEGRATION_ID`: exact Nango Confluence integration unique key.
+- `NANGO_MICROSOFT_TEAMS_INTEGRATION_ID`: exact Nango Microsoft Graph/Teams integration unique key.
 - `GOOGLE_PICKER_API_KEY`: Google Picker browser API key, restricted in Google Cloud to the approved Opryn HTTPS origins and the Picker API.
 - `GOOGLE_PICKER_APP_ID`: numeric Google Cloud project number used by Picker.
 

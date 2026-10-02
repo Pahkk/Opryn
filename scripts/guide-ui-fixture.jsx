@@ -58,6 +58,54 @@ function Fixture() {
           roles={[]}
           plan="premium"
           returnTo="/app/processes"
+          sourceSummaries={[
+            {
+              id: "google_drive",
+              connected: true,
+              connectionId: "fixture-google",
+              selectedCount: 12,
+              status: "healthy",
+              lastLearned: "2026-09-15T16:00:00.000Z",
+            },
+            {
+              id: "notion",
+              connected: true,
+              connectionId: "fixture-notion",
+              selectedCount: 8,
+              status: "healthy",
+              lastLearned: "2026-09-14T16:00:00.000Z",
+            },
+            {
+              id: "confluence",
+              connected: false,
+              connectionId: null,
+              selectedCount: 0,
+              status: "healthy",
+              lastLearned: null,
+            },
+          ]}
+          recentSources={[
+            {
+              id: "recent-1",
+              processId: "recent-1",
+              title: "Refund Policy",
+              provider: "google_drive",
+              updatedAt: "2026-09-15T16:00:00.000Z",
+            },
+            {
+              id: "recent-2",
+              processId: "recent-2",
+              title: "Pricing Rules",
+              provider: "notion",
+              updatedAt: "2026-09-14T16:00:00.000Z",
+            },
+          ]}
+          useElsewhere={[
+            { id: "slack", name: "Slack", connected: true },
+            { id: "teams", name: "Microsoft Teams", connected: false },
+            { id: "chatgpt", name: "ChatGPT", connected: false },
+            { id: "claude", name: "Claude", connected: false },
+          ]}
         />
       )}
       {path === "/app/processes" && (

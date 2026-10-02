@@ -3,6 +3,7 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { gsap, motionScope } from "@/lib/motion/gsap";
 import { motion } from "@/lib/motion/presets";
+import { MotionHover } from "@/components/motion/motion-panel";
 
 /** Illustrative marketing sequences only. No timeline changes product state. */
 export function SignatureStory({
@@ -104,7 +105,11 @@ export function SignatureStory({
     };
   }, [kind]);
   return (
-    <div ref={ref} className={`signature-story signature-${kind}`}>
+    <div
+      ref={ref}
+      data-motion-owner="gsap"
+      className={`signature-story signature-${kind}`}
+    >
       {children}
     </div>
   );
@@ -131,65 +136,16 @@ export function MaskedHeadline({ children }: { children: ReactNode }) {
     return () => scope.dispose();
   }, []);
   return (
-    <span className="headline-mask">
+    <span className="headline-mask" data-motion-owner="gsap">
       <span ref={ref}>{children}</span>
     </span>
   );
 }
 
 export function PointerSurface({ children }: { children: ReactNode }) {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const root = ref.current;
-    if (!root) return;
-    const scope = motionScope(root);
-    const move = (event: PointerEvent) => {
-      if (
-        !matchMedia(
-          "(hover: hover) and (pointer: fine) and (min-width: 1024px)",
-        ).matches
-      )
-        return;
-      const box = root.getBoundingClientRect();
-      const x = Math.max(
-        -2,
-        Math.min(2, ((event.clientX - box.left) / box.width - 0.5) * 4),
-      );
-      const y = Math.max(
-        -2,
-        Math.min(2, ((event.clientY - box.top) / box.height - 0.5) * 4),
-      );
-      scope.run(() =>
-        gsap.to(root.firstElementChild, {
-          x,
-          y,
-          duration: motion.duration.fast,
-          overwrite: true,
-          ease: motion.ease.state,
-        }),
-      );
-    };
-    const reset = () =>
-      scope.run(() =>
-        gsap.to(root.firstElementChild, {
-          x: 0,
-          y: 0,
-          duration: motion.duration.fast,
-          clearProps: "transform",
-          overwrite: true,
-        }),
-      );
-    root.addEventListener("pointermove", move);
-    root.addEventListener("pointerleave", reset);
-    return () => {
-      root.removeEventListener("pointermove", move);
-      root.removeEventListener("pointerleave", reset);
-      scope.dispose();
-    };
-  }, []);
   return (
-    <div ref={ref} className="pointer-surface">
+    <MotionHover className="pointer-surface">
       <div className="pointer-plane">{children}</div>
-    </div>
+    </MotionHover>
   );
 }

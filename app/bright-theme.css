@@ -1,0 +1,22 @@
+/* Bright Opryn identity — public homepage and activation only. */
+.bright-home,.bright-onboarding {
+  --opryn-paper: #fffcf7;
+  --opryn-surface: #ffffff;
+  --opryn-cobalt: #2855f9;
+  --opryn-cobalt-hover: #2045ce;
+  --opryn-ink: #14213d;
+  --opryn-copy: #566279;
+  --opryn-sky: #eaf4ff;
+  --opryn-apricot: #ffd5b5;
+  --opryn-border: #d6e0ee;
+  --opryn-radius-demo: 32px;
+  --opryn-radius-panel: 24px;
+  --opryn-radius-input: 14px;
+  --editorial-page: var(--opryn-paper);
+  --editorial-ink: var(--opryn-ink);
+  --editorial-copy: var(--opryn-copy);
+  --editorial-brand: var(--opryn-cobalt);
+  --editorial-deep: var(--opryn-cobalt);
+  --editorial-navy: var(--opryn-cobalt-hover);
+  --editorial-line: var(--opryn-border);
+}

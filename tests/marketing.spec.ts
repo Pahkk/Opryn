@@ -20,7 +20,7 @@ test("page renders without overflow and navigation works", async ({
       .getByRole("navigation", { name: "Main navigation" })
       .getByRole("link", { name: "Product", exact: true })
       .click();
-    await expect(page).toHaveURL(/#inside-opryn$/);
+    await expect(page).toHaveURL(/#answer-everywhere$/);
   } else {
     await page.getByRole("button", { name: "Toggle navigation menu" }).click();
     const mobileNavigation = page.getByRole("navigation", {
@@ -40,26 +40,28 @@ test("page renders without overflow and navigation works", async ({
   });
 });
 
-test("pricing clearly separates Core and Premium", async ({ page }) => {
+test("pricing clearly separates Starter and Pro", async ({ page }) => {
   await page.goto("/pricing");
   await expect(
-    page.getByRole("heading", { name: "Company knowledge for people and AI." }),
+    page.getByRole("heading", { name: "Choose what fits your business today." }),
   ).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Opryn Core" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Starter" })).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Opryn Premium" }),
+    page.getByRole("heading", { name: "Pro" }),
   ).toBeVisible();
+  await expect(page.getByText("$49", { exact: true })).toBeVisible();
+  await expect(page.getByText("$129", { exact: true })).toBeVisible();
   await expect(
     page.getByText("Video and screen-recording learning"),
   ).toBeVisible();
   await expect(
-    page.getByText("Learn From Calls", { exact: true }),
+    page.getByText("Learn from selected calls", { exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByText("External AI Connections and secure Agent API"),
+    page.getByText("External AI connections + Agent API"),
   ).toBeVisible();
   await expect(
-    page.getByText("Document uploads and Google Drive import"),
+    page.getByText("Documents, text and audio learning"),
   ).toBeVisible();
   const overflow = await page.evaluate(
     () =>
@@ -74,35 +76,30 @@ test("primary calls to action lead to signup", async ({ page }) => {
   const ctas = page.getByRole("link", { name: "Get Started" });
   expect(await ctas.count()).toBeGreaterThanOrEqual(2);
   for (const cta of await ctas.all())
-    await expect(cta).toHaveAttribute("href", "/signup");
+    await expect(cta).toHaveAttribute(
+      "href",
+      /^\/signup(?:\?plan=(core|premium))?$/,
+    );
 });
 
-test("illustrative product demo grounds both consumers in the displayed source", async ({
+test("one illustrative workflow keeps approval and source visible", async ({
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
+  const example = page.locator(".knowledge-flow");
   await expect(
-    page
-      .locator(".shared-policy")
-      .getByText(/Website projects include two revision rounds/),
+    page.locator(".flow-caption").getByText("Example workflow"),
   ).toBeVisible();
-  await page
-    .getByRole("button", {
-      name: "Website bot",
+  await expect(
+    example.getByRole("button", { name: "Approved", exact: true }),
+  ).toBeVisible();
+  await expect(
+    example.getByText("Project-lead approval required.", {
       exact: true,
-    })
-    .click();
-  await expect(page.locator(".shared-answer-stack .is-current h3")).toHaveText(
-    "Additional rounds require project lead approval.",
-  );
-  await expect(
-    page
-      .locator(".editorial-trust")
-      .getByText(
-        "No approved answer found. Route the question to the right person.",
-      ),
+    }),
   ).toBeVisible();
+  await expect(example.getByText("Source attached")).toBeVisible();
 });
 
 test("Sign in opens the existing email and Google entry flow", async ({

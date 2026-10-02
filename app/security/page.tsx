@@ -76,7 +76,9 @@ export default function SecurityPage() {
         <p>
           Slack and Teams require their supported setup and authorized user
           interactions. Custom bots and agents remain external systems; Opryn
-          does not build or retrain them.
+          provides approved knowledge and evaluates its responses under
+          connection permissions. It does not build agents or fine-tune model
+          weights.
         </p>
       </section>
       <section>

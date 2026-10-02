@@ -2,10 +2,9 @@
 import { StaggerList } from "@/components/motion/motion-region";
 import { DialogSurface } from "@/components/app/dialog-surface";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Check,
   Copy,
   LoaderCircle,
   Mail,
@@ -15,6 +14,8 @@ import {
   X,
 } from "lucide-react";
 import { showAppToast } from "@/lib/client-toast";
+import { OprynAction } from "@/components/motion/opryn-action";
+import { SuccessCheck } from "@/components/motion/success-check";
 
 type Role = {
   id: string;
@@ -59,6 +60,7 @@ export function TeamManager({
   const [email, setEmail] = useState("");
   const [roleId, setRoleId] = useState("");
   const [loading, setLoading] = useState(false);
+  const invitePending = useRef(false);
   const [error, setError] = useState("");
   const [inviteResult, setInviteResult] = useState<{
     url: string;
@@ -75,7 +77,8 @@ export function TeamManager({
 
   async function invite(event: FormEvent) {
     event.preventDefault();
-    if (loading) return;
+    if (invitePending.current) return;
+    invitePending.current = true;
     setLoading(true);
     setError("");
     try {
@@ -105,6 +108,7 @@ export function TeamManager({
       );
     } finally {
       setLoading(false);
+      invitePending.current = false;
     }
   }
 
@@ -281,7 +285,7 @@ export function TeamManager({
           <button
             data-guide="team.invite"
             onClick={startInvite}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#3158d8] px-4 text-sm font-semibold text-white shadow-[0_9px_22px_rgba(49,88,216,.18)] hover:bg-[#2446b8]"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#2855f9] px-4 text-sm font-semibold text-white shadow-[0_4px_12px_rgba(40,85,249,.12)] transition-colors hover:bg-[#2045ce]"
           >
             <Plus className="size-4" />
             Invite Employee
@@ -298,7 +302,7 @@ export function TeamManager({
         </p>
       ) : null}
 
-      <section className="rounded-2xl border border-[#dfe5ed] bg-white p-5 sm:p-6">
+      <section className="border-t border-[var(--opryn-line)] pt-5">
         <label className="mb-5 block text-sm font-medium">
           Search members
           <input
@@ -336,7 +340,7 @@ export function TeamManager({
               return (
                 <article
                   key={member.id}
-                  className="py-5"
+                  className="team-interaction-row py-5"
                   data-motion-row={member.id}
                 >
                   <div className="flex items-start gap-3">
@@ -451,7 +455,7 @@ export function TeamManager({
       </section>
 
       {canManage && invites.length ? (
-        <section className="rounded-2xl border border-[#dfe5ed] bg-white p-5 sm:p-6">
+        <section className="border-t border-[var(--opryn-line)] pt-5">
           <div className="flex items-center gap-2">
             <Mail className="size-4 text-[#3158d8]" />
             <h2 className="font-semibold">Pending invitations</h2>
@@ -464,7 +468,7 @@ export function TeamManager({
               <div
                 key={invite.id}
                 data-motion-row={invite.id}
-                className="flex flex-col gap-3 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
+                className="team-interaction-row flex flex-col gap-3 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
               >
                 <div>
                   <p className="font-medium">{invite.email}</p>
@@ -531,7 +535,7 @@ export function TeamManager({
             {inviteResult ? (
               <div className="mt-6">
                 <div className="flex items-start gap-2 rounded-xl bg-[#eaf7f1] p-3 text-sm text-[#177257]">
-                  <Check className="mt-0.5 size-4 shrink-0" />
+                  <SuccessCheck />
                   <span>
                     {inviteResult.delivered
                       ? "Invitation emailed. The employee can use the secure sign-in link to join."
@@ -619,17 +623,16 @@ export function TeamManager({
                     {error}
                   </p>
                 ) : null}
-                <button
-                  disabled={loading}
-                  className="mt-5 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#3158d8] text-sm font-semibold text-white disabled:opacity-60"
-                >
-                  {loading ? (
-                    <LoaderCircle className="size-4 animate-spin" />
-                  ) : (
-                    <Mail className="size-4" />
-                  )}
-                  {loading ? "Sending…" : "Send Invitation"}
-                </button>
+                <div className="mt-5">
+                  <OprynAction
+                    type="submit"
+                    label="Send Invitation"
+                    pendingLabel="Sending…"
+                    successLabel="Invited"
+                    state={loading ? "pending" : error ? "error" : "idle"}
+                    icon={<Mail className="size-4" />}
+                  />
+                </div>
               </>
             )}
           </form>

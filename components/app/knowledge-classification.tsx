@@ -1,6 +1,10 @@
 "use client";
 import { useState } from "react";
 import {
+  OprynAction,
+  useActionFeedback,
+} from "@/components/motion/opryn-action";
+import {
   KNOWLEDGE_CATEGORIES,
   type KnowledgeCategory,
 } from "@/lib/knowledge-library";
@@ -19,12 +23,10 @@ export function KnowledgeClassification({
   const [category, setCategory] = useState(initialCategory);
   const [tags, setTags] = useState(initialTags.join(", "));
   const [revision, setRevision] = useState(initialRevision);
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState("");
+  const feedback = useActionFeedback();
+  const [savedValues, setSavedValues] = useState("");
   async function save() {
-    setBusy(true);
-    setMessage("");
-    try {
+    await feedback.run(async () => {
       const response = await fetch("/api/knowledge-library/metadata", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -43,12 +45,8 @@ export function KnowledgeClassification({
       if (!response.ok)
         throw new Error(data.error || "Classification could not be saved.");
       setRevision(data.revision);
-      setMessage("Classification saved.");
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Try again.");
-    } finally {
-      setBusy(false);
-    }
+      setSavedValues(JSON.stringify({ category, tags }));
+    });
   }
   return (
     <section className="rounded-xl border border-[#CBCFCA] bg-[#FAF9F5] p-5">
@@ -82,19 +80,23 @@ export function KnowledgeClassification({
           />
         </label>
       </div>
-      <button
-        type="button"
-        className="opryn-button-secondary mt-4"
-        disabled={busy}
-        onClick={save}
-      >
-        {busy ? "Saving…" : "Save classification"}
-      </button>
-      {message && (
-        <p className="mt-3" role="status">
-          {message}
-        </p>
-      )}
+      <div className="mt-4">
+        <OprynAction
+          label="Save classification"
+          pendingLabel="Saving…"
+          successLabel="Saved"
+          variant="secondary"
+          repeatable
+          state={
+            feedback.state === "success" &&
+            savedValues !== JSON.stringify({ category, tags })
+              ? "idle"
+              : feedback.state
+          }
+          errorMessage={feedback.error}
+          onClick={save}
+        />
+      </div>
     </section>
   );
 }

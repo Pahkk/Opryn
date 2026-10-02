@@ -1,10 +1,19 @@
 import "server-only";
 
 import { z } from "zod";
+import { after } from "next/server";
+import {
+  validateLearningHandoff,
+  attachLearningHandoff,
+} from "@/lib/onboarding/learning-handoff";
+import { scopeContextSchema } from "@/lib/opryn/knowledge/scope";
+import { mcpQuestionOrigin } from "@/lib/opryn/mcp/config";
+import { memberScopeContext } from "@/lib/opryn/knowledge/scope-context";
+import { scopedKnowledgeContext } from "@/lib/opryn/knowledge/scoped-context";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { getOrganizationPlan } from "@/lib/billing/subscription";
-import { hasFeature } from "@/lib/billing/plans";
+import { hasFeature, type PlanFeature } from "@/lib/billing/plans";
 import { answerCompanyQuestion } from "@/lib/ai/services";
 import { searchCompanyKnowledge } from "@/lib/opryn/knowledge/retrieval";
 import { resolveKnowledgeSources } from "@/lib/opryn/knowledge/sources";
@@ -16,8 +25,6 @@ import {
 } from "@/lib/opryn/mcp/service";
 import {
   createProcessFromContext,
-  formatExternalLearningResponse,
-  listProcessKnowledgeProposals,
   processExternalLearningJob,
   startExternalLearning,
 } from "@/lib/opryn/mcp/learning";
@@ -35,18 +42,28 @@ import {
 const questionSchema = z.object({
   question: z.string().trim().min(3).max(4000),
   context: z.string().trim().max(4000).optional(),
+  scope_context: scopeContextSchema.optional(),
 });
 
 const searchSchema = z.object({
+  scope_context: scopeContextSchema.optional(),
   query: z.string().trim().min(2).max(2000),
   limit: z.number().int().min(1).max(20).optional().default(5),
 });
 
-const policySchema = z.object({ topic: z.string().trim().min(2).max(500) });
-const processSchema = z.object({ query: z.string().trim().min(2).max(500) });
+const policySchema = z.object({
+  topic: z.string().trim().min(2).max(500),
+  scope_context: scopeContextSchema.optional(),
+});
+const processSchema = z.object({
+  query: z.string().trim().min(2).max(500),
+  scope_context: scopeContextSchema.optional(),
+});
 const learningSchema = z.object({
+  provider: z.enum(["chatgpt", "claude"]).optional(),
   name: z.string().trim().min(1).max(200),
-  learning_type: z.enum(["business", "process", "topic"]),
+  learning_type: z.enum(["business", "process", "topic", "general"]),
+  learning_request_id: z.uuid().optional(),
   focus: z.string().trim().max(200).optional(),
   context: z.string().trim().min(40).max(100000),
   notes: z.string().trim().max(3000).optional(),
@@ -201,7 +218,12 @@ export function registerOprynTools(
           };
           return { result, status: created.status, sourceCount: 0 };
         },
-        { requiresPremium: false, minuteLimit: 4, hourLimit: 20 },
+        {
+          feature: "ai_conversation_learning",
+          minuteLimit: 4,
+          hourLimit: 20,
+          workspaceLearningLimit: true,
+        },
       ),
   );
 
@@ -265,7 +287,12 @@ export function registerOprynTools(
           };
           return { result, status: created.status, sourceCount: 0 };
         },
-        { requiresPremium: false, minuteLimit: 4, hourLimit: 20 },
+        {
+          feature: "ai_conversation_learning",
+          minuteLimit: 4,
+          hourLimit: 20,
+          workspaceLearningLimit: true,
+        },
       ),
   );
 
@@ -538,7 +565,7 @@ export function registerOprynTools(
     {
       title: "Learn from this conversation",
       description:
-        "Send business-specific information from the CURRENT conversation to Opryn for owner review. Use only when the user explicitly asks Opryn to learn, remember, or be taught from the current conversation or supplied context. Supported modes are business, process, and topic. Include only relevant context actually available in this conversation; never assume access to other chats or account history. Findings remain Observed and are not approved company policy until reviewed in Opryn.",
+        "Send relevant information from the CURRENT conversation to Opryn for human review. Use only when the user explicitly asks Opryn to learn from supplied context. Supported modes: business, process, topic, general. If the user provides a learning request reference, pass it unchanged as learning_request_id. Include only relevant context actually available here, never other chats/history. Findings are not approved policy until reviewed in Opryn.",
       inputSchema: learningSchema,
       annotations: {
         readOnlyHint: false,
@@ -546,55 +573,93 @@ export function registerOprynTools(
         openWorldHint: false,
       },
     },
-    async ({ name, learning_type, focus, context, notes, source_title }) =>
+    async ({
+      name,
+      learning_type,
+      focus,
+      context,
+      notes,
+      source_title,
+      learning_request_id,
+      provider,
+    }) =>
       runTool(
         service,
         auth,
         "learn_from_context",
         async () => {
           requireMcpScope(auth, "opryn.learning.create");
+          if (
+            provider &&
+            ["chatgpt", "claude"].includes(auth.clientKind) &&
+            provider !== auth.clientKind
+          )
+            throw new Error(
+              "The conversation provider does not match this connection.",
+            );
+          const handoff = await validateLearningHandoff(
+            service,
+            auth,
+            learning_request_id,
+          );
+          if (handoff?.jobId) {
+            const { data: existing, error } = await service
+              .from("external_learning_jobs")
+              .select("content_hash")
+              .eq("id", handoff.jobId)
+              .eq("organization_id", auth.organizationId)
+              .eq("created_by", auth.userId)
+              .maybeSingle();
+            if (error) throw error;
+            if (!existing)
+              throw new Error(
+                "Your previous conversation couldn't be found. Prepare a new request.",
+              );
+          }
           const job = await startExternalLearning(service, auth, {
-            name: learning_type === "business" ? name : focus || name,
-            learningType: learning_type,
+            name:
+              handoff?.name ||
+              (learning_type === "business" ? name : focus || name),
+            learningType:
+              (handoff?.type || learning_type) === "general"
+                ? "topic"
+                : ((handoff?.type || learning_type) as
+                    "business" | "process" | "topic"),
+            expectedJobId: handoff?.jobId,
+            learningRequestId: handoff?.requestId,
             context,
             notes,
             sourceTitle: source_title,
           });
+          if (handoff)
+            await attachLearningHandoff(service, auth, handoff, job.id);
           if (!["needs_review", "complete"].includes(job.status))
-            await processExternalLearningJob(service, job.id);
-          const { data: completedJob, error: completedJobError } = await service
-            .from("external_learning_jobs")
-            .select("id,status,result_summary,process_id")
-            .eq("id", job.id)
-            .eq("organization_id", auth.organizationId)
-            .single();
-          if (completedJobError) throw completedJobError;
-          const liveJob = {
-            id: completedJob.id,
-            status: completedJob.status,
-            summary: parseLearningSummary(completedJob.result_summary),
-            processId: completedJob.process_id as string | null,
+            after(async () => {
+              await processExternalLearningJob(service, job.id).catch(
+                () => undefined,
+              );
+            });
+          const result = {
+            message:
+              "Opryn received this conversation and is preparing findings for human review. Nothing has been approved or published.",
+            learningJobId: job.id,
+            status: job.status,
             duplicate: job.duplicate,
+            source: auth.clientKind,
+            reviewUrl: "https://www.opryn.app/onboarding",
           };
-          const proposals = liveJob.processId
-            ? await listProcessKnowledgeProposals(
-                service,
-                auth.organizationId,
-                liveJob.processId,
-              )
-            : [];
-          const result = formatExternalLearningResponse({
-            job: liveJob,
-            name,
-            proposals,
-          });
           return {
             result,
             status: result.status,
             sourceCount: 0,
           };
         },
-        { requiresPremium: false, minuteLimit: 5, hourLimit: 25 },
+        {
+          feature: "ai_conversation_learning",
+          minuteLimit: 5,
+          hourLimit: 25,
+          workspaceLearningLimit: true,
+        },
       ),
   );
 
@@ -611,10 +676,16 @@ export function registerOprynTools(
         openWorldHint: false,
       },
     },
-    async ({ question, context }) =>
+    async ({ question, context, scope_context }) =>
       runTool(service, auth, "ask_opryn", async () => {
         requireMcpScope(auth, "opryn.knowledge.read");
-        const result = await askOprynFromMcp(service, auth, question, context);
+        const result = await askOprynFromMcp(
+          service,
+          auth,
+          question,
+          context,
+          scope_context,
+        );
         return {
           result,
           status: result.status,
@@ -636,7 +707,7 @@ export function registerOprynTools(
         openWorldHint: false,
       },
     },
-    async ({ query, limit }) =>
+    async ({ query, limit, scope_context }) =>
       runTool(service, auth, "search_company_knowledge", async () => {
         requireMcpScope(auth, "opryn.knowledge.read");
         const { knowledge } = await searchCompanyKnowledge({
@@ -645,6 +716,8 @@ export function registerOprynTools(
           userId: auth.userId,
           query,
           limit,
+          scopeContext: scope_context,
+          channel: mcpQuestionOrigin(auth.clientKind),
         });
         const sources = auth.scopes.has("opryn.sources.read")
           ? await resolveKnowledgeSources(service, knowledge)
@@ -684,7 +757,7 @@ export function registerOprynTools(
         openWorldHint: false,
       },
     },
-    async ({ topic }) =>
+    async ({ topic, scope_context }) =>
       runTool(service, auth, "check_company_policy", async () => {
         requireMcpScope(auth, "opryn.knowledge.read");
         const { knowledge } = await searchCompanyKnowledge({
@@ -693,6 +766,8 @@ export function registerOprynTools(
           userId: auth.userId,
           query: `company policy for ${topic}`,
           limit: 12,
+          scopeContext: scope_context,
+          channel: mcpQuestionOrigin(auth.clientKind),
         });
         const policyKnowledge = knowledge.filter((item) =>
           ["rule", "owner_answer", "exception", "faq"].includes(
@@ -758,7 +833,7 @@ export function registerOprynTools(
         openWorldHint: false,
       },
     },
-    async ({ query }) =>
+    async ({ query, scope_context }) =>
       runTool(service, auth, "get_company_process", async () => {
         requireMcpScope(auth, "opryn.processes.read");
         const { knowledge } = await searchCompanyKnowledge({
@@ -767,6 +842,8 @@ export function registerOprynTools(
           userId: auth.userId,
           query,
           limit: 20,
+          scopeContext: scope_context,
+          channel: mcpQuestionOrigin(auth.clientKind),
         });
         const candidate = knowledge.find((item) => item.process_id);
         if (!candidate?.process_id)
@@ -778,6 +855,41 @@ export function registerOprynTools(
         if (!(await canReadProcess(service, auth, candidate.process_id)))
           return {
             result: { status: "not_found", process: null },
+            status: "not_found",
+            sourceCount: 0,
+          };
+        // A scoped summary must not unlock an entire process containing other
+        // non-applicable rules. Raw library browsing remains a separate capability.
+        const processKnowledge = await service
+          .from("knowledge_chunks")
+          .select("id")
+          .eq("organization_id", auth.organizationId)
+          .eq("process_id", candidate.process_id)
+          .eq("approved", true);
+        if (processKnowledge.error) throw processKnowledge.error;
+        const applicability = await scopedKnowledgeContext(
+          service,
+          auth.organizationId,
+          processKnowledge.data ?? [],
+          await memberScopeContext(
+            service,
+            auth.organizationId,
+            auth.userId,
+            mcpQuestionOrigin(auth.clientKind),
+            scope_context,
+          ),
+        );
+        if (
+          applicability.knowledge.length !==
+          (processKnowledge.data ?? []).length
+        )
+          return {
+            result: {
+              status: "needs_clarification",
+              process: null,
+              message:
+                "The full process contains guidance that cannot be applied to this context. Ask a specific question with the required applicability context.",
+            },
             status: "not_found",
             sourceCount: 0,
           };
@@ -842,7 +954,7 @@ export function registerOprynTools(
         openWorldHint: false,
       },
     },
-    async ({ question, context }) =>
+    async ({ question, context, scope_context }) =>
       runTool(service, auth, "request_owner_guidance", async () => {
         requireMcpScope(auth, "opryn.escalations.create");
         const result = await requestGuidanceFromMcp(
@@ -850,23 +962,11 @@ export function registerOprynTools(
           auth,
           question,
           context,
+          scope_context,
         );
         return { result, status: "submitted", sourceCount: 0 };
       }),
   );
-}
-
-function parseLearningSummary(value: unknown) {
-  if (!value || typeof value !== "object")
-    return { processes: 0, steps: 0, rules: 0, faqs: 0, clarifications: 0 };
-  const summary = value as Record<string, unknown>;
-  return {
-    processes: Number(summary.processes) || 0,
-    steps: Number(summary.steps) || 0,
-    rules: Number(summary.rules) || 0,
-    faqs: Number(summary.faqs) || 0,
-    clarifications: Number(summary.clarifications) || 0,
-  };
 }
 
 async function runTool(
@@ -880,6 +980,8 @@ async function runTool(
   }>,
   options: {
     requiresPremium?: boolean;
+    feature?: PlanFeature;
+    workspaceLearningLimit?: boolean;
     minuteLimit?: number;
     hourLimit?: number;
   } = {},
@@ -887,10 +989,14 @@ async function runTool(
   const startedAt = Date.now();
   try {
     const requiresPremium = options.requiresPremium ?? true;
-    const subscription = requiresPremium
-      ? await getOrganizationPlan(service, auth.organizationId)
-      : null;
-    if (subscription && !hasFeature(subscription.plan, "mcpAccess")) {
+    const subscription =
+      requiresPremium || options.feature
+        ? await getOrganizationPlan(service, auth.organizationId)
+        : null;
+    if (
+      subscription &&
+      !hasFeature(subscription.plan, options.feature ?? "mcpAccess")
+    ) {
       await logMcpActivity(service, auth, {
         toolName,
         resultStatus: "premium_required",
@@ -900,11 +1006,29 @@ async function runTool(
         {
           error: "premium_required",
           message:
-            "Opryn is connected. Finish onboarding, then activate Opryn Everywhere to use approved company knowledge here.",
-          upgrade_url: "https://www.opryn.app/pricing",
+            options.feature === "ai_conversation_learning"
+              ? "Conversation learning is available on Opryn Pro. Return to onboarding to unlock it."
+              : "An active Opryn Pro plan is required for this capability.",
+          upgrade_url: "https://www.opryn.app/onboarding",
         },
         true,
       );
+    }
+    if (options.workspaceLearningLimit) {
+      const { data: allowed, error } = await service.rpc(
+        "consume_ai_learning_rate_limit",
+        { workspace_id: auth.organizationId },
+      );
+      if (error) throw error;
+      if (!allowed)
+        return toolResult(
+          {
+            error: "rate_limited",
+            message:
+              "This workspace has sent several conversations recently. Try again shortly.",
+          },
+          true,
+        );
     }
     const { data: allowed } = await service.rpc("consume_mcp_rate_limit", {
       target_grant_id: auth.grantId,

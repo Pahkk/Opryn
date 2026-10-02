@@ -1,16 +1,22 @@
 "use client";
+import { KnowledgeScopePanel } from "./knowledge-scope";
+import { ConflictReplacement } from "./conflict-replacement";
 
 import Link from "next/link";
+import { ApprovalImpact } from "@/components/training/approval-impact";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { MotionRegion } from "@/components/motion/motion-region";
+import { MotionRegion, StaggerList } from "@/components/motion/motion-region";
 import { MotionNumber } from "@/components/motion/motion-number";
 import { DecisionReceipt } from "@/components/motion/decision-receipt";
-import { SelectionTrack } from "@/components/motion/selection-track";
-import { gsap, motionScope } from "@/lib/motion/gsap";
-import { motion } from "@/lib/motion/presets";
+import { OprynAction } from "@/components/motion/opryn-action";
+import { MotionTabs, ActiveIndicator } from "@/components/motion/motion-tabs";
+import { DecisionWhy } from "./product-feedback";
 import { ArrowRight, Check, X } from "lucide-react";
 import { OwnerAnswer } from "@/components/app/owner-answer";
+import { GapRecheck } from "@/components/app/gap-recheck";
+import { GapQuestionActions } from "@/components/app/gap-question-actions";
+import { EscalationCard } from "@/components/app/ai-connections";
 import type { NeedsYouItem, NeedsYouKind } from "@/lib/opryn/needs-you";
 import { showAppToast } from "@/lib/client-toast";
 import { DialogSurface } from "@/components/app/dialog-surface";
@@ -37,16 +43,14 @@ export function NeedsYouCenter({
 }) {
   const router = useRouter();
   const queueRef = useRef<HTMLDivElement>(null);
-  const clearCleanup = useRef<(() => void) | null>(null);
   const decisionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const decisionLock = useRef(false);
   useEffect(
     () => () => {
       if (decisionTimer.current) clearTimeout(decisionTimer.current);
     },
     [],
   );
-  const [clearing, setClearing] = useState(false);
-  useEffect(() => () => clearCleanup.current?.(), []);
   const [decisionError, setDecisionError] = useState("");
   const [resolved, setResolved] = useState<
     Record<string, { title: string; height: number }>
@@ -106,7 +110,8 @@ export function NeedsYouCenter({
     item: NeedsYouItem,
     decision: "approve" | "deny",
   ) {
-    if (resolvingId) return;
+    if (decisionLock.current) return;
+    decisionLock.current = true;
     setDecisionError("");
     setResolvingId(item.id);
     try {
@@ -143,6 +148,7 @@ export function NeedsYouCenter({
           : "This decision wasn't saved. Please try again.",
       );
       setResolvingId(null);
+      decisionLock.current = false;
       showAppToast(
         "That decision wasn't saved.",
         error instanceof Error ? error.message : "Please try again.",
@@ -155,7 +161,8 @@ export function NeedsYouCenter({
     payload: Record<string, string | number>,
     message: string,
   ) {
-    if (resolvingId) return;
+    if (decisionLock.current) return;
+    decisionLock.current = true;
     setDecisionError("");
     setResolvingId(item.id);
     try {
@@ -177,6 +184,7 @@ export function NeedsYouCenter({
           : "This decision wasn't saved. Please try again.",
       );
       setResolvingId(null);
+      decisionLock.current = false;
       showAppToast(
         "That review wasn't saved.",
         error instanceof Error ? error.message : "Please try again.",
@@ -185,7 +193,8 @@ export function NeedsYouCenter({
   }
 
   async function denyProcess(item: NeedsYouItem) {
-    if (resolvingId) return;
+    if (decisionLock.current) return;
+    decisionLock.current = true;
     setDecisionError("");
     setResolvingId(item.id);
     try {
@@ -209,6 +218,7 @@ export function NeedsYouCenter({
           : "This decision wasn't saved. Please try again.",
       );
       setResolvingId(null);
+      decisionLock.current = false;
       showAppToast(
         "That decision wasn't saved.",
         error instanceof Error ? error.message : "Please try again.",
@@ -229,13 +239,15 @@ export function NeedsYouCenter({
     // click cannot approve a different item as it moves under the pointer.
     setResolvingId(item.id);
     if (decisionTimer.current) clearTimeout(decisionTimer.current);
-    decisionTimer.current = setTimeout(() => setResolvingId(null), 350);
+    decisionTimer.current = setTimeout(() => {
+      setResolvingId(null);
+      decisionLock.current = false;
+    }, 350);
     setSelectedId(null);
     router.refresh();
   }
 
   const remaining = items.filter((item) => !resolved[item.id]).length;
-
   return (
     <div className="needs-you-center" ref={queueRef} data-guide="review.queue">
       {decisionError && !selected ? (
@@ -248,9 +260,10 @@ export function NeedsYouCenter({
       ) : null}
       <header className="needs-you-hero">
         <div>
+          <p className="product-kicker">Your decision center</p>
           <h1 className="opryn-page-title">Needs You</h1>
           <p className="mt-4 max-w-2xl text-[15px] leading-7 text-[var(--opryn-muted)]">
-            Opryn handled the rest. These need your input.
+            A few human decisions. Better answers for everyone.
           </p>
         </div>
         <div
@@ -279,7 +292,7 @@ export function NeedsYouCenter({
         <SummaryMetric label="Updates" value={counts.update} tone="update" />
       </section>
 
-      <SelectionTrack value={filter}>
+      <MotionTabs>
         <div
           className="needs-you-filters"
           role="group"
@@ -294,51 +307,24 @@ export function NeedsYouCenter({
               className={filter === item.id ? "is-active" : ""}
             >
               {item.label}
+              {filter === item.id ? <ActiveIndicator /> : null}
             </button>
           ))}
         </div>
-      </SelectionTrack>
+      </MotionTabs>
 
       {Object.keys(resolved).length ? (
         <button
           type="button"
           className="mt-4 min-h-11 text-sm font-semibold text-[var(--opryn-blue)]"
-          disabled={clearing}
           onClick={() => {
-            if (clearing || !queueRef.current) return;
-            setClearing(true);
+            if (!queueRef.current) return;
             // Move focus to a stable control before removing completed rows.
             queueRef.current
               .querySelector<HTMLButtonElement>(".needs-you-filters button")
               ?.focus({ preventScroll: true });
-            const scope = motionScope(queueRef.current);
-            scope.run(() =>
-              gsap.to(queueRef.current!.querySelectorAll(".review-result"), {
-                opacity: 0,
-                y: -6,
-                minHeight: 0,
-                height: 0,
-                margin: 0,
-                padding: 0,
-                overflow: "hidden",
-                duration: motion.duration.fast,
-                ease: motion.ease.exit,
-              }),
-            );
-            // State removal has a bounded fallback independent of GSAP completion.
-            const timer = window.setTimeout(() => {
-              scope.dispose();
-              setItems((current) =>
-                current.filter((item) => !resolved[item.id]),
-              );
-              setResolved({});
-              setClearing(false);
-              clearCleanup.current = null;
-            }, motion.duration.fast * 1000);
-            clearCleanup.current = () => {
-              clearTimeout(timer);
-              scope.dispose();
-            };
+            setItems((current) => current.filter((item) => !resolved[item.id]));
+            setResolved({});
           }}
         >
           {remaining} left · Clear completed decisions
@@ -346,7 +332,7 @@ export function NeedsYouCenter({
       ) : null}
 
       {visibleItems.length ? (
-        <div className="mt-7 space-y-9">
+        <div className="mt-7 space-y-8">
           {(["now", "soon", "can_wait"] as const).map((priority) => {
             const group = visibleItems.filter(
               (item) => item.priority === priority,
@@ -363,35 +349,40 @@ export function NeedsYouCenter({
                   </h2>
                   <span className="h-px flex-1 bg-[var(--opryn-line)]" />
                 </div>
-                <div className="space-y-3">
-                  {group.map((item) =>
-                    resolved[item.id] ? (
-                      <DecisionReceipt
-                        key={item.id}
-                        previousHeight={resolved[item.id].height}
-                      >
-                        <MotionRegion variant="status">
-                          <p className="font-semibold text-[var(--opryn-blue)]">
-                            {resolved[item.id].title}
-                          </p>
-                          <p className="mt-1 text-sm text-[var(--opryn-muted)]">
-                            {item.title}
-                          </p>
-                        </MotionRegion>
-                      </DecisionReceipt>
-                    ) : (
-                      <NeedsYouCard
-                        key={item.id}
-                        item={item}
-                        busy={resolvingId !== null}
-                        leaving={false}
-                        onOpen={() => setSelectedId(item.id)}
-                        onAccept={() => void resolveProposal(item, "approve")}
-                        onDeny={() => void resolveProposal(item, "deny")}
-                      />
-                    ),
-                  )}
-                </div>
+                <StaggerList
+                  className="needs-you-decision-list"
+                  changeKey={group.map((item) => item.id).join(",")}
+                >
+                  {group.map((item) => (
+                    <div key={item.id} data-motion-row={item.id}>
+                      {resolved[item.id] ? (
+                        <DecisionReceipt
+                          key={item.id}
+                          previousHeight={resolved[item.id].height}
+                        >
+                          <MotionRegion variant="status">
+                            <p className="font-semibold text-[var(--opryn-blue)]">
+                              {resolved[item.id].title}
+                            </p>
+                            <p className="mt-1 text-sm text-[var(--opryn-muted)]">
+                              {item.title}
+                            </p>
+                          </MotionRegion>
+                        </DecisionReceipt>
+                      ) : (
+                        <NeedsYouCard
+                          key={item.id}
+                          item={item}
+                          busy={resolvingId !== null}
+                          leaving={false}
+                          onOpen={() => setSelectedId(item.id)}
+                          onAccept={() => void resolveProposal(item, "approve")}
+                          onDeny={() => void resolveProposal(item, "deny")}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </StaggerList>
               </section>
             );
           })}
@@ -401,8 +392,24 @@ export function NeedsYouCenter({
           <span>
             <Check />
           </span>
-          <h2>Opryn doesn&apos;t need anything from you right now.</h2>
-          <p>When a real decision needs your input, it will appear here.</p>
+          <h2>
+            {filter === "all"
+              ? "You're clear for now."
+              : "Nothing in this view."}
+          </h2>
+          <p>
+            {filter === "all"
+              ? "When an answer or approval needs your input, Opryn will bring it here."
+              : "Try another decision type or return to all items."}
+          </p>
+          {filter === "all" ? (
+            <Link
+              href="/app/processes"
+              className="mt-4 inline-flex min-h-11 items-center font-semibold text-[#2045ce]"
+            >
+              Explore approved knowledge <ArrowRight size={15} />
+            </Link>
+          ) : null}
           {filter !== "all" ? (
             <button type="button" onClick={() => setFilter("all")}>
               Show all items
@@ -467,34 +474,45 @@ function NeedsYouCard({
         type="button"
         onClick={onOpen}
         className="min-w-0 flex-1 text-left"
-        aria-label={`Review ${item.title}`}
+        aria-label={`Review ${decisionTitle(item)}`}
       >
-        <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
+        <div className="needs-you-card-meta flex flex-wrap items-center gap-2 text-xs font-semibold">
           <span className="needs-you-kind">{kindLabel(item.kind)}</span>
+          <span
+            className={`needs-you-priority needs-you-priority-${item.priority}`}
+          >
+            {priorityLabel(item.priority)}
+          </span>
           {item.source ? (
-            <span className="text-[var(--opryn-faint)]">{item.source}</span>
+            <span className="needs-you-source">{item.source}</span>
+          ) : null}
+          {typeof item.metadata?.questionCount === "number" &&
+          item.metadata.questionCount > 1 ? (
+            <span className="text-[var(--opryn-muted)]">
+              Asked {item.metadata.questionCount} times
+            </span>
           ) : null}
         </div>
         <h3 className="mt-2 text-lg font-semibold tracking-[-.025em] text-[var(--opryn-navy)]">
-          {item.title}
+          {decisionTitle(item)}
         </h3>
-        <p
-          className={`mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-[var(--opryn-muted)] ${quickApproval ? "" : "line-clamp-3"}`}
-        >
-          {item.summary}
+        <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-[var(--opryn-muted)] line-clamp-2">
+          {item.type === "question" || item.type === "external_question"
+            ? "No approved answer covers this situation yet."
+            : item.summary}
         </p>
+        <DecisionWhy kind={item.kind} />
       </button>
       <div className="needs-you-card-actions">
         {quickApproval ? (
           <>
-            <button
-              type="button"
-              disabled={busy}
+            <OprynAction
+              label="Accept"
+              pendingLabel="Approving…"
+              successLabel="Approved"
+              state={busy ? "pending" : "idle"}
               onClick={onAccept}
-              className="opryn-action min-w-[104px] justify-center"
-            >
-              {busy ? "Adding…" : "Accept"}
-            </button>
+            />
             <button
               type="button"
               disabled={busy}
@@ -557,11 +575,11 @@ function ReviewSheet({
       labelledBy="needs-you-sheet-title"
       busy={busy}
     >
-      <aside className="needs-you-sheet">
+      <aside className="needs-you-sheet product-review">
         <header>
           <div>
             <p className="opryn-section-label">{kindLabel(item.kind)}</p>
-            <h2 id="needs-you-sheet-title">{item.title}</h2>
+            <h2 id="needs-you-sheet-title">{decisionTitle(item)}</h2>
             <WorkspaceNotice action="Reviewing for" />
           </div>
           <button
@@ -574,6 +592,27 @@ function ReviewSheet({
           </button>
         </header>
         <div className="needs-you-sheet-body">
+          <DecisionWhy kind={item.kind} />
+          {item.detail ? (
+            <details className="mb-5 mt-4 text-xs leading-6 text-[#566279]">
+              <summary className="min-h-11 cursor-pointer font-semibold">
+                Why this needs a decision
+              </summary>
+              <p>{item.detail}</p>
+            </details>
+          ) : null}
+          {item.type === "knowledge_proposal" &&
+          typeof item.metadata?.existingKnowledgeId === "string" ? (
+            <ApprovalImpact knowledgeId={item.metadata.existingKnowledgeId} />
+          ) : null}
+          {item.type === "knowledge_proposal" ? (
+            <KnowledgeScopePanel
+              id={item.targetId}
+              entity="proposal"
+              canManage
+              onRevision={onClose}
+            />
+          ) : null}
           {item.type === "knowledge_proposal" &&
           item.primaryAction === "accept" ? (
             <p className="mb-5 text-sm leading-6 text-[var(--opryn-muted)]">
@@ -602,15 +641,47 @@ function ReviewSheet({
             </p>
           </ReviewBlock>
           {item.type === "question" ? (
-            <OwnerAnswer
-              questionId={item.targetId}
-              onResolved={onQuestionResolved}
-            />
+            <>
+              <OwnerAnswer
+                questionId={item.targetId}
+                onResolved={onQuestionResolved}
+              />
+              <GapQuestionActions
+                questionId={item.targetId}
+                onClose={onClose}
+              />
+            </>
           ) : null}
           {item.source ? (
             <ReviewBlock label="Source">
               <p>{item.source}</p>
             </ReviewBlock>
+          ) : null}
+          {item.type === "gap_recheck" ? (
+            <GapRecheck proposalId={item.targetId} />
+          ) : null}
+          {item.type === "external_question" && item.metadata?.connectionId ? (
+            <EscalationCard
+              connectionId={String(item.metadata.connectionId)}
+              item={{
+                id: item.targetId,
+                question: item.summary,
+                context: String(item.metadata.context ?? ""),
+                status: "open",
+                resolution: item.metadata.resolution
+                  ? String(item.metadata.resolution)
+                  : null,
+                proposed_rule: item.metadata.proposedRule
+                  ? String(item.metadata.proposedRule)
+                  : null,
+                is_one_time_exception: Boolean(item.metadata.oneTimeException),
+                knowledge_proposal_id: item.metadata.proposalId
+                  ? String(item.metadata.proposalId)
+                  : null,
+                created_at: item.createdAt,
+              }}
+              onDone={onQuestionResolved}
+            />
           ) : null}
           {item.detail ? (
             <ReviewBlock label="Why Opryn needs you">
@@ -620,6 +691,9 @@ function ReviewSheet({
           {item.type === "conflict" ? (
             <div className="space-y-3">
               <ReviewBlock label="First answer">
+                <p className="text-xs text-[#566279]">
+                  Version {String(item.metadata?.firstVersion ?? "unavailable")}
+                </p>
                 <p>
                   {String(
                     item.metadata?.firstContent || "First approved answer",
@@ -627,12 +701,23 @@ function ReviewSheet({
                 </p>
               </ReviewBlock>
               <ReviewBlock label="Second answer">
+                <p className="text-xs text-[#566279]">
+                  Version{" "}
+                  {String(item.metadata?.secondVersion ?? "unavailable")}
+                </p>
                 <p>
                   {String(
                     item.metadata?.secondContent || "Second approved answer",
                   )}
                 </p>
               </ReviewBlock>
+              <ConflictReplacement
+                key={item.targetId}
+                id={item.targetId}
+                firstVersion={Number(item.metadata?.firstVersion ?? 0)}
+                secondVersion={Number(item.metadata?.secondVersion ?? 0)}
+                applicability={String(item.metadata?.firstApplicability ?? "")}
+              />
             </div>
           ) : null}
         </div>
@@ -644,7 +729,7 @@ function ReviewSheet({
             {error}
           </p>
         ) : null}
-        {item.type !== "question" ? (
+        {item.type !== "question" && item.type !== "gap_recheck" ? (
           <footer className="needs-you-sheet-actions">
             {item.type === "knowledge_proposal" ? (
               item.primaryAction === "accept" ||
@@ -725,6 +810,12 @@ function ReviewSheet({
                       {
                         action: "resolve_conflict",
                         conflictId: item.targetId,
+                        expectedFirstVersion: Number(
+                          item.metadata?.firstVersion ?? 0,
+                        ),
+                        expectedSecondVersion: Number(
+                          item.metadata?.secondVersion ?? 0,
+                        ),
                         resolution: "use_first",
                       },
                       "First answer kept.",
@@ -742,6 +833,12 @@ function ReviewSheet({
                       {
                         action: "resolve_conflict",
                         conflictId: item.targetId,
+                        expectedFirstVersion: Number(
+                          item.metadata?.firstVersion ?? 0,
+                        ),
+                        expectedSecondVersion: Number(
+                          item.metadata?.secondVersion ?? 0,
+                        ),
                         resolution: "use_second",
                       },
                       "Second answer kept.",
@@ -760,6 +857,12 @@ function ReviewSheet({
                         {
                           action: "resolve_conflict",
                           conflictId: item.targetId,
+                          expectedFirstVersion: Number(
+                            item.metadata?.firstVersion ?? 0,
+                          ),
+                          expectedSecondVersion: Number(
+                            item.metadata?.secondVersion ?? 0,
+                          ),
                           resolution: "keep_both",
                         },
                         "Both answers kept.",
@@ -768,6 +871,31 @@ function ReviewSheet({
                     className="opryn-button-secondary min-h-11 px-4"
                   >
                     Keep Both
+                  </button>
+                ) : null}
+                {item.metadata?.separateScopes ? (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    className="opryn-button-secondary min-h-11 px-4"
+                    onClick={() =>
+                      onReviewAction(
+                        {
+                          action: "resolve_conflict",
+                          conflictId: item.targetId,
+                          resolution: "keep_scoped",
+                          expectedFirstVersion: Number(
+                            item.metadata?.firstVersion ?? 0,
+                          ),
+                          expectedSecondVersion: Number(
+                            item.metadata?.secondVersion ?? 0,
+                          ),
+                        },
+                        "Both rules retained with separate applicability.",
+                      )
+                    }
+                  >
+                    Keep separate scopes
                   </button>
                 ) : null}
               </>
@@ -868,9 +996,18 @@ function priorityLabel(priority: NeedsYouItem["priority"]) {
   return "Can wait";
 }
 
+/** Actual question copy, not a generated topic or fabricated priority. Full text stays in review. */
+function decisionTitle(item: NeedsYouItem) {
+  return item.type === "question" || item.type === "external_question"
+    ? item.summary.length > 140
+      ? `${item.summary.slice(0, 137)}…`
+      : item.summary
+    : item.title;
+}
+
 function kindLabel(kind: NeedsYouKind) {
-  if (kind === "answer") return "Answer";
-  if (kind === "approve") return "Approve";
+  if (kind === "answer") return "Needs an answer";
+  if (kind === "approve") return "Needs approval";
   if (kind === "conflict") return "Conflict";
   return "Update";
 }

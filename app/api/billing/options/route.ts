@@ -4,6 +4,7 @@ import {
   getStripe,
   getStripePriceId,
   annualBillingConfigured,
+  isCurrentMonthlyPrice,
 } from "@/lib/billing/stripe";
 import { getOrganizationPlan } from "@/lib/billing/subscription";
 import { PLAN_DETAILS, PLAN_FEATURES, type PlanId } from "@/lib/billing/plans";
@@ -39,6 +40,8 @@ export async function GET() {
             price.unit_amount === null
           )
             throw new Error("Invalid configured price");
+          if (interval === "month" && !isCurrentMonthlyPrice(price, plan))
+            throw new Error("Configured monthly price is not current");
           return {
             plan,
             interval,

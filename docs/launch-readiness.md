@@ -1,5 +1,7 @@
 # Public launch-readiness audit — September 9, 2026
 
+> Historical launch audit. Its Core/Premium prices and trial references are superseded by Starter $49/month, Pro $129/month, and the current five-day Checkout trial. See [deployment pricing status](deployment.md#september-19-2026-price-cutover-status).
+
 ## Scope and outcome
 
 Incremental public-site refactor. No integration, authentication, approval, billing, or database architecture replacement. Green/gray theme and official logo retained. Homepage reduced from 15,029px to 10,524px at 1440px viewport in reduced-motion screenshots (~30%). The six-image gallery is now three purposeful visual moments; unused assets remain available but are not requested by the homepage.

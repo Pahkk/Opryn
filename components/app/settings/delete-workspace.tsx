@@ -76,9 +76,10 @@ export function DeleteWorkspace({
         other workspaces stay intact.
       </p>
       <p className="mt-2 text-sm leading-6">
-        Opryn will disconnect this workspace’s integrations, delete its uploaded
-        files, and cancel its active subscription without a prorated refund.
-        Original files in Google and other external services stay unchanged.
+        Opryn will disconnect this workspace’s integrations, remove its Nango
+        connections, delete its uploaded files, and cancel its active
+        subscription without a prorated refund. Original files in Google and
+        other external services stay unchanged.
       </p>
       <button
         ref={trigger}

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { MotionRegion } from "@/components/motion/motion-region";
+import { SuccessCheck } from "@/components/motion/success-check";
 export function SettingsHeading({
   title,
   description,
@@ -33,7 +34,8 @@ export function SettingsFeedback({
       ) : null}
       {message ? (
         <MotionRegion variant="status" changeKey={message}>
-          <p role="status" className="settings-message">
+          <p role="status" className="settings-message flex items-center gap-2">
+            <SuccessCheck />
             {message}
           </p>
         </MotionRegion>

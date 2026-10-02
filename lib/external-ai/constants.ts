@@ -4,6 +4,7 @@ export const EXTERNAL_AI_SCOPES = [
   "policies:read",
   "sources:read",
   "escalations:create",
+  "evaluations:create",
 ] as const;
 
 export type ExternalAIScope = (typeof EXTERNAL_AI_SCOPES)[number];

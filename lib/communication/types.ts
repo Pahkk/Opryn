@@ -32,6 +32,7 @@ export type ChannelAnswerResult =
     }
   | {
       status: "unknown";
+      routed?: boolean;
       questionId: string;
       expert: { id: string; name: string } | null;
       related: { content: string; source: ChannelSource | null } | null;

@@ -2,6 +2,8 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Logo } from "./ui";
+import "./marketing/cinematic-public.css";
+import "./marketing/public-light.css";
 
 export function LegalDocument({
   children,
@@ -13,7 +15,10 @@ export function LegalDocument({
   title: string;
 }) {
   return (
-    <div id="top" className="legal-document min-h-screen bg-[#fbfcfe]">
+    <div
+      id="top"
+      className="legal-document knowledge-public-site opryn-public-editorial opryn-public-light min-h-screen"
+    >
       <header className="legal-nav border-b border-[#e3e8ef] bg-white/90 backdrop-blur-xl">
         <div className="container-shell flex h-[72px] items-center justify-between">
           <Logo />

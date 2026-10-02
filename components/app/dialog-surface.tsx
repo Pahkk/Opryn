@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useRef, type ReactNode } from "react";
-import { gsap, immediateContent, motionScope } from "@/lib/motion/gsap";
-import { motion } from "@/lib/motion/presets";
+import { useAnimate } from "motion/react";
+import { uiTransition } from "@/lib/motion/motion-tokens";
+import { useProductReducedMotion } from "@/lib/motion/use-product-motion";
+const immediateContent =
+  '[role="alert"], [aria-invalid="true"], [data-motion-immediate]';
 
 /** Native top-layer dialogs escape animated page containers and trap focus.
  * Children provide one scrollable surface; keyboard size follows VisualViewport.
@@ -26,6 +29,8 @@ export function DialogSurface({
   animate?: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const [, animateSurface] = useAnimate();
+  const reduced = useProductReducedMotion();
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
@@ -61,39 +66,41 @@ export function DialogSurface({
   }, []);
   useEffect(() => {
     const dialog = ref.current;
-    const content = dialog?.querySelector(":scope > .dialog-content");
+    const content = dialog?.querySelector(
+      ":scope > .dialog-content, :scope > .needs-you-sheet",
+    );
     if (
       !dialog ||
       !content ||
       !animate ||
+      reduced ||
       dialog.classList.contains("dialog-navigation") ||
       dialog.querySelector(immediateContent)
     )
       return;
     // Never transform the native top layer: Google Picker can suspend it safely.
-    const scope = motionScope(dialog);
-    scope.run(() =>
-      gsap.fromTo(
-        content,
-        {
-          opacity: 0,
-          // Enter from inside the viewport; don't enlarge horizontal scroll bounds.
-          x: window.innerWidth >= 768 ? -motion.distance.sheet : 0,
-          y: window.innerWidth < 768 ? motion.distance.sheet : 0,
-        },
-        {
-          opacity: 1,
-          x: 0,
-          y: 0,
-          duration: motion.duration.standard,
-          ease: motion.ease.drawer,
-          clearProps: "opacity,transform",
-        },
-      ),
+    const surface = content as HTMLElement;
+    surface.dataset.motionOwner = "motion";
+    const reset = () => {
+      surface.style.opacity = "1";
+      surface.style.transform = "none";
+    };
+    const playback = animateSurface(
+      surface,
+      {
+        opacity: [0, 1],
+        // Enter from inside the viewport, including full-width desktop sheets.
+        x: window.innerWidth >= 768 ? [-24, 0] : 0,
+        y: window.innerWidth < 768 ? [24, 0] : 0,
+      },
+      uiTransition(),
     );
+    void playback.then(reset);
     const observer = new MutationObserver(() => {
-      if (!dialog.open || dialog.querySelector(immediateContent))
-        scope.dispose();
+      if (!dialog.open || dialog.querySelector(immediateContent)) {
+        playback.stop();
+        reset();
+      }
     });
     observer.observe(dialog, {
       childList: true,
@@ -103,9 +110,10 @@ export function DialogSurface({
     });
     return () => {
       observer.disconnect();
-      scope.dispose();
+      playback.stop();
+      reset();
     };
-  }, [animate]);
+  }, [animate, animateSurface, reduced]);
   return (
     <dialog
       ref={ref}

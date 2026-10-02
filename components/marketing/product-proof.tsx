@@ -1,195 +1,47 @@
 "use client";
-
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
-import { gsap } from "@/lib/motion/gsap";
+import { useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
+import { MotionTabs, ActiveIndicator } from "@/components/motion/motion-tabs";
+import { useProductReducedMotion } from "@/lib/motion/use-product-motion";
+import { uiTransition } from "@/lib/motion/motion-tokens";
 import "./product-proof.css";
-
 const views = [
   {
     id: "teach",
     title: "Teach",
     copy: "Start with information your business already has.",
-    alt: "Teach Opryn with choices to explain, upload files, choose Google files, or learn from calls.",
+    alt: "Teach Opryn: explain, upload, choose Google files, or learn from calls.",
   },
   {
     id: "knowledge",
     title: "Knowledge",
     copy: "Know what’s approved, where it came from, and what needs attention.",
-    alt: "Opryn Knowledge library with category navigation, source labels, and review status.",
+    alt: "Knowledge library with categories, sources and review status.",
   },
   {
     id: "needs-you",
     title: "Needs You",
     copy: "The decisions that need a person, ready for review.",
-    alt: "Needs You decision queue showing a proposed revision policy ready to accept or edit.",
+    alt: "Needs You: a proposed policy ready to accept or edit.",
   },
   {
     id: "connections",
     title: "Connections",
     copy: "Bring knowledge in. Make approved guidance available elsewhere.",
-    alt: "Opryn Connections manager with searchable integrations grouped by how they are used.",
+    alt: "Connections manager with searchable integrations.",
   },
-] as const;
-
+];
 export function ProductProof() {
   const [active, setActive] = useState(0);
-  const root = useRef<HTMLElement>(null);
-  const seek = useRef<((index: number) => void) | null>(null);
-  useEffect(() => {
-    const element = root.current;
-    if (!element) return;
-    let disposed = false;
-    let media: ReturnType<typeof gsap.matchMedia> | undefined;
-    const observer = new IntersectionObserver(
-      async (entries) => {
-        if (!entries.some((entry) => entry.isIntersecting)) return;
-        observer.disconnect();
-        try {
-          const { ScrollTrigger } = await import("gsap/ScrollTrigger");
-          if (disposed) return;
-          gsap.registerPlugin(ScrollTrigger);
-          // Decode the selected responsive sources before layering them.
-          const images = [...element.querySelectorAll<HTMLImageElement>("img")];
-          await Promise.all(
-            images.map((image) => {
-              image.loading = "eager";
-              return image.decode();
-            }),
-          );
-          if (disposed) return;
-          media = gsap.matchMedia();
-          media.add(
-            "(min-width: 1024px) and (min-height: 760px) and (prefers-reduced-motion: no-preference)",
-            () => {
-              element.dataset.scrollProof = "true";
-              const slides = [
-                ...element.querySelectorAll<HTMLElement>(".proof-slide"),
-              ];
-              const frame = element.querySelector<HTMLElement>(".proof-stage")!;
-              slides.forEach((slide, index) =>
-                slide.setAttribute("aria-hidden", String(index !== 0)),
-              );
-              const rail = element.querySelector(".proof-scroll-fill");
-              const duration = 4;
-              const timeline = gsap.timeline({
-                scrollTrigger: {
-                  id: "opryn-product-proof",
-                  trigger: element.querySelector(".proof-track"),
-                  start: "top 88px",
-                  end: () =>
-                    `+=${Math.round(Math.min(2400, innerHeight * 2.3))}`,
-                  pin: frame,
-                  scrub: 0.55,
-                  anticipatePin: 1,
-                  invalidateOnRefresh: true,
-                },
-                onUpdate() {
-                  const current = Math.min(3, Math.floor(timeline.time()));
-                  setActive((previous) =>
-                    previous === current ? previous : current,
-                  );
-                  slides.forEach((slide, i) => {
-                    slide.setAttribute("aria-hidden", String(i !== current));
-                  });
-                },
-              });
-              gsap.set(slides.slice(1), {
-                clipPath: "inset(100% 0% 0% 0%)",
-                y: 28,
-              });
-              slides.forEach((slide, index) => {
-                timeline.addLabel(views[index].id, index);
-                if (index) {
-                  timeline.to(
-                    slides[index - 1],
-                    {
-                      y: -20,
-                      opacity: 0.35,
-                      duration: 0.55,
-                      ease: "power2.inOut",
-                    },
-                    index - 0.45,
-                  );
-                  timeline.to(
-                    slide,
-                    {
-                      clipPath: "inset(0% 0% 0% 0%)",
-                      y: 0,
-                      duration: 0.55,
-                      ease: "power2.inOut",
-                    },
-                    index - 0.45,
-                  );
-                }
-              });
-              timeline.fromTo(
-                rail,
-                { scaleX: 0 },
-                { scaleX: 1, duration, ease: "none" },
-                0,
-              );
-              seek.current = (index) => {
-                const trigger = timeline.scrollTrigger!;
-                window.scrollTo({
-                  top:
-                    trigger.start +
-                    ((index + 0.35) / duration) * (trigger.end - trigger.start),
-                  behavior: "instant",
-                });
-              };
-              ScrollTrigger.refresh();
-              return () => {
-                seek.current = null;
-                delete element.dataset.scrollProof;
-                slides.forEach((slide) => slide.removeAttribute("aria-hidden"));
-              };
-            },
-            element,
-          );
-          media.add(
-            "(max-width: 1023px) and (prefers-reduced-motion: no-preference)",
-            () => {
-              element.querySelectorAll(".proof-slide").forEach((slide) => {
-                gsap.fromTo(
-                  slide.querySelector(".proof-image"),
-                  { clipPath: "inset(7% 0% 0% 0%)", y: 16 },
-                  {
-                    clipPath: "inset(0% 0% 0% 0%)",
-                    y: 0,
-                    duration: 0.55,
-                    ease: "power2.out",
-                    scrollTrigger: {
-                      trigger: slide,
-                      start: "top 80%",
-                      once: true,
-                    },
-                  },
-                );
-              });
-            },
-            element,
-          );
-        } catch {
-          // The full HTML sequence remains readable if images or motion fail.
-          media?.revert();
-        }
-      },
-      { rootMargin: "800px" },
-    );
-    observer.observe(element);
-    return () => {
-      disposed = true;
-      observer.disconnect();
-      media?.revert();
-    };
-  }, []);
+  const reduced = useProductReducedMotion();
+  const view = views[active];
   return (
     <section
-      ref={root}
       className="product-proof"
       id="inside-opryn"
       aria-labelledby="product-proof-title"
+      data-animation-owner="motion"
     >
       <div className="story-shell">
         <header className="proof-heading">
@@ -203,42 +55,73 @@ export function ProductProof() {
             No customer data or results shown.
           </p>
         </header>
-        <div className="proof-track">
-          <div className="proof-stage">
-            <nav
-              className="public-tabs proof-steps"
+        <div className="proof-stage">
+          <MotionTabs>
+            <div
+              role="tablist"
+              className="proof-steps"
               aria-label="Inside Opryn views"
             >
-              {views.map((item, index) => (
+              {views.map((item, i) => (
                 <button
+                  role="tab"
+                  type="button"
                   key={item.id}
                   id={`proof-tab-${item.id}`}
-                  aria-current={active === index ? "step" : undefined}
-                  onClick={() => seek.current?.(index)}
+                  aria-selected={active === i}
+                  aria-controls="proof-panel"
+                  tabIndex={active === i ? 0 : -1}
+                  onClick={() => setActive(i)}
+                  onKeyDown={(e) => {
+                    let next = i;
+                    if (e.key === "ArrowRight") next = (i + 1) % 4;
+                    else if (e.key === "ArrowLeft") next = (i + 3) % 4;
+                    else if (e.key === "Home") next = 0;
+                    else if (e.key === "End") next = 3;
+                    else return;
+                    e.preventDefault();
+                    setActive(next);
+                    document
+                      .getElementById(`proof-tab-${views[next].id}`)
+                      ?.focus();
+                  }}
                 >
                   {item.title}
+                  {active === i && <ActiveIndicator />}
                 </button>
               ))}
-            </nav>
-            <div className="proof-scroll-rail" aria-hidden="true">
-              <span className="proof-scroll-fill" />
+            </div>
+          </MotionTabs>
+          <div
+            id="proof-panel"
+            role="tabpanel"
+            aria-labelledby={`proof-tab-${view.id}`}
+            tabIndex={0}
+            className="proof-window"
+          >
+            <div className="proof-window-bar" aria-hidden="true">
+              <span>OPRYN / {view.title.toUpperCase()}</span>
+              <span>EXAMPLE WORKSPACE</span>
             </div>
             <div className="proof-slides">
-              {views.map((view, index) => (
-                <figure
+              <AnimatePresence initial={false}>
+                <motion.figure
                   className="proof-slide"
                   key={view.id}
-                  id={`proof-${view.id}`}
+                  initial={{ opacity: 0, scale: reduced ? 1 : 0.99 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={uiTransition(reduced, 0.24)}
                 >
                   <figcaption className="proof-caption">
                     <span className="proof-view-label">
-                      0{index + 1} / {view.title}
+                      0{active + 1} / {view.title}
                     </span>
                     {view.copy}
                   </figcaption>
                   <picture className="proof-image">
                     <source
-                      media="(max-width: 600px)"
+                      media="(max-width:600px)"
                       srcSet={`/product-proof/${view.id}-390-retina.webp`}
                       width={390}
                       height={800}
@@ -251,8 +134,8 @@ export function ProductProof() {
                       unoptimized
                     />
                   </picture>
-                </figure>
-              ))}
+                </motion.figure>
+              </AnimatePresence>
             </div>
           </div>
         </div>

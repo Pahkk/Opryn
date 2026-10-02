@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { AuthProvider } from "@/components/auth";
 import { Navbar, Footer } from "@/components/navigation";
+import "./cinematic-public.css";
+import "./public-light.css";
 
 export function PublicInfoPage({
   title,
@@ -13,7 +15,7 @@ export function PublicInfoPage({
 }) {
   return (
     <AuthProvider>
-      <div className="knowledge-public-site">
+      <div className="knowledge-public-site opryn-public-editorial opryn-public-light">
         <Navbar />
         <main id="top" className="public-info-page">
           <header>

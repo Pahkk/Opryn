@@ -3,6 +3,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { ProviderLogo } from "@/components/connections/provider-logo";
 import { marketingIntegrations } from "@/lib/marketing/integrations";
+import { MotionTabs, ActiveIndicator } from "@/components/motion/motion-tabs";
+import { StaggerList } from "@/components/motion/motion-region";
 
 export function PublicIntegrations() {
   const [query, setQuery] = useState("");
@@ -25,22 +27,26 @@ export function PublicIntegrations() {
           placeholder="Search integrations"
         />
       </label>
-      <div
-        className="public-tabs"
-        role="group"
-        aria-label="Filter integrations"
-      >
-        {["All", "Knowledge", "Communication", "AI", "Calls"].map((name) => (
-          <button
-            key={name}
-            aria-pressed={filter === name}
-            onClick={() => setFilter(name)}
-          >
-            {name}
-          </button>
-        ))}
-        <Link href="/app/integrations">Your connections ↗</Link>
-      </div>
+      <MotionTabs>
+        <div
+          className="public-tabs"
+          role="group"
+          aria-label="Filter integrations"
+        >
+          {["All", "Knowledge", "Communication", "AI", "Calls"].map((name) => (
+            <button
+              key={name}
+              aria-pressed={filter === name}
+              onClick={() => setFilter(name)}
+              style={{ position: "relative" }}
+            >
+              {name}
+              {filter === name && <ActiveIndicator />}
+            </button>
+          ))}
+          <Link href="/app/integrations">Your connections ↗</Link>
+        </div>
+      </MotionTabs>
       <p className="catalog-count" role="status">
         {matches.length} supported{" "}
         {matches.length === 1 ? "integration" : "integrations"}
@@ -57,43 +63,47 @@ export function PublicIntegrations() {
               <h2>{title}</h2>
               <p>{copy}</p>
             </header>
-            {items.map((p) => (
-              <details className="public-provider" key={p.id} id={p.id}>
-                <summary>
-                  <ProviderLogo id={p.id} name={p.name} />
-                  <span className="provider-summary">
-                    <strong>{p.name}</strong>
-                    <span>{p.purpose}</span>
-                    <small>
-                      {p.category}
-                      {direction === "learn" ? " source" : " access"}
-                    </small>
-                  </span>
-                  <span className="provider-action">
-                    <span>{p.status}</span>
-                    <span className="provider-more">
-                      Learn more <span aria-hidden>↘</span>
-                    </span>
-                  </span>
-                </summary>
-                <div className="provider-detail">
-                  <p>{p.detail}</p>
-                  <Link href={p.href}>
-                    {p.href === "/signup"
-                      ? "Get started"
-                      : p.href === "/pricing"
-                        ? "See Premium"
-                        : p.href.startsWith("/contact")
-                          ? "Talk about setup"
-                          : p.href.startsWith("/docs")
-                            ? "Read developer documentation"
-                            : "Explore AI access"}{" "}
-                    →
-                  </Link>
-                  <Link href="/security">Data handling →</Link>
+            <StaggerList changeKey={items.map((p) => p.id).join(",")}>
+              {items.map((p) => (
+                <div key={p.id} data-motion-row={p.id}>
+                  <details className="public-provider" key={p.id} id={p.id}>
+                    <summary>
+                      <ProviderLogo id={p.id} name={p.name} />
+                      <span className="provider-summary">
+                        <strong>{p.name}</strong>
+                        <span>{p.purpose}</span>
+                        <small>
+                          {p.category}
+                          {direction === "learn" ? " source" : " access"}
+                        </small>
+                      </span>
+                      <span className="provider-action">
+                        <span>{p.status}</span>
+                        <span className="provider-more">
+                          Learn more <span aria-hidden>↘</span>
+                        </span>
+                      </span>
+                    </summary>
+                    <div className="provider-detail">
+                      <p>{p.detail}</p>
+                      <Link href={p.href}>
+                        {p.href === "/signup"
+                          ? "Get started"
+                          : p.href === "/pricing"
+                            ? "See Pro"
+                            : p.href.startsWith("/contact")
+                              ? "Talk about setup"
+                              : p.href.startsWith("/docs")
+                                ? "Read developer documentation"
+                                : "Explore AI access"}{" "}
+                        →
+                      </Link>
+                      <Link href="/security">Data handling →</Link>
+                    </div>
+                  </details>
                 </div>
-              </details>
-            ))}
+              ))}
+            </StaggerList>
           </section>
         );
       })}

@@ -21,7 +21,7 @@ export default async function TwilioIntegrationPage() {
     return (
       <>
         <PageHeading
-          eyebrow="Premium integration"
+          eyebrow="Pro integration"
           title="Twilio Call Learning"
           description="Automatically turn authorized Twilio recordings into reviewable company knowledge."
         />
@@ -75,7 +75,7 @@ export default async function TwilioIntegrationPage() {
   return (
     <>
       <PageHeading
-        eyebrow="Premium integration"
+        eyebrow="Pro integration"
         title="Twilio Call Learning"
         description="Your team keeps taking calls normally. Opryn learns after the recording is ready."
       />

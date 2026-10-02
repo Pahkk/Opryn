@@ -18,13 +18,19 @@ export const guideTargets = {
     route: "/app",
     title: "Your workspace",
     description:
-      "See what Opryn handled and what needs a person. Setup progress reflects saved activity, not tour clicks.",
+      "Here’s what Opryn handled and what needs your decision. Your first approved knowledge is part of this workspace.",
   },
   "teach.explain": {
     route: "/app/processes/new",
     title: "Teach in your own words",
     description:
-      "Explain one process or rule. Opryn prepares findings for review; teaching does not automatically publish company policy.",
+      "Teach Opryn whenever your business learns something new. Start with one source or explain a process, then review what it finds.",
+    admin: true,
+  },
+  "teach.search": {
+    route: "/app/processes/new",
+    title: "Search teaching sources",
+    description: "Find a connected source or another way to teach Opryn.",
     admin: true,
   },
   "teach.upload": {
@@ -41,6 +47,41 @@ export const guideTargets = {
       "Choose Google Workspace. If authorization is needed, complete it here. Then choose the files Opryn should learn from. You stay in Teach.",
     admin: true,
   },
+  "teach.notion": {
+    route: "/app/processes/new",
+    title: "Teach from Notion",
+    description:
+      "Choose Notion pages or databases here. If Notion is not connected, authorization resumes in Teach.",
+    admin: true,
+  },
+  "teach.confluence": {
+    route: "/app/processes/new",
+    title: "Teach from Confluence",
+    description:
+      "Choose Confluence pages or spaces here. Connection management remains under Connections.",
+    admin: true,
+  },
+  "teach.calls": {
+    route: "/app/processes/new",
+    title: "Teach from a call",
+    description:
+      "Add an authorized recording and review every finding before approval.",
+    admin: true,
+  },
+  "teach.recent": {
+    route: "/app/processes/new",
+    title: "Recently learned",
+    description:
+      "Open recent source activity and continue to its reviewable finding.",
+    admin: true,
+  },
+  "teach.useElsewhere": {
+    route: "/app/processes/new",
+    title: "Use Opryn elsewhere",
+    description:
+      "Manage places where approved Opryn knowledge can be used. These are separate from learning sources.",
+    admin: true,
+  },
   "teach.sources": {
     route: "/app/learning-sources",
     title: "Your learning sources",
@@ -54,6 +95,47 @@ export const guideTargets = {
     description:
       "Search the knowledge available to you. Open an item to inspect its rule, status, and source.",
   },
+  "knowledge.testbench": {
+    route: "/app/knowledge/test",
+    title: "Test Opryn",
+    description:
+      "Owners/admins simulate the real Opryn response under an actual member or external connection's permissions. Save expected outcomes and rerun after knowledge changes. Nothing is sent externally.",
+    admin: true,
+  },
+  "knowledge.health": {
+    route: "/app/knowledge/health",
+    title: "Knowledge Health",
+    description:
+      "Recorded coverage, gaps, conflicts, review age and selected-source updates. No arbitrary health score.",
+    admin: true,
+  },
+  "knowledge.sourceUpdates": {
+    route: "/app/knowledge/health",
+    title: "Source Updates",
+    description:
+      "Check selected Google Workspace, Notion and Confluence content. Updated imports require review; approved knowledge is retained.",
+    admin: true,
+  },
+  "knowledge.analysis": {
+    route: "/app/knowledge/analysis",
+    title: "Analyze company knowledge",
+    description:
+      "Choose up to two previously selected sources. New findings require review; analysis never approves knowledge.",
+    admin: true,
+  },
+  "team.learning": {
+    route: "/app/training",
+    title: "My Learning / Team Learning",
+    description:
+      "Read assigned approved guidance, acknowledge its current version and practice. Owners assign processes by role or individual; no rankings.",
+  },
+  "connections.aiAccess": {
+    route: "/app/ai-connections",
+    title: "AI knowledge access",
+    description:
+      "Open an actual connection to narrow allowed areas/items, exclusions and unknown routing. Test permissions before relying on them.",
+    admin: true,
+  },
   "knowledge.categories": {
     route: "/app/processes",
     title: "Find a subject or view",
@@ -65,6 +147,32 @@ export const guideTargets = {
     title: "Knowledge needing review",
     description:
       "Open a finding to inspect its exact wording and source. Only an authorized person can approve it.",
+    admin: true,
+  },
+  "knowledge.filters": {
+    route: "/app/processes",
+    title: "Filter knowledge",
+    description:
+      "Narrow the library by category, status, source, or update date.",
+  },
+  "knowledge.detail": {
+    route: "/app/processes",
+    title: "Inspect knowledge details",
+    description:
+      "Open a row to inspect its source, approval state, version, and lifecycle actions.",
+  },
+  "knowledge.archive": {
+    route: "/app/processes",
+    title: "Archive knowledge",
+    description:
+      "Open a knowledge item, then use Actions. Archive removes it from active retrieval while retaining history and provenance.",
+    admin: true,
+  },
+  "knowledge.delete": {
+    route: "/app/processes",
+    title: "Delete a draft process",
+    description:
+      "Open a draft process and use Actions. Approved knowledge must be archived first; permanent deletion is intentionally restricted.",
     admin: true,
   },
   "review.queue": {
@@ -134,6 +242,27 @@ export const guideTargets = {
     description:
       "Manage the personal delivery options available here. These do not grant permissions or change company approval rules.",
   },
+  "settings.integrations": {
+    route: "/app/settings/connections",
+    title: "Manage connections",
+    description:
+      "Reconnect, inspect health, or disconnect providers here. Use connected knowledge sources from Teach.",
+    admin: true,
+  },
+  "settings.billing": {
+    route: "/app/settings/billing",
+    title: "Billing settings",
+    description:
+      "View the workspace plan and open supported subscription management. Guide never changes billing for you.",
+    admin: true,
+  },
+  "settings.security": {
+    route: "/app/settings/data",
+    title: "Security and data",
+    description:
+      "Review available workspace security and data controls. Guide never changes security settings for you.",
+    admin: true,
+  },
 } as const satisfies Record<string, Target>;
 export type TargetId = keyof typeof guideTargets;
 export const targetIds = Object.keys(guideTargets) as TargetId[];
@@ -148,6 +277,132 @@ export function canGuideTarget(id: string, role: GuideRole): id is TargetId {
 export function targetSelector(id: TargetId) {
   return `[data-guide="${id}"]`;
 }
+
+type GuideDestination = {
+  route: string;
+  title: string;
+  aliases: readonly string[];
+  admin?: boolean;
+};
+
+/** Deterministic navigation destinations. Guide never turns generated text into a URL. */
+export const guideDestinations = [
+  {
+    route: "/app/knowledge/analysis",
+    title: "Analyze company knowledge",
+    aliases: [
+      "company analysis",
+      "analyze company knowledge",
+      "analyze my knowledge",
+    ],
+    admin: true,
+  },
+  {
+    route: "/app/training",
+    title: "Learning",
+    aliases: ["my learning", "team learning", "role learning"],
+  },
+  {
+    route: "/app/knowledge/health",
+    title: "Knowledge Health",
+    aliases: ["knowledge health", "source updates", "source freshness"],
+    admin: true,
+  },
+  {
+    route: "/app/knowledge/test",
+    title: "Test Opryn",
+    aliases: ["test opryn", "testbench", "test an answer"],
+    admin: true,
+  },
+  { route: "/app", title: "Home", aliases: ["home", "dashboard"] },
+  {
+    route: "/app/ask",
+    title: "Ask Opryn",
+    aliases: ["ask", "ask opryn", "questions"],
+  },
+  {
+    route: "/app/processes/new",
+    title: "Teach Opryn",
+    aliases: ["teach", "teach opryn", "add knowledge"],
+    admin: true,
+  },
+  {
+    route: "/app/processes",
+    title: "Knowledge",
+    aliases: ["knowledge", "knowledge library", "processes"],
+  },
+  {
+    route: "/app/needs-you",
+    title: "Needs You",
+    aliases: ["needs you", "review queue", "reviews", "approvals"],
+    admin: true,
+  },
+  { route: "/app/team", title: "Team", aliases: ["team", "people"] },
+  {
+    route: "/app/integrations",
+    title: "Connections",
+    aliases: ["connections", "integrations"],
+    admin: true,
+  },
+  {
+    route: "/app/settings",
+    title: "Settings",
+    aliases: ["settings", "preferences"],
+  },
+  {
+    route: "/app/settings/profile",
+    title: "Profile",
+    aliases: ["profile", "my profile"],
+  },
+  {
+    route: "/app/settings/notifications",
+    title: "Notifications",
+    aliases: ["notifications", "notification settings"],
+  },
+  {
+    route: "/app/settings/billing",
+    title: "Billing",
+    aliases: ["billing", "subscription", "plan"],
+    admin: true,
+  },
+  {
+    route: "/app/settings/data",
+    title: "Security and data",
+    aliases: ["security", "security and data", "data settings"],
+    admin: true,
+  },
+  {
+    route: "/app/help",
+    title: "Help",
+    aliases: ["help", "help center"],
+  },
+] as const satisfies readonly GuideDestination[];
+
+export function resolveGuideDestination(
+  prompt: string,
+  role: GuideRole,
+): GuideDestination | null {
+  const navigation = prompt
+    .trim()
+    .toLowerCase()
+    .match(
+      /^(?:please\s+)?(?:(?:take|bring|send|navigate)\s+me\s+to|(?:go|open)\s+(?:to\s+)?)\s+(.+?)[.!?]*$/,
+    );
+  if (!navigation) return null;
+  const destination = navigation[1]
+    .replace(/\b(?:the|page|screen|section)\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const match = (guideDestinations as readonly GuideDestination[]).find(
+    (item) =>
+      item.aliases.some(
+        (alias) => destination === alias || destination.startsWith(`${alias} `),
+      ),
+  );
+  if (!match || (match.admin && role === "employee")) return null;
+  return match;
+}
+
 export type GuideStep = { targetId: TargetId; milestone?: Milestone };
 export const guides = {
   "setup-opryn": {
@@ -208,9 +463,9 @@ export const guides = {
     steps: [
       { targetId: "home.overview" },
       { targetId: "teach.explain" },
+      { targetId: "ask.question" },
       { targetId: "knowledge.search" },
       { targetId: "review.queue" },
-      { targetId: "team.invite" },
       { targetId: "connections.search" },
     ],
   },
@@ -263,4 +518,4 @@ export const milestoneLabels: Record<Milestone, string> = {
   team: "Invite a teammate",
   connection: "Connect a place to use Opryn",
 };
-export const productHelp = `Opryn Guide explains the product, not company policies. Ask Opryn answers company questions from authorized approved knowledge. The core loop is Teach, Review, Approved Knowledge, Ask/Use, unknown questions, Needs You. Sources and imports do not automatically become approved policy. Owners/admins manage teaching, connections and team. Members can search accessible knowledge, ask, and manage their personal settings. Expertise does not automatically confer approval permission. Google in Teach uses selected Docs, Sheets and Slides through existing OAuth and Picker; never ask customers for OAuth secrets or pasted file IDs. Connecting is not importing; importing is not approving. External AI access is permission-controlled retrieval, not agent hosting or fine-tuning. Guide cannot change billing, permissions, approval, invitations, deletions, security, or credentials. Plans and provider availability must be inspected in the real UI; never invent prices, limits, enabled providers, or completion. If a feature is not documented in the registered targets, say you cannot confirm it and suggest Help. Never request passwords, tokens, or company documents in Guide.`;
+export const productHelp = `Ask Opryn explains the product, setup, settings and integrations, not company policies. Ask Opryn answers company questions from authorized approved knowledge. Teach Opryn is where owners/admins USE connected knowledge sources: choose Google files, Notion pages/databases, or Confluence pages/spaces. Connections is where they MANAGE authorization, health, metadata, reconnection and disconnection. Never route a connected source to Connections when the user wants to teach from it. The core loop is Teach, Review, Approved Knowledge, Ask/Use, unknown questions, Needs You. Sources and imports do not automatically become approved policy. Owners/admins manage teaching, connections and team. Members can search accessible knowledge, ask, and manage their personal settings. Expertise does not automatically confer approval permission. Never ask customers for OAuth secrets or pasted provider IDs. Connecting is not importing; importing is not approving. Archive removes knowledge from active retrieval but retains history and source provenance. Approved knowledge is archived rather than directly hard-deleted. External AI access is permission-controlled retrieval, not agent hosting or fine-tuning. Ask Opryn cannot change billing, permissions, approval, invitations, deletions, security, or credentials. Treat supplied connection status as authoritative and never infer a provider is connected when absent. Plans and provider availability must be inspected in the real UI; never invent prices, limits, enabled providers, or completion. If a feature is not documented in the registered targets, say you cannot confirm it. Never request passwords, tokens, or company documents in Ask Opryn.`;

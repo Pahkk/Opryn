@@ -33,7 +33,7 @@ export async function processTwilioRecording(callId: string) {
   if (!hasFeature(plan.plan, "callLearning")) {
     await failCall(
       callId,
-      "Twilio Call Learning requires Opryn Premium.",
+      "Twilio Call Learning requires Opryn Pro.",
       true,
     );
     return;

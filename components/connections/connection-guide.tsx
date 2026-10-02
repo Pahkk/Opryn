@@ -1,5 +1,6 @@
 "use client";
 import { DialogSurface } from "@/components/app/dialog-surface";
+import { conversationRequest } from "@/lib/onboarding/conversation-learning";
 import { WorkspaceNotice } from "@/components/app/workspace-context";
 
 import Link from "next/link";
@@ -21,7 +22,7 @@ const guides = {
   chatgpt: {
     name: "ChatGPT",
     openLabel: "Connect ChatGPT",
-    openUrl: "https://chatgpt.com/#settings/Connectors",
+    openUrl: "https://chatgpt.com/plugins",
     example: "@Opryn what is our refund policy?",
     connectionDescription:
       "Let ChatGPT check the approved Opryn knowledge this person is allowed to use.",
@@ -61,6 +62,7 @@ type LearningState = {
 
 export function ConnectionGuide({
   provider,
+  organizationId,
   connected = false,
   organizationName,
   initialMode = "learn",
@@ -69,6 +71,7 @@ export function ConnectionGuide({
   onClose,
 }: {
   provider: Provider;
+  organizationId?: string;
   connected?: boolean;
   organizationName?: string;
   initialMode?: Mode;
@@ -107,7 +110,12 @@ export function ConnectionGuide({
     async function poll() {
       const response = await fetch(
         `/api/onboarding/ai-connections/status?provider=${provider}`,
-        { cache: "no-store" },
+        {
+          cache: "no-store",
+          headers: organizationId
+            ? { "x-opryn-organization": organizationId }
+            : {},
+        },
       ).catch(() => null);
       if (!response?.ok || cancelled) return;
       const body = await response.json().catch(() => ({}));
@@ -117,7 +125,7 @@ export function ConnectionGuide({
       setLatestLearning(body.latestLearning ?? null);
       if (!body.connected) return;
       setChecking(false);
-      if (!isConnected) {
+      if ((!isConnected || !learningEnabled) && body.learningEnabled) {
         setMessage(`${guide.name} is connected to Opryn.`);
         onConnectedRef.current?.();
       }
@@ -128,7 +136,14 @@ export function ConnectionGuide({
       cancelled = true;
       window.clearInterval(interval);
     };
-  }, [connectionStarted, guide.name, isConnected, provider]);
+  }, [
+    connectionStarted,
+    guide.name,
+    isConnected,
+    provider,
+    organizationId,
+    learningEnabled,
+  ]);
 
   async function copy(value: string, name: string) {
     try {
@@ -146,8 +161,18 @@ export function ConnectionGuide({
     setMessage("");
     const response = await fetch(
       `/api/onboarding/ai-connections/status?provider=${provider}`,
-      { cache: "no-store" },
-    );
+      {
+        cache: "no-store",
+        headers: organizationId
+          ? { "x-opryn-organization": organizationId }
+          : {},
+      },
+    ).catch(() => null);
+    if (!response) {
+      setChecking(false);
+      setMessage("Opryn couldn't check the connection. Try again.");
+      return;
+    }
     const body = await response.json().catch(() => ({}));
     setChecking(false);
     if (!response.ok) {
@@ -159,7 +184,7 @@ export function ConnectionGuide({
       setLearningEnabled(Boolean(body.learningEnabled));
       setLatestLearning(body.latestLearning ?? null);
       setMessage(`${guide.name} is connected to Opryn.`);
-      onConnected?.();
+      if (body.learningEnabled) onConnected?.();
       return;
     }
     setMessage(
@@ -188,10 +213,12 @@ export function ConnectionGuide({
     }
   }
 
-  const learnCommand =
-    provider === "chatgpt"
-      ? `@Opryn /learn ${organizationName || "your business"}`
-      : `Use Opryn to learn ${organizationName || "this business"} from this conversation.`;
+  const learnCommand = conversationRequest({
+    provider,
+    type: "business",
+    name: organizationName || "your business",
+    stage: "request",
+  });
   const learningComplete =
     latestLearning?.status === "needs_review" ||
     latestLearning?.status === "complete";
@@ -477,7 +504,7 @@ export function ConnectionGuide({
                       ]
                     : [
                         "Open ChatGPT and sign in there if asked.",
-                        "Open Settings → Apps and add Opryn as a custom app.",
+                        "In ChatGPT Settings → Security and login, enable Developer mode if available. Then open Plugins and choose + to add Opryn.",
                         "Use the secure Opryn address below.",
                         "Sign into Opryn, choose this business, and approve access.",
                       ]
@@ -505,7 +532,7 @@ export function ConnectionGuide({
 
               <div className="mt-5 rounded-[14px] bg-[#eef4fb] p-4">
                 <p className="text-xs font-bold text-[#52627a]">
-                  Opryn MCP address
+                  Secure Opryn connection address
                 </p>
                 <div className="mt-2 flex overflow-hidden rounded-[10px] border border-[#cad7e7] bg-white">
                   <code className="min-w-0 flex-1 overflow-x-auto p-3 text-xs">
@@ -515,7 +542,7 @@ export function ConnectionGuide({
                     type="button"
                     onClick={() => void copy(MCP_URL, "address")}
                     className="grid size-11 place-items-center border-l border-[#cad7e7] text-[#146bff]"
-                    aria-label="Copy Opryn MCP address"
+                    aria-label="Copy Opryn connection address"
                   >
                     {copied === "address" ? (
                       <Check size={16} />
@@ -591,15 +618,21 @@ export function ConnectionGuide({
                     <div className="mt-2 space-y-1 rounded-xl bg-white/70 p-3">
                       <p>
                         <strong>Process:</strong>{" "}
-                        {provider === "chatgpt"
-                          ? "@Opryn /learn process Client Onboarding"
-                          : "Use Opryn to learn the Client Onboarding process from this conversation."}
+                        {conversationRequest({
+                          provider,
+                          type: "process",
+                          name: "Client Onboarding",
+                          stage: "request",
+                        })}
                       </p>
                       <p>
                         <strong>Topic:</strong>{" "}
-                        {provider === "chatgpt"
-                          ? "@Opryn /learn topic Refunds"
-                          : "Use Opryn to learn about Refunds from this conversation."}
+                        {conversationRequest({
+                          provider,
+                          type: "topic",
+                          name: "Refunds",
+                          stage: "request",
+                        })}
                       </p>
                     </div>
                   </details>

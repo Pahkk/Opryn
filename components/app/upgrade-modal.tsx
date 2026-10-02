@@ -8,7 +8,7 @@ export function PremiumBadge({ className = "" }: { className?: string }) {
     <span
       className={`inline-flex items-center rounded-full bg-[#eaf7f1] px-2.5 py-1 text-[9px] font-bold uppercase tracking-[.08em] text-[#177257] ${className}`}
     >
-      Premium
+      Pro
     </span>
   );
 }
@@ -42,7 +42,7 @@ export function UpgradeModal({
             Teach Opryn by showing it.
           </h2>
           <p className="mt-2 text-sm leading-6 text-[#bdc8da]">
-            With Opryn Premium, upload videos, record workflows, and let Opryn
+            With Opryn Pro, upload videos, record workflows, and let Opryn
             learn from real business calls.
           </p>
           <button
@@ -83,7 +83,7 @@ export function UpgradeModal({
               onClick={() => router.push("/pricing?upgrade=premium")}
               className="min-h-11 rounded-xl bg-[#3158d8] px-5 text-sm font-semibold text-white shadow-[0_9px_22px_rgba(49,88,216,.2)] hover:bg-[#2446b8]"
             >
-              Upgrade to Premium
+              Upgrade to Pro
             </button>
           </div>
         </div>

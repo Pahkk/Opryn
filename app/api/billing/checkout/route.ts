@@ -4,9 +4,11 @@ import { randomUUID } from "node:crypto";
 import { getRequestContext } from "@/lib/api";
 import { rejectCrossOrigin } from "@/lib/request-origin";
 import { getOrganizationPlan } from "@/lib/billing/subscription";
-import { getAppUrl, getStripe, getStripePriceId } from "@/lib/billing/stripe";
+import { getAppUrl, getStripe, getStripePriceId, isCurrentMonthlyPrice } from "@/lib/billing/stripe";
 import { trialConfiguration } from "@/lib/billing/trial";
 import { createServiceClient } from "@/lib/supabase/service";
+import { conversationIntentSchema } from "@/lib/onboarding/conversation-learning";
+import { hasFeature } from "@/lib/billing/plans";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -15,7 +17,9 @@ const schema = z
     plan: z.enum(["core", "premium"]),
     interval: z.enum(["month", "year"]).default("month"),
     intent: z.enum(["trial", "purchase"]).default("purchase"),
-    source: z.enum(["onboarding", "billing"]).default("billing"),
+    source: z
+      .enum(["onboarding", "onboarding_ai_learning", "billing"])
+      .default("billing"),
   })
   .strict();
 const fail = (error: string, status = 409) =>
@@ -36,6 +40,20 @@ export async function POST(request: Request) {
   const lease = randomUUID();
   let claimed = false;
   try {
+    if (input.data.source === "onboarding_ai_learning") {
+      const { data, error } = await supabase
+        .from("onboarding_learning_sessions")
+        .select("intent")
+        .eq("organization_id", org)
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (
+        error ||
+        !conversationIntentSchema.safeParse(data?.intent).success ||
+        !hasFeature(input.data.plan, "ai_conversation_learning")
+      )
+        return fail("Choose a conversation source in onboarding first.", 400);
+    }
     if (input.data.source === "onboarding") {
       const state = await supabase
         .from("organization_subscriptions")
@@ -53,6 +71,11 @@ export async function POST(request: Request) {
       return fail("Choose the configured trial plan.", 400);
     const priceId =
       trial?.priceId || getStripePriceId(input.data.plan, input.data.interval);
+    if (input.data.interval === "month") {
+      const checkoutPrice = await getStripe().prices.retrieve(priceId);
+      if (!isCurrentMonthlyPrice(checkoutPrice, input.data.plan))
+        return fail("This plan is being updated in billing. Please try again later.", 503);
+    }
     const fingerprint = JSON.stringify([
       priceId,
       input.data.intent,
@@ -174,14 +197,12 @@ export async function POST(request: Request) {
         allow_promotion_codes: true,
         payment_method_collection:
           trial && !trial.requiresPaymentMethod ? "if_required" : "always",
-        success_url:
-          input.data.source === "onboarding"
-            ? `${appUrl}/api/billing/return?billing=confirming&workspace=${org}`
-            : `${appUrl}/app/settings/billing?billing=confirming`,
-        cancel_url:
-          input.data.source === "onboarding"
-            ? `${appUrl}/api/billing/return?billing=canceled&workspace=${org}`
-            : `${appUrl}/pricing?billing=canceled`,
+        success_url: input.data.source.startsWith("onboarding")
+          ? `${appUrl}/api/billing/return?billing=confirming&workspace=${org}`
+          : `${appUrl}/app/settings/billing?billing=confirming`,
+        cancel_url: input.data.source.startsWith("onboarding")
+          ? `${appUrl}/api/billing/return?billing=canceled&workspace=${org}`
+          : `${appUrl}/pricing?billing=canceled`,
         metadata,
         subscription_data: {
           metadata,

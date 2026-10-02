@@ -1,4 +1,5 @@
 import { AskOpryn } from "@/components/app/ask-opryn";
+import { ClarificationReplies } from "@/components/app/gap-question-actions";
 import { PageHeading } from "@/components/app/page-heading";
 import { requireAppContext } from "@/lib/app-context";
 import { createClient } from "@/lib/supabase/server";
@@ -54,16 +55,46 @@ export default async function AskPage({
     category: "Approved process",
     text: `Walk me through ${process.title}.`,
   }));
+  const { data: clarifications, error: clarificationError } = await supabase
+    .from("question_clarifications")
+    .select(
+      "id,question_id,message,employee_questions!inner(question,asked_by)",
+    )
+    .eq("organization_id", context.organization.id)
+    .eq("status", "open")
+    .eq("employee_questions.asked_by", context.user.id)
+    .order("created_at", { ascending: false })
+    .limit(10);
+  if (clarificationError)
+    throw new Error("Questions needing context could not be loaded.");
   return (
     <>
       <PageHeading
+        eyebrow="Your company. One trusted answer."
         title="Ask Opryn"
-        description="Your company's approved knowledge. A clear answer, with its source."
+        description="Ask a real work question. Get clear guidance, with the approved source attached."
+      />
+      <ClarificationReplies
+        items={(clarifications ?? []).map((item) => {
+          const raw = item.employee_questions as unknown;
+          const question = (Array.isArray(raw) ? raw[0] : raw) as {
+            question: string;
+          };
+          return {
+            id: item.id,
+            questionId: item.question_id,
+            message: item.message,
+            question: question.question,
+          };
+        })}
       />
       <AskOpryn
+        workspaceName={context.organization.name}
+        workspaceLogo={context.organization.logoUrl}
         hasKnowledge={accessible.length > 0}
         prompts={prompts}
         initialQuestion={q?.slice(0, 4000) ?? ""}
+        canTest={context.isAdmin}
       />
     </>
   );

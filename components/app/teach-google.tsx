@@ -1,9 +1,12 @@
 "use client";
 import "./knowledge-library.css";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { OprynAction } from "@/components/motion/opryn-action";
 import Link from "next/link";
 import { ConnectionAction } from "@/components/connections/connection-action";
 import { StaggerList } from "@/components/motion/motion-region";
+import { TeachWorkflow } from "@/components/motion/teach-workflow";
+import { OprynThinkingOrb } from "@/components/motion/opryn-thinking-orb";
 
 type FileRow = {
   id: string;
@@ -16,15 +19,18 @@ export function TeachGoogle({
   organizationId,
   organizationName,
   onPrepared,
+  initialConnectionId,
 }: {
   organizationId: string;
   organizationName: string;
   onPrepared?: (processId: string) => void;
+  initialConnectionId?: string | null;
 }) {
-  const [connection, setConnection] = useState("");
+  const [connection, setConnection] = useState(initialConnectionId || "");
   const [files, setFiles] = useState<FileRow[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const learning = useRef(false);
   async function selected(id: string, ids: string[]) {
     setConnection(id);
     setError("");
@@ -44,7 +50,8 @@ export function TeachGoogle({
     });
   }
   async function learn() {
-    if (busy) return;
+    if (learning.current) return;
+    learning.current = true;
     setError("");
     for (const file of files.filter((f) => !f.processId)) {
       setBusy(file.id);
@@ -60,6 +67,10 @@ export function TeachGoogle({
         const data = await response.json();
         if (!response.ok)
           throw new Error(data.error || "This file could not be processed.");
+        if (data.busy)
+          throw new Error(
+            "This source is already being processed. Try again shortly.",
+          );
         setFiles((current) =>
           current.map((f) =>
             f.id === file.id
@@ -81,6 +92,7 @@ export function TeachGoogle({
       }
     }
     setBusy(null);
+    learning.current = false;
   }
   return (
     <section className="teach-google" aria-label="Teach from Google Workspace">
@@ -89,8 +101,9 @@ export function TeachGoogle({
         organizationId={organizationId}
         organizationName={organizationName}
         onSelected={selected}
+        initialConnectionId={initialConnectionId}
       />
-      {!!files.length && (
+      <TeachWorkflow open={!!files.length}>
         <div className="connection-files">
           <h2 className="text-lg font-semibold">Your Google files</h2>
           <p className="text-sm">
@@ -108,16 +121,33 @@ export function TeachGoogle({
                   <small>{file.name}</small>
                   {file.error && <span role="alert">{file.error}</span>}
                   {busy === file.id && (
-                    <span role="status">Preparing findings…</span>
+                    <span className="teach-ai-status" role="status">
+                      <OprynThinkingOrb
+                        state="solving"
+                        size={20}
+                        label="Structuring findings"
+                        decorative
+                      />
+                      Structuring findings…
+                    </span>
                   )}
                 </span>
                 {file.processId ? (
-                  onPrepared ? <button className="opryn-button-secondary" onClick={() => onPrepared(file.processId!)}>Review findings</button> : <Link
-                    className="opryn-button-secondary"
-                    href={`/app/processes/${file.processId}?review=true&returnTo=%2Fapp%2Fprocesses`}
-                  >
-                    Review findings
-                  </Link>
+                  onPrepared ? (
+                    <button
+                      className="opryn-button-secondary"
+                      onClick={() => onPrepared(file.processId!)}
+                    >
+                      Review findings
+                    </button>
+                  ) : (
+                    <Link
+                      className="opryn-button-secondary"
+                      href={`/app/processes/${file.processId}?review=true&returnTo=%2Fapp%2Fprocesses`}
+                    >
+                      Review findings
+                    </Link>
+                  )
                 ) : (
                   <button
                     type="button"
@@ -135,13 +165,17 @@ export function TeachGoogle({
             ))}
           </StaggerList>
           {files.some((file) => !file.processId) && (
-            <button className="opryn-action" disabled={!!busy} onClick={learn}>
-              {busy
-                ? "Preparing findings…"
-                : files.some((file) => file.error)
+            <OprynAction
+              label={
+                files.some((file) => file.error)
                   ? "Retry unfinished files"
-                  : "Learn from these files"}
-            </button>
+                  : "Learn from these files"
+              }
+              pendingLabel="Preparing findings…"
+              successLabel="Ready for review"
+              state={busy ? "pending" : "idle"}
+              onClick={learn}
+            />
           )}
           {files.every((file) => file.processId) && (
             <p role="status">
@@ -150,7 +184,7 @@ export function TeachGoogle({
             </p>
           )}
         </div>
-      )}
+      </TeachWorkflow>
       {error && <p role="alert">{error}</p>}
     </section>
   );

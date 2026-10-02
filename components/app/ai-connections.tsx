@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
   ArrowRight,
@@ -429,6 +429,8 @@ export function ConnectionDetail({
     status: string;
     resolution: string | null;
     proposed_rule: string | null;
+    is_one_time_exception?: boolean;
+    knowledge_proposal_id?: string | null;
     created_at: string;
   }>;
   keyPrefix: string | null;
@@ -525,7 +527,11 @@ export function ConnectionDetail({
     }
   }
   async function remove() {
-    if (!window.confirm("Delete this connection and revoke all of its keys?"))
+    if (
+      !window.confirm(
+        "Disconnect this agent and revoke its keys? Evaluation history will be retained.",
+      )
+    )
       return;
     const response = await fetch(`/api/ai-connections/${connection.id}`, {
       method: "DELETE",
@@ -837,7 +843,7 @@ export function ConnectionDetail({
                 onClick={() => void remove()}
                 className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-[#f0c7c4] px-4 text-sm font-semibold text-[#a13d36]"
               >
-                <Trash2 className="size-4" /> Delete connection
+                <Trash2 className="size-4" /> Disconnect agent
               </button>
             </div>
           </div>
@@ -847,7 +853,7 @@ export function ConnectionDetail({
   );
 }
 
-function EscalationCard({
+export function EscalationCard({
   connectionId,
   item,
   onDone,
@@ -860,13 +866,30 @@ function EscalationCard({
     status: string;
     resolution: string | null;
     proposed_rule: string | null;
+    is_one_time_exception?: boolean;
+    knowledge_proposal_id?: string | null;
     created_at: string;
   };
   onDone: () => void;
 }) {
   const [answer, setAnswer] = useState(item.resolution ?? "");
   const [rule, setRule] = useState(item.proposed_rule ?? "");
-  const [stage, setStage] = useState(item.proposed_rule ? "review" : "answer");
+  const [stage, setStage] = useState(
+    item.knowledge_proposal_id
+      ? "submitted"
+      : item.proposed_rule
+        ? "review"
+        : "answer",
+  );
+  const [oneTimeException, setOneTimeException] = useState(
+    item.is_one_time_exception ?? false,
+  );
+  const [submissionError, setSubmissionError] = useState("");
+  const [proposalId, setProposalId] = useState<string | null>(
+    item.knowledge_proposal_id ?? null,
+  );
+  const pendingRequest = useRef<AbortController | null>(null);
+  useEffect(() => () => pendingRequest.current?.abort(), []);
   const [clarificationQuestions, setClarificationQuestions] = useState<
     string[]
   >([]);
@@ -875,36 +898,63 @@ function EscalationCard({
   >({});
   const [busy, setBusy] = useState(false);
   async function submit(
-    action: "suggest" | "approve" | "answer_only" | "dismiss",
+    action: "suggest" | "request_approval" | "answer_only" | "dismiss",
   ) {
+    if (pendingRequest.current) return;
+    const controller = new AbortController();
+    pendingRequest.current = controller;
     setBusy(true);
-    const response = await fetch(
-      `/api/ai-connections/${connectionId}/escalations/${item.id}/answer`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          action,
-          answer,
-          rule,
-          clarificationAnswers: clarificationQuestions.map((question) => ({
-            question,
-            answer: clarificationAnswers[question] || "",
-          })),
-        }),
-      },
-    );
-    const data = await response.json();
-    if (response.ok && action === "suggest") {
-      setRule(data.rule);
-      if (data.complete === false) {
-        setClarificationQuestions(data.clarificationQuestions ?? []);
-        setStage("clarify");
-      } else {
-        setStage("review");
-      }
-    } else if (response.ok) onDone();
-    setBusy(false);
+    setSubmissionError("");
+    try {
+      const response = await fetch(
+        `/api/ai-connections/${connectionId}/escalations/${item.id}/answer`,
+        {
+          method: "POST",
+          signal: controller.signal,
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            action,
+            answer,
+            rule,
+            oneTimeException,
+            clarificationAnswers:
+              action === "suggest"
+                ? clarificationQuestions.map((question) => ({
+                    question,
+                    answer: clarificationAnswers[question] || "",
+                  }))
+                : [],
+          }),
+        },
+      );
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data)
+        throw new Error(
+          data?.error || "The answer could not be saved. Try again.",
+        );
+      if (response.ok && action === "suggest") {
+        setRule(data.rule);
+        if (data.complete === false) {
+          setClarificationQuestions(data.clarificationQuestions ?? []);
+          setStage("clarify");
+        } else {
+          setStage("review");
+        }
+      } else if (data.awaitingApproval && data.proposalId) {
+        setProposalId(data.proposalId);
+        setStage("submitted");
+      } else onDone();
+    } catch (error) {
+      if (!controller.signal.aborted)
+        setSubmissionError(
+          error instanceof Error
+            ? error.message
+            : "The answer could not be saved.",
+        );
+    } finally {
+      pendingRequest.current = null;
+      if (!controller.signal.aborted) setBusy(false);
+    }
   }
   return (
     <article className="rounded-xl border border-[#e1e6ed] p-4">
@@ -921,7 +971,22 @@ function EscalationCard({
           {new Date(item.created_at).toLocaleDateString()}
         </span>
       </div>
-      {item.status === "open" ? (
+      {submissionError ? (
+        <p role="alert" className="mt-3 text-sm text-red-700">
+          {submissionError}
+        </p>
+      ) : null}
+      {stage === "submitted" && proposalId ? (
+        <div role="status" className="mt-4 text-sm text-[#536176]">
+          This answer has a knowledge proposal. Publication requires approval.
+          <Link
+            href={`/app/needs-you?item=${proposalId}`}
+            className="mt-2 block font-semibold text-[#2855f9]"
+          >
+            Review proposal →
+          </Link>
+        </div>
+      ) : item.status === "open" ? (
         stage === "answer" ? (
           <div className="mt-4">
             <textarea
@@ -930,15 +995,29 @@ function EscalationCard({
               placeholder="Write the owner's answer…"
               className={`${inputClass} min-h-24 py-3`}
             />
-            <div className="mt-2 flex gap-2">
+            <label className="mt-3 flex items-center gap-2 text-xs text-[#536176]">
+              <input
+                type="checkbox"
+                checked={oneTimeException}
+                disabled={busy}
+                onChange={(event) => setOneTimeException(event.target.checked)}
+              />
+              One-time exception — not company policy
+            </label>
+            <div className="mt-2 flex flex-wrap gap-2">
               <button
                 disabled={!answer.trim() || busy}
-                onClick={() => void submit("suggest")}
+                onClick={() =>
+                  void submit(oneTimeException ? "answer_only" : "suggest")
+                }
                 className="rounded-lg bg-[#3158d8] px-3 py-2 text-xs font-semibold text-white"
               >
-                Answer &amp; review rule
+                {oneTimeException
+                  ? "Save answer only"
+                  : "Prepare knowledge proposal"}
               </button>
               <button
+                disabled={busy}
                 onClick={() => void submit("dismiss")}
                 className="px-3 py-2 text-xs font-semibold text-[#7b8797]"
               >
@@ -987,7 +1066,7 @@ function EscalationCard({
         ) : (
           <div className="mt-4 rounded-xl bg-[#f7f9fc] p-4">
             <p className="text-xs font-bold uppercase text-[#177257]">
-              Suggested company rule
+              Proposed company guidance · approval required
             </p>
             <textarea
               value={rule}
@@ -997,12 +1076,13 @@ function EscalationCard({
             <div className="mt-3 flex flex-wrap gap-2">
               <button
                 disabled={!rule.trim() || busy}
-                onClick={() => void submit("approve")}
-                className="rounded-lg bg-[#177257] px-3 py-2 text-xs font-semibold text-white"
+                onClick={() => void submit("request_approval")}
+                className="rounded-lg bg-[#2855f9] px-3 py-2 text-xs font-semibold text-white"
               >
-                Remember It
+                Create knowledge proposal
               </button>
               <button
+                disabled={busy}
                 onClick={() => void submit("answer_only")}
                 className="rounded-lg border border-[#d8dfe8] px-3 py-2 text-xs font-semibold"
               >

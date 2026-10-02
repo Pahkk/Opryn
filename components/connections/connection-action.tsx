@@ -11,13 +11,17 @@ export function ConnectionAction({
   organizationName,
   onSelected,
   label = "Google Workspace",
+  initialConnectionId,
 }: {
   organizationId: string;
   organizationName: string;
   onSelected: (connectionId: string, fileIds: string[]) => void | Promise<void>;
   label?: string;
+  initialConnectionId?: string | null;
 }) {
-  const [connectionId, setConnectionId] = useState<string | null>(null);
+  const [connectionId, setConnectionId] = useState<string | null>(
+    initialConnectionId || null,
+  );
   const [sheet, setSheet] = useState(false);
   const [attempt, setAttempt] = useState<string>();
   const [error, setError] = useState("");

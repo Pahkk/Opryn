@@ -1,5 +1,74 @@
 # Opryn motion system
 
+## September 16 homepage amendment
+
+Inside Opryn is now a Motion-owned, user-controlled tabbed product window, not a second GSAP pinned sequence. PublicAction owns marketing CTA interaction; PublicReveal owns ordinary section entries. The six-stage knowledge story remains GSAP-only, explicitly registered through `lib/motion/story-gsap.ts`, and now adapts down to 620px desktop viewport height. See [homepage-motion-refresh.md](homepage-motion-refresh.md) for the live audit, ownership convention, tests and evidence. This supersedes the product-proof ownership statements below.
+
+## Current architecture — Motion 13.3.0 / GSAP 3.15.0
+
+September 15, 2026. This section supersedes the historical GSAP-only implementation below.
+
+### Ownership
+
+| Owner                   | Responsibility                                        | Examples                                                                                                            |
+| ----------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Motion (`motion/react`) | React product state, local layout, presence, controls | routes, native-dialog content, selected files, filters, lists, approval receipts, onboarding, counters              |
+| GSAP                    | Choreographed timelines and SVG/text storytelling     | pinned homepage, scroll-driven Inside Opryn, TeachPipeline, WelcomeStory, FlowLine, masked headlines, Guide pointer |
+| thinking-orbs           | AI working visualization                              | orb internals; Motion only transitions its outer status area                                                        |
+| CSS                     | Static styling, focus, simple color/hover states      | borders, foreground/background, focus rings                                                                         |
+
+Mark animated roots with `data-motion-owner="motion"` or `"gsap"`. Never animate the same property of the same DOM node from both systems. Nested owners are allowed only for distinct nodes: e.g. GSAP owns the product-proof screenshots and timeline, Motion owns its tab underline. No global GSAP defaults or general-purpose GSAP product wrappers remain.
+
+### Reused primitives
+
+- `lib/motion/motion-tokens.ts`: 140/200/260/420ms durations, shared ease, 420/34/0.7 control spring, 280/30 layout spring. Existing `presets.ts` now serves GSAP storytelling only.
+- `use-product-motion.ts`: Motion OS preference plus the existing saved `data-motion="reduced"` preference and document visibility. A single shared observer is removed when the final consumer unmounts. SSR starts visible.
+- `MotionRegion`: Motion `useAnimate`, existing page/step/status/quiet API. Keeps children mounted; interrupts on errors. Does not retain obsolete private routes, gate navigation, or reset forms merely to animate them.
+- `StaggerList`: real keyed `AnimatePresence`/`layout="position"` using original button/article/div tags. Removed rows become inert and hidden from assistive technology. Entry delay is capped at 120ms; lists over 40 rows skip entry/layout work. Knowledge already paginates to 30 rows (6 on overview). No virtualization introduced.
+- `SelectionTrack`: measured Motion selected underline, including nested/scrolling/wrapping controls. `MotionTabs`/`ActiveIndicator` use local `LayoutGroup` namespaces and `layoutId` for nearby selection states.
+- `MotionPanel`: conditional height/opacity expansion with noninteractive exits. `TeachWorkflowScope` portals full-width provider workflows into their source row while retaining provider branding and controls.
+- `DialogSurface`: canonical native dialog/focus trap remains. Motion animates only `.dialog-content` or `.needs-you-sheet`, with a 24px entry inside the viewport (vertical on mobile). Dismissal and Google Picker handoff remain immediate. This is the shared drawer/sheet/modal surface; no parallel dialog primitive was added.
+- `PresenceSwap`: short state text/working indicator transitions; never editable forms or answer streams.
+- `MotionNumber`/`MotionProgress`: `useSpring` and `useTransform`, starting from the actual server value. Accessible values update immediately, visual values settle. No fictitious count-up from zero.
+- `MotionButton`/`MotionHover`: max 1.01 hover / .99 press, or 1px lift. No mouse-following marketing cards remain.
+- `SetupContext`: persistent company/knowledge context reflows with Motion; approval status uses the same source of truth.
+
+### Surface migration
+
+| Surface                                                                                          | Implementation                                                                                                                                                                                                    |
+| ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| App shell / Home / Ask / Teach / Knowledge / Needs You / Team / Connections / Settings / Profile | existing AppShell content wrapper now uses Motion; navigation stays stationary; sensitive settings retain immediate presentation                                                                                  |
+| Home                                                                                             | confirmed-count springs and real handled-rate progress; recent activity keyed updates; owner-answer approval transitions into a confirmed receipt linked to Recent Knowledge; receipt survives the server refresh |
+| Needs You                                                                                        | review-to-receipt height transition, keyed queue reflow and exits; existing explicit Clear completed control retained for pointer safety                                                                          |
+| Knowledge                                                                                        | result rows, removal/reordering, selected nav indicator, native detail/filter/category drawers; no cross-portal layoutId flight                                                                                   |
+| Teach                                                                                            | connected-source filtering, Google selected-file expansion, Notion/Confluence inline selectors, selected-content lists; existing inline OAuth resume retained                                                     |
+| Team                                                                                             | existing member/invite StaggerList callers now use Motion; canonical dialog retains permissions and focus                                                                                                         |
+| Connections                                                                                      | categorized result lists, active filters, success surface, selected files and canonical sheets                                                                                                                    |
+| Onboarding                                                                                       | 260ms step changes without form remounts, goal microinteraction, persistent setup context, stage progress and local active indicator, billing frequency/amount/confirmed-state changes                            |
+| Ask Opryn product help                                                                           | message entry, panel/sheet, orb-to-submit transition; GSAP pointer/Driver target lifecycle unchanged                                                                                                              |
+| Public                                                                                           | mobile nav content, controls, integration filters/results, product-proof active tab, pricing frequency/amounts, FAQ expansions and restrained card hover                                                          |
+| Profile                                                                                          | avatar changes use quiet Motion entry, existing save feedback uses the shared status wrapper                                                                                                                      |
+
+### Deliberate boundaries
+
+- App Router content enters immediately. No frozen-router workaround or retained authenticated page exit.
+- Knowledge drawers use title continuity through an anchored native surface, not `layoutId` across a top-layer portal. No teleporting proxy elements.
+- Home approval produces a confirmed receipt and refreshed activity. It does not animate a fabricated database object between unrelated routes.
+- Inside Opryn remains a GSAP scroll sequence as previously requested; only the indicator is Motion-owned.
+- `useScroll` is not added: existing scroll progress belongs to GSAP; new product progress is derived from real data via `useSpring`.
+- Reduced motion disables displacement, layout springs, stagger and hover. GSAP retains its existing static fallbacks. Functionality, focus and status text do not depend on animation.
+- Native dialog dismissal is immediate to preserve Escape, focus restoration and third-party Picker top-layer handoff. Normal conditional panel/list exits use AnimatePresence.
+
+### Verification / assets
+
+`verify-motion-ui.mjs` exercises rapid updates, unsaved fields, errors, account/OS preferences, unmount, hidden-page recovery, native focus and 4× CPU slowdown. `verify-motion-product.mjs` uses actual Teach, provider selection, Needs You, Knowledge and Home components with explicit API doubles at 1440/1280/1024/768/430/390px. Tests do not connect customer providers, approve production records or charge cards.
+
+Screenshots and WebM recordings: `artifacts/motion-product/`, `artifacts/motion/recordings/`. Existing activation, Guide, Settings, product UI, public-layout, product-proof and GSAP stress suites cover the adjacent workflows. The reports distinguish fixture OAuth/Stripe behavior from real provider authorization. Real device keyboards and live OAuth round trips have not been reauthorized for this visual migration.
+
+References: [Motion accessibility](https://motion.dev/docs/react-accessibility), [presence](https://motion.dev/docs/react-animate-presence), [bundle guidance](https://motion.dev/docs/react-reduce-bundle-size).
+
+## Historical implementation (superseded)
+
 ## Audit and decisions
 
 The app uses Next.js App Router, React 19, shared native dialogs, and an existing CSS animation vocabulary. There is no Framer Motion dependency. GSAP 3.15.0 was already installed in the preceding package-install task. This pass uses core GSAP only: no plugin registration, ScrollTrigger, routing interception, new animation dependency, or global GSAP defaults.

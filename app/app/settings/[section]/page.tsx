@@ -21,7 +21,7 @@ import {
   SettingsSection,
 } from "@/components/app/settings/primitives";
 import { BillingSettings } from "@/components/app/billing-settings";
-import { billingConfigured } from "@/lib/billing/stripe";
+import { billingConfigured, currentMonthlyBillingReady, getStripe } from "@/lib/billing/stripe";
 import { getOrganizationPlan } from "@/lib/billing/subscription";
 import { getTeamLimit } from "@/lib/billing/plans";
 
@@ -44,7 +44,30 @@ export default async function Page({
       />
     );
   if (section === "members") redirect("/app/team");
-  if (section === "connections") redirect("/app/integrations");
+  if (section === "connections")
+    return (
+      <>
+        <SettingsHeading
+          title="Connections & AI Access"
+          description="Control the sources Opryn learns from and where approved knowledge can be used."
+          scope={`Workspace · ${context.organization.name}`}
+        />
+        <SettingsSection title="Connected sources">
+          <p>Review connected accounts, their health, and what Opryn can learn from them.</p>
+          <Link className="settings-index-link" href="/app/integrations">
+            <span><strong>Manage connections</strong><small>View sources and connection controls</small></span>
+            <ArrowRight size={18} aria-hidden="true" />
+          </Link>
+        </SettingsSection>
+        <SettingsSection title="Connected AI">
+          <p>Review access to approved company knowledge for compatible AI connections.</p>
+          <Link className="settings-index-link" href="/app/ai-connections">
+            <span><strong>Manage AI access</strong><small>View connections and their available controls</small></span>
+            <ArrowRight size={18} aria-hidden="true" />
+          </Link>
+        </SettingsSection>
+      </>
+    );
   const supabase = await createClient();
   const account = await getAccountSettings(context.user.id);
   const heading = (
@@ -233,11 +256,33 @@ export default async function Page({
     ]);
     if (members.error || invites.error)
       throw new Error("Workspace usage could not be loaded.");
+    const billingReady = await currentMonthlyBillingReady();
+    let actualPrice: string | null = null;
+    let actualCadence: string | null = null;
+    if (subscription.stripeSubscriptionId && billingConfigured()) {
+      try {
+        const stripeSubscription = await getStripe().subscriptions.retrieve(
+          subscription.stripeSubscriptionId,
+        );
+        const price = stripeSubscription.items.data[0]?.price;
+        if (price?.unit_amount != null && price.currency === "usd") {
+          actualPrice = new Intl.NumberFormat("en-US", {
+            style: "currency",
+            currency: "USD",
+          }).format(price.unit_amount / 100);
+          actualCadence = price.recurring?.interval ?? null;
+        }
+      } catch {
+        // Never show the current public price as an existing subscriber's rate.
+      }
+    }
     return (
       <>
         {heading}
         <BillingSettings
-          plan={subscription.plan}
+          plan={subscription.subscribedPlan}
+          actualPrice={actualPrice}
+          actualCadence={actualCadence}
           interval={subscription.billingInterval}
           status={subscription.status}
           periodEnd={subscription.currentPeriodEnd}
@@ -245,7 +290,7 @@ export default async function Page({
           cancelAtPeriodEnd={subscription.cancelAtPeriodEnd}
           hasStripeCustomer={Boolean(subscription.stripeCustomerId)}
           hasSubscription={Boolean(subscription.stripeSubscriptionId)}
-          billingReady={billingConfigured()}
+          billingReady={billingReady}
           success={query.billing === "success"}
         />
         <section className="settings-section mt-6">

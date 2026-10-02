@@ -43,6 +43,63 @@ const schema = z.object({
     .max(20),
 });
 
+export async function GET(
+  _: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const context = await getRequestContext({ admin: true });
+  if ("error" in context) return context.error;
+  const { id } = await params;
+  if (!z.uuid().safeParse(id).success)
+    return NextResponse.json({ error: "Process not found." }, { status: 404 });
+  const { supabase, membership } = context;
+  const organizationId = membership.organization_id;
+  const process = await supabase
+    .from("processes")
+    .select("id,title,status,library_archived_at")
+    .eq("id", id)
+    .eq("organization_id", organizationId)
+    .maybeSingle();
+  if (process.error)
+    return apiError(process.error, "Unable to inspect this process.");
+  if (!process.data)
+    return NextResponse.json({ error: "Process not found." }, { status: 404 });
+  const count = (table: string, column = "process_id") =>
+    supabase
+      .from(table)
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", organizationId)
+      .eq(column, id);
+  const [knowledge, questions, proposals, replacements] = await Promise.all([
+    count("knowledge_chunks"),
+    count("employee_questions", "related_process_id"),
+    count("knowledge_proposals", "related_process_id"),
+    count("processes", "supersedes_process_id"),
+  ]);
+  if (
+    [knowledge, questions, proposals, replacements].some(
+      (result) => result.error,
+    )
+  )
+    return NextResponse.json(
+      { error: "Deletion impact could not be verified." },
+      { status: 503 },
+    );
+  return NextResponse.json({
+    id: process.data.id,
+    title: process.data.title,
+    status: process.data.status,
+    archived: Boolean(process.data.library_archived_at),
+    canDelete: process.data.status !== "approved",
+    impact: {
+      knowledge: knowledge.count ?? 0,
+      questions: questions.count ?? 0,
+      proposals: proposals.count ?? 0,
+      related: replacements.count ?? 0,
+    },
+  });
+}
+
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -167,12 +224,40 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const context = await getRequestContext({ admin: true });
   if ("error" in context) return context.error;
+  if (
+    request.headers.get("origin") &&
+    request.headers.get("origin") !== new URL(request.url).origin
+  )
+    return NextResponse.json(
+      { error: "Request not allowed." },
+      { status: 403 },
+    );
   const { id } = await params;
+  if (!z.uuid().safeParse(id).success)
+    return NextResponse.json({ error: "Process not found." }, { status: 404 });
+  const existing = await context.supabase
+    .from("processes")
+    .select("id,status")
+    .eq("id", id)
+    .eq("organization_id", context.membership.organization_id)
+    .maybeSingle();
+  if (existing.error)
+    return apiError(existing.error, "Unable to verify this process.");
+  if (!existing.data)
+    return NextResponse.json({ error: "Process not found." }, { status: 404 });
+  if (existing.data.status === "approved")
+    return NextResponse.json(
+      {
+        error:
+          "Approved knowledge cannot be permanently deleted here. Archive it to remove it from active retrieval while preserving its audit history.",
+      },
+      { status: 409 },
+    );
   const { error } = await context.supabase
     .from("processes")
     .delete()

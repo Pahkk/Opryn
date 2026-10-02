@@ -1,6 +1,7 @@
 export type PlanId = "core" | "premium";
 export type BillingInterval = "month" | "year";
 export type PlanFeature =
+  | "ai_conversation_learning"
   | "videoLearning"
   | "screenRecording"
   | "callLearning"
@@ -13,6 +14,7 @@ export type PlanFeature =
 
 export const PLAN_FEATURES = Object.freeze({
   core: Object.freeze({
+    ai_conversation_learning: false,
     videoLearning: false,
     screenRecording: false,
     callLearning: false,
@@ -25,6 +27,7 @@ export const PLAN_FEATURES = Object.freeze({
     teamLimit: 5,
   }),
   premium: Object.freeze({
+    ai_conversation_learning: true,
     videoLearning: true,
     screenRecording: true,
     callLearning: true,
@@ -40,15 +43,20 @@ export const PLAN_FEATURES = Object.freeze({
 
 export const PLAN_DETAILS = Object.freeze({
   core: {
-    name: "Opryn Core",
-    monthlyPrice: 99,
-    annualMonthlyEquivalent: 79,
+    name: "Starter",
+    monthlyPrice: 49,
   },
   premium: {
-    name: "Opryn Premium",
-    monthlyPrice: 249,
-    annualMonthlyEquivalent: 199,
+    name: "Pro",
+    monthlyPrice: 129,
   },
+});
+
+/** Historical database keys remain core/premium so existing access rules and
+ * subscriptions keep working. Starter/Pro are the customer-facing names. */
+export const PUBLIC_PLAN_KEYS = Object.freeze({
+  core: "starter",
+  premium: "pro",
 });
 
 export function hasFeature(plan: PlanId, feature: PlanFeature) {

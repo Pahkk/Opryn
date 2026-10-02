@@ -5,6 +5,7 @@ import { useState } from "react";
 import { ArrowLeft, ArrowRight, Search } from "lucide-react";
 import { settingsSections, searchSettings } from "@/lib/settings-navigation";
 import "./settings.css";
+import { MotionTabs, ActiveIndicator } from "@/components/motion/motion-tabs";
 
 export function SettingsLayout({
   children,
@@ -23,6 +24,7 @@ export function SettingsLayout({
     <div className="settings-shell">
       <header className="settings-header">
         <div>
+          <p className="settings-overline">OPRYN PREFERENCES</p>
           <h1>Settings</h1>
           <p>Your account, your preferences, and your workspace.</p>
         </div>
@@ -65,33 +67,39 @@ export function SettingsLayout({
         className={`settings-columns ${atIndex ? "settings-is-index" : ""}`}
         style={query.trim() ? { display: "none" } : undefined}
       >
-        <nav className="settings-nav" aria-label="Settings sections">
-          {["account", "workspace"].map((group) => {
-            const items = sections.filter((item) => item.group === group);
-            return items.length ? (
-              <div key={group}>
-                <p>
-                  {group === "account"
-                    ? "Your account"
-                    : `Workspace · ${workspace}`}
-                </p>
-                {items.map((item) => (
-                  <Link
-                    key={item.id}
-                    href={`/app/settings/${item.id}`}
-                    aria-current={
-                      pathname === `/app/settings/${item.id}`
-                        ? "page"
-                        : undefined
-                    }
-                  >
-                    {item.title}
-                  </Link>
-                ))}
-              </div>
-            ) : null;
-          })}
-        </nav>
+        <MotionTabs>
+          <nav className="settings-nav" aria-label="Settings sections">
+            {["account", "workspace"].map((group) => {
+              const items = sections.filter((item) => item.group === group);
+              return items.length ? (
+                <div key={group}>
+                  <p>
+                    {group === "account"
+                      ? "Your account"
+                      : `Workspace · ${workspace}`}
+                  </p>
+                  {items.map((item) => (
+                    <Link
+                      key={item.id}
+                      href={`/app/settings/${item.id}`}
+                      style={{ position: "relative" }}
+                      aria-current={
+                        pathname === `/app/settings/${item.id}`
+                          ? "page"
+                          : undefined
+                      }
+                    >
+                      <span>{item.title}</span>
+                      {pathname === `/app/settings/${item.id}` && (
+                        <ActiveIndicator />
+                      )}
+                    </Link>
+                  ))}
+                </div>
+              ) : null;
+            })}
+          </nav>
+        </MotionTabs>
         <div
           className="settings-pane"
           data-guide={
@@ -99,7 +107,13 @@ export function SettingsLayout({
               ? "settings.profile"
               : pathname === "/app/settings/notifications"
                 ? "settings.notifications"
-                : undefined
+                : pathname === "/app/settings/connections"
+                  ? "settings.integrations"
+                  : pathname === "/app/settings/billing"
+                    ? "settings.billing"
+                    : pathname === "/app/settings/data"
+                      ? "settings.security"
+                      : undefined
           }
         >
           {!atIndex ? (
@@ -107,7 +121,7 @@ export function SettingsLayout({
               <ArrowLeft size={16} /> All settings
             </Link>
           ) : null}
-          {children}
+          <div className="settings-content">{children}</div>
         </div>
       </div>
     </div>

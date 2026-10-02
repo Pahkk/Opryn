@@ -1,0 +1,11 @@
+# Live onboarding setup preview
+
+`SetupContext` now renders one meaningful Your Opryn Setup panel. CompanyProfileFields supplies the current profile, selected goal, accepted knowledge areas, pending AI suggestions and recommended source. ActivationOnboarding uses the same component after the company step, adding the actual selected source, first finding/approval and the next action derived from the current stage. The duplicate company-step summary and orange placeholder label are removed.
+
+The company initial is a generated text avatar, not an invented uploaded logo. Empty fields stay absent. Suggestions are explicitly labeled until applied; accepted or manually selected knowledge areas say Confirmed. These are onboarding choices, not approved policy. Existing suggestion acceptance, profile saving and review authority remain unchanged.
+
+The preview orb runs only while the existing suggestions HTTP request is pending. That endpoint returns one complete response, not streamed phases: there are no simulated intermediate stages, percentages or timed completion. The existing optional explanation/reason is displayed as part of its suggestion, not presented as verified usage telemetry. No recommendation is manufactured when state contains none.
+
+Motion animates local values with opacity and 6px travel, and knowledge chip/layout changes. No full-panel remount per keystroke, no cross-form layoutId transfer, no GSAP, no new dependencies. Reduced motion removes travel/layout animation. Mobile has an accessible View/Hide toggle after the form fields, with hidden content removed from keyboard access. Semantic headings, textual Suggested/Confirmed/Approved states and polite real-request status remain available.
+
+Rendered verification uses the actual ActivationOnboarding components with mocked services, not a live authenticated workspace. `scripts/verify-activation.mjs` checks suggested versus accepted state, mobile disclosure, no horizontal overflow, and the existing review/approval/answer flow, recording screenshots in `artifacts/activation/`. `scripts/verify-setup-suggestions.mjs` checks the actual suggestion route with explicit model/database doubles. No real model requests, provider authorization, production writes or deployment are part of this change.

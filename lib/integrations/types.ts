@@ -6,7 +6,13 @@ export type IntegrationCategory =
 
 export type IntegrationCapability =
   | "knowledge_import"
+  | "learn_from_pages"
+  | "learn_from_databases"
+  | "learn_from_spaces"
+  | "sync_source_updates"
   | "ask_opryn"
+  | "send_notifications"
+  | "route_unknown_question"
   | "escalation_notifications"
   | "customer_context"
   | "call_learning"
@@ -28,7 +34,10 @@ export type IntegrationCatalogItem = {
   premium: boolean;
   href?: string;
   availability?: "available" | "beta" | "request_only";
-  nango?: { integrationIdEnv: string; adapter: "google_drive" };
+  nango?: {
+    integrationIdEnv: string;
+    adapter: "google_drive" | "notion" | "confluence" | "microsoft_teams";
+  };
   permissions: {
     can: readonly string[];
     cannot: readonly string[];

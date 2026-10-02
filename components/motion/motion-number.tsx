@@ -1,47 +1,28 @@
 "use client";
-import { useLayoutEffect, useRef } from "react";
-import { gsap, motionScope } from "@/lib/motion/gsap";
-import { motion } from "@/lib/motion/presets";
-
-/** First render is the real value, never a fictitious zero. AT receives only state. */
+import { useEffect } from "react";
+import { motion, useSpring, useTransform } from "motion/react";
+import { motionTokens } from "@/lib/motion/motion-tokens";
+import { useProductReducedMotion } from "@/lib/motion/use-product-motion";
+/** Starts at the real server value; AT receives only confirmed state. */
 export function MotionNumber({ value }: { value: number }) {
-  const ref = useRef<HTMLSpanElement>(null);
-  const previous = useRef(value);
-  useLayoutEffect(() => {
-    const element = ref.current;
-    const from = previous.current;
-    previous.current = value;
-    if (!element || from === value) return;
-    const scope = motionScope(element);
-    const counter = { value: from };
-    scope.run(() =>
-      gsap.to(counter, {
-        value,
-        duration: motion.duration.emphasis,
-        ease: motion.ease.state,
-        onUpdate: () => {
-          element.textContent = String(Math.round(counter.value));
-        },
-        onInterrupt: () => {
-          element.textContent = String(value);
-        },
-      }),
-    );
-    return () => {
-      scope.dispose();
-      element.textContent = String(value);
-    };
-  }, [value]);
+  const reduced = useProductReducedMotion();
+  const spring = useSpring(value, motionTokens.spring);
+  const display = useTransform(spring, (current) =>
+    String(Math.round(current)),
+  );
+  useEffect(() => {
+    if (reduced) spring.jump(value);
+    else spring.set(value);
+  }, [value, reduced, spring]);
   return (
     <>
       <span className="sr-only">{value}</span>
-      <span
-        ref={ref}
+      <motion.span
         aria-hidden="true"
         className="motion-number-value tabular-nums"
       >
-        {value}
-      </span>
+        {display}
+      </motion.span>
     </>
   );
 }

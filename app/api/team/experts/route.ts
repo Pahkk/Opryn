@@ -6,6 +6,10 @@ const createSchema = z.object({
   userId: z.string().uuid(),
   category: z.string().trim().min(2).max(120),
   canApprove: z.boolean().default(false),
+  assignmentType: z
+    .enum(["category", "subject", "tag", "process", "business_area"])
+    .default("category"),
+  processId: z.string().uuid().optional(),
 });
 const deleteSchema = z.object({ id: z.string().uuid() });
 
@@ -30,13 +34,31 @@ export async function POST(request: Request) {
       { error: "That person is not in this team." },
       { status: 400 },
     );
+  if (parsed.data.assignmentType === "process") {
+    const process = parsed.data.processId
+      ? await supabase
+          .from("processes")
+          .select("title")
+          .eq("id", parsed.data.processId)
+          .eq("organization_id", membership.organization_id)
+          .eq("status", "approved")
+          .maybeSingle()
+      : null;
+    if (!process?.data)
+      return NextResponse.json(
+        { error: "Choose an approved process in this workspace." },
+        { status: 400 },
+      );
+    parsed.data.category = process.data.title;
+  }
   try {
     const { data: existing } = await supabase
       .from("knowledge_experts")
       .select("id")
       .eq("organization_id", membership.organization_id)
       .eq("user_id", parsed.data.userId)
-      .ilike("category", parsed.data.category)
+      .eq("category", parsed.data.category)
+      .eq("assignment_type", parsed.data.assignmentType)
       .is("knowledge_chunk_id", null)
       .maybeSingle();
     const query = existing
@@ -45,6 +67,11 @@ export async function POST(request: Request) {
           .update({
             category: parsed.data.category,
             can_approve: parsed.data.canApprove,
+            assignment_type: parsed.data.assignmentType,
+            process_id:
+              parsed.data.assignmentType === "process"
+                ? parsed.data.processId
+                : null,
           })
           .eq("id", existing.id)
       : supabase.from("knowledge_experts").insert({
@@ -53,6 +80,11 @@ export async function POST(request: Request) {
           category: parsed.data.category,
           priority: 1,
           can_approve: parsed.data.canApprove,
+          assignment_type: parsed.data.assignmentType,
+          process_id:
+            parsed.data.assignmentType === "process"
+              ? parsed.data.processId
+              : null,
         });
     const { error } = await query;
     if (error) throw error;

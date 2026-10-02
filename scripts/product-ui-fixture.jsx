@@ -25,7 +25,7 @@ const employee = new URLSearchParams(location.search).has("employee");
 const longText =
   "Clients receive two standard revision rounds. Additional revisions need approval before a commitment is made. ";
 const common = {
-  source: "ChatGPT conversation · UI fixture",
+  source: "ChatGPT conversation · Example workspace",
   createdAt: "2026-09-08",
   secondaryActions: ["deny", "edit"],
 };
@@ -140,8 +140,9 @@ const panels = {
   "teach-google": (
     <>
       <PageHeading
-        title="Teach Opryn"
-        description="Start with what your company already knows."
+        eyebrow="Teach Opryn"
+        title="Teach Opryn."
+        description="Start with information you already have. Opryn prepares findings for you to review."
       />
       <TeachWorkspace
         organizationId="fixture-org"

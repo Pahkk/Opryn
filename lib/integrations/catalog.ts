@@ -10,7 +10,7 @@ export const INTEGRATION_CATALOG: readonly IntegrationCatalogItem[] = [
     name: "Google Workspace",
     category: "learn",
     authMode: "native_oauth",
-    capabilities: ["knowledge_import"],
+    capabilities: ["knowledge_import", "sync_source_updates"],
     description: "Teach Opryn from the Docs, Sheets, and Slides you choose.",
     aliases: ["drive", "google workspace", "files", "documents"],
     setupTime: "About 1 minute",
@@ -56,11 +56,19 @@ export const INTEGRATION_CATALOG: readonly IntegrationCatalogItem[] = [
   },
   {
     id: "teams",
+    nango: {
+      integrationIdEnv: "NANGO_MICROSOFT_TEAMS_INTEGRATION_ID",
+      adapter: "microsoft_teams",
+    },
     name: "Microsoft Teams",
     category: "communication",
     authMode: "native_oauth",
-    href: "/app/integrations/teams",
-    capabilities: ["ask_opryn", "escalation_notifications"],
+    capabilities: [
+      "ask_opryn",
+      "send_notifications",
+      "route_unknown_question",
+      "escalation_notifications",
+    ],
     description: "Use approved Opryn knowledge from Microsoft Teams.",
     aliases: ["microsoft", "office 365", "chat", "communication"],
     setupTime: "About 2 minutes",
@@ -150,18 +158,74 @@ export const INTEGRATION_CATALOG: readonly IntegrationCatalogItem[] = [
 
 function guidedKnowledgeProviders(): IntegrationCatalogItem[] {
   return [
-    guided(
-      "notion",
-      "Notion",
-      "knowledge_import",
-      "Bring selected Notion knowledge into Opryn.",
-    ),
-    guided(
-      "confluence",
-      "Confluence",
-      "knowledge_import",
-      "Import selected team documentation for review.",
-    ),
+    {
+      id: "notion",
+      name: "Notion",
+      category: "learn",
+      authMode: "native_oauth",
+      capabilities: [
+        "knowledge_import",
+        "learn_from_pages",
+        "learn_from_databases",
+        "sync_source_updates",
+      ],
+      description: "Teach Opryn from selected pages and databases.",
+      aliases: ["documents", "wiki", "knowledge", "databases"],
+      setupTime: "About 1 minute",
+      premium: false,
+      nango: {
+        integrationIdEnv: "NANGO_NOTION_INTEGRATION_ID",
+        adapter: "notion",
+      },
+      permissions: {
+        can: [
+          "Read pages and databases shared with the Opryn integration",
+          "Import only content you explicitly select",
+          "Check selected sources for changes",
+        ],
+        cannot: [
+          "Read pages Notion has not shared with Opryn",
+          "Modify or delete Notion content",
+          "Automatically approve imported findings",
+        ],
+        privacy:
+          "Opryn stores selected page and database content for review, without persisting Notion user profiles.",
+      },
+    },
+    {
+      id: "confluence",
+      name: "Confluence",
+      category: "learn",
+      authMode: "native_oauth",
+      capabilities: [
+        "knowledge_import",
+        "learn_from_pages",
+        "learn_from_spaces",
+        "sync_source_updates",
+      ],
+      description: "Teach Opryn from selected pages and spaces.",
+      aliases: ["documents", "wiki", "knowledge", "atlassian"],
+      setupTime: "About 1 minute",
+      premium: false,
+      nango: {
+        integrationIdEnv: "NANGO_CONFLUENCE_INTEGRATION_ID",
+        adapter: "confluence",
+      },
+      permissions: {
+        can: [
+          "Read Confluence pages and spaces you can access",
+          "Import only content you explicitly select",
+          "Check selected sources for version changes",
+        ],
+        cannot: [
+          "Modify or delete Confluence content",
+          "Persist Atlassian author or owner profiles",
+          "Automatically approve imported findings",
+        ],
+        privacy:
+          "Opryn stores selected page content and source location. Atlassian author, owner, account, email, avatar, and timezone fields are stripped before persistence.",
+      },
+    },
     guided(
       "sharepoint",
       "SharePoint",
@@ -249,6 +313,7 @@ function aiProviders(): IntegrationCatalogItem[] {
         "Read approved knowledge the signed-in user may access",
         "Request owner or expert guidance",
         "Suggest processes for owner review when authorized",
+        "Teach Opryn from current conversation context explicitly sent on Pro",
       ],
       cannot: ["Change company policy", "Access restricted knowledge"],
       privacy:
@@ -260,7 +325,7 @@ function aiProviders(): IntegrationCatalogItem[] {
       ...base,
       id: "chatgpt",
       name: "ChatGPT",
-      description: "Ask ChatGPT to use approved Opryn knowledge.",
+      description: "Use approved knowledge and teach from explicitly sent conversations on Pro. Provider support is separate.",
       aliases: ["openai", "gpt", "ai assistant"],
       href: "/docs/chatgpt",
     },
@@ -268,7 +333,7 @@ function aiProviders(): IntegrationCatalogItem[] {
       ...base,
       id: "claude",
       name: "Claude",
-      description: "Let Claude check how your company handles something.",
+      description: "Use approved knowledge in Claude, or teach Opryn from explicitly sent conversations with Pro. Claude connector eligibility is separate.",
       aliases: ["anthropic", "ai assistant"],
       href: "/docs/claude",
     },

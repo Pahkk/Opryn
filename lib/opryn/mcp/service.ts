@@ -9,6 +9,7 @@ import {
 import type { McpAuthContext } from "@/lib/opryn/oauth/tokens";
 import { mcpQuestionOrigin } from "@/lib/opryn/mcp/config";
 import { searchCompanyKnowledge } from "@/lib/opryn/knowledge/retrieval";
+import type { ScopeContext } from "@/lib/opryn/knowledge/scope";
 import { resolveKnowledgeSources } from "@/lib/opryn/knowledge/sources";
 
 export async function askOprynFromMcp(
@@ -16,6 +17,7 @@ export async function askOprynFromMcp(
   auth: McpAuthContext,
   question: string,
   context?: string,
+  scopeContext?: ScopeContext,
 ) {
   const retrievalQuery = context?.trim()
     ? `${question}\n${context.trim()}`
@@ -27,6 +29,8 @@ export async function askOprynFromMcp(
       userId: auth.userId,
       query: retrievalQuery,
       limit: 15,
+      scopeContext,
+      channel: mcpQuestionOrigin(auth.clientKind),
     }),
     service
       .from("organization_settings")
@@ -68,6 +72,9 @@ export async function askOprynFromMcp(
       context,
       embedding,
       knowledge,
+      Boolean(settings?.allow_escalations ?? true) &&
+        auth.scopes.has("opryn.escalations.create"),
+      scopeContext,
     );
     const related = knowledge[0]
       ? {
@@ -82,6 +89,9 @@ export async function askOprynFromMcp(
         ? "Owner guidance is required. Opryn will not guess about critical company policy."
         : "Opryn does not have an approved company answer for this yet.",
       can_escalate:
+        Boolean(settings?.allow_escalations ?? true) &&
+        auth.scopes.has("opryn.escalations.create"),
+      routed:
         Boolean(settings?.allow_escalations ?? true) &&
         auth.scopes.has("opryn.escalations.create"),
       question_id: questionId,
@@ -178,6 +188,7 @@ export async function requestGuidanceFromMcp(
   auth: McpAuthContext,
   question: string,
   context?: string,
+  scopeContext: ScopeContext = {},
 ) {
   const origin = mcpQuestionOrigin(auth.clientKind);
   const cutoff = new Date(Date.now() - 15 * 60 * 1000).toISOString();
@@ -188,6 +199,7 @@ export async function requestGuidanceFromMcp(
     .eq("asked_by", auth.userId)
     .eq("origin", origin)
     .eq("question", question)
+    .eq("scope_context", scopeContext)
     .gte("created_at", cutoff)
     .order("created_at", { ascending: false })
     .limit(1)
@@ -201,6 +213,8 @@ export async function requestGuidanceFromMcp(
       userId: auth.userId,
       query: question,
       limit: 5,
+      scopeContext,
+      channel: origin,
     });
     const { data: clusterId } = await service.rpc("record_question_cluster", {
       target_organization_id: auth.organizationId,
@@ -227,6 +241,7 @@ export async function requestGuidanceFromMcp(
         assigned_expert_id: expertId,
         cluster_id: clusterId,
         conversation_context: context ? [{ role: "user", text: context }] : [],
+        scope_context: scopeContext,
         origin,
       })
       .select("id")
@@ -288,6 +303,8 @@ async function recordUnknownQuestion(
   context: string | undefined,
   embedding: number[],
   knowledge: RetrievedKnowledge[],
+  routeToExpert: boolean,
+  scopeContext?: ScopeContext,
 ) {
   const origin = mcpQuestionOrigin(auth.clientKind);
   const { data: clusterId, error: clusterError } = await service.rpc(
@@ -314,12 +331,13 @@ async function recordUnknownQuestion(
       question,
       status: "needs_owner",
       answered_by_opryn: false,
-      escalated: false,
+      escalated: routeToExpert,
       relevance_score: knowledge[0]?.similarity ?? null,
       cluster_id: clusterId,
       assigned_expert_id: expert?.id ?? null,
       conversation_context: context ? [{ role: "user", text: context }] : [],
       origin,
+      scope_context: scopeContext ?? {},
     })
     .select("id")
     .single();

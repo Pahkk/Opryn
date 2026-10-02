@@ -11,6 +11,10 @@ import {
   readNangoConnection,
   verifyNangoWebhook,
 } from "@/lib/integrations/nango";
+import {
+  disconnectTeamsNango,
+  reconcileTeamsNangoConnection,
+} from "@/lib/integrations/teams-nango";
 
 export const runtime = "nodejs";
 
@@ -175,6 +179,16 @@ export async function POST(request: Request) {
       granted_capabilities: provider.capabilities,
     });
     if (saved.error) throw new Error("Reconciliation failed");
+    if (attempt.provider === "teams" && saved.data) {
+      if (status === "connected")
+        await reconcileTeamsNangoConnection({
+          organizationId: attempt.organization_id,
+          userId: attempt.user_id,
+          integrationId: saved.data,
+        });
+      else if (status === "disconnected")
+        await disconnectTeamsNango(attempt.organization_id, saved.data);
+    }
     return NextResponse.json({ received: true });
   } catch {
     // Deliberately omit payloads and SDK errors, which can carry secrets.

@@ -12,6 +12,10 @@
     {
       "path": "/api/cron/external-learning",
       "schedule": "45 4 * * *"
+    },
+    {
+      "path": "/api/cron/integration-source-updates",
+      "schedule": "15 5 * * *"
     }
   ]
 }

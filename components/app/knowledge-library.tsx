@@ -1,9 +1,22 @@
 "use client";
 import { StaggerList } from "@/components/motion/motion-region";
+import { MotionTabs, ActiveIndicator } from "@/components/motion/motion-tabs";
 import "./knowledge-library.css";
+import { ProductStatus } from "./product-feedback";
+import { OprynAction } from "@/components/motion/opryn-action";
+import { showAppToast } from "@/lib/client-toast";
+import {
+  BookOpen,
+  FileText,
+  Layers3,
+  Search,
+  SlidersHorizontal,
+  X,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { lazy, Suspense, useState } from "react";
+import { KnowledgeScopePanel } from "./knowledge-scope";
+import { lazy, Suspense, useRef, useState } from "react";
 import { DialogSurface } from "./dialog-surface";
 const LibraryProcessReview = lazy(() =>
   import("./library-process-review").then((module) => ({
@@ -48,6 +61,7 @@ export function KnowledgeLibrary({
   );
   const [categorySheet, setCategorySheet] = useState(false);
   const [filterSheet, setFilterSheet] = useState(false);
+  const [allCategories, setAllCategories] = useState(false);
   const view = filters.view || "overview";
   function href(values: Record<string, string>) {
     const params = new URLSearchParams(
@@ -66,36 +80,55 @@ export function KnowledgeLibrary({
   }
   function navigation() {
     return (
-      <>
+      <MotionTabs>
         <nav aria-label="Knowledge views">
           <Link
             aria-current={view === "overview" ? "page" : undefined}
             href="/app/processes"
+            style={{ position: "relative" }}
           >
             Overview
+            {view === "overview" && <ActiveIndicator />}
           </Link>
           <Link
             aria-current={
               view === "all" && !filters.category ? "page" : undefined
             }
             href={href({ view: "all", category: "" })}
+            style={{ position: "relative" }}
           >
             All knowledge
+            {view === "all" && !filters.category && <ActiveIndicator />}
           </Link>
         </nav>
         <p className="library-label">Categories</p>
         <nav aria-label="Knowledge categories">
-          {Object.entries(KNOWLEDGE_CATEGORIES).map(([id, label]) => (
-            <Link
-              key={id}
-              href={href({ category: id, view: "all" })}
-              aria-current={filters.category === id ? "page" : undefined}
-            >
-              <span>{label}</span>
-              <span>{categories[id] || 0}</span>
-            </Link>
-          ))}
+          {Object.entries(KNOWLEDGE_CATEGORIES)
+            .filter(
+              ([id]) =>
+                allCategories || categories[id] || filters.category === id,
+            )
+            .map(([id, label]) => (
+              <Link
+                key={id}
+                href={href({ category: id, view: "all" })}
+                aria-current={filters.category === id ? "page" : undefined}
+                style={{ position: "relative" }}
+              >
+                <span>{label}</span>
+                <span>{categories[id] || 0}</span>
+                {filters.category === id && <ActiveIndicator />}
+              </Link>
+            ))}
         </nav>
+        <button
+          type="button"
+          aria-expanded={allCategories}
+          className="min-h-11 px-2 text-xs font-semibold text-[#2045ce]"
+          onClick={() => setAllCategories((value) => !value)}
+        >
+          {allCategories ? "Show populated categories" : "Show all categories"}
+        </button>
         <p className="library-label">Smart views</p>
         <nav aria-label="Smart views">
           {Object.entries(LIBRARY_VIEWS)
@@ -105,12 +138,14 @@ export function KnowledgeLibrary({
                 key={id}
                 href={href({ view: id, category: "", status: "", days: "" })}
                 aria-current={view === id ? "page" : undefined}
+                style={{ position: "relative" }}
               >
                 {label}
+                {view === id && <ActiveIndicator />}
               </Link>
             ))}
         </nav>
-      </>
+      </MotionTabs>
     );
   }
   function rows(list: LibraryItem[], empty: string) {
@@ -130,12 +165,23 @@ export function KnowledgeLibrary({
               data-motion-row={`${item.entity}-${item.id}`}
               data-motion-version={item.updated_at}
               onClick={() => setSelected(item)}
+              aria-label={`Open ${item.title}, ${statusLabel(item.status)}, version ${item.version}`}
             >
-              <span>
+              <span aria-hidden="true">
+                {item.entity === "process" ? (
+                  <Layers3 size={17} />
+                ) : item.entity === "proposal" ? (
+                  <FileText size={17} />
+                ) : (
+                  <BookOpen size={17} />
+                )}
+              </span>
+              <span className="library-row-body">
                 <strong>{item.title}</strong>
-                <span>
-                  {KNOWLEDGE_CATEGORIES[item.category] || "Uncategorized"} ·{" "}
-                  {statusLabel(item.status)}
+                <span className="library-row-meta">
+                  <ProductStatus status={item.status} />
+                  {KNOWLEDGE_CATEGORIES[item.category] || "Uncategorized"}
+                  <span className="library-version">v{item.version}</span>
                 </span>
                 <small>
                   {item.source_title ? `${item.source_title} · ` : ""}
@@ -143,13 +189,22 @@ export function KnowledgeLibrary({
                 </small>
               </span>
               <span className="library-row-date">
-                {date(item.updated_at)}
+                <time dateTime={item.updated_at}>{date(item.updated_at)}</time>
                 <span aria-hidden> →</span>
               </span>
             </button>
           ))
         ) : (
-          <p className="library-empty">{empty}</p>
+          <div className="library-empty">
+            <BookOpen size={22} aria-hidden="true" />
+            <p className="mt-3">{empty}</p>
+            <Link
+              className="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-[#2045ce]"
+              href={total ? "/app/processes?view=all" : "/app/processes/new"}
+            >
+              {total ? "Browse all knowledge →" : "Teach your first answer →"}
+            </Link>
+          </div>
         )}
       </StaggerList>
     );
@@ -158,16 +213,36 @@ export function KnowledgeLibrary({
     <div className="knowledge-library">
       <header className="library-heading">
         <div>
+          <p className="product-kicker">Your operational library</p>
           <h1 className="opryn-page-title">Knowledge</h1>
           <p>What your company knows. Reviewed, organized, and ready to use.</p>
         </div>
         {canManage && (
-          <Link href="/app/processes/new" className="opryn-action">
-            Teach Opryn
-          </Link>
+          <nav
+            aria-label="Knowledge tools"
+            className="flex flex-wrap items-center gap-3"
+          >
+            <Link
+              data-guide="knowledge.health"
+              href="/app/knowledge/health"
+              className="opryn-button-secondary inline-flex min-h-11 items-center px-3"
+            >
+              Knowledge Health
+            </Link>
+            <Link
+              href="/app/knowledge/test"
+              className="opryn-button-secondary inline-flex min-h-11 items-center px-3"
+            >
+              Test Opryn
+            </Link>
+            <Link href="/app/processes/new" className="opryn-action">
+              Teach Opryn
+            </Link>
+          </nav>
         )}
       </header>
       <form className="library-search" action="/app/processes">
+        <Search size={18} aria-hidden="true" />
         <label className="sr-only" htmlFor="knowledge-search">
           Search company knowledge
         </label>
@@ -185,6 +260,19 @@ export function KnowledgeLibrary({
         )}
         <button type="submit">Search</button>
       </form>
+      <div className="library-pulse" aria-label="Current knowledge view">
+        <span>
+          <strong>{total}</strong>
+          {view === "overview" ? "library items" : "matching items"}
+        </span>
+        <span>Sources and versions stay attached.</span>
+        <Link
+          href={href({ view: "needs_review", category: "" })}
+          className="font-semibold text-[#2045ce]"
+        >
+          Review knowledge →
+        </Link>
+      </div>
       <div className="library-mobile-controls">
         <button
           data-guide="knowledge.categories"
@@ -197,7 +285,12 @@ export function KnowledgeLibrary({
             : "All Knowledge"}{" "}
           ↓
         </button>
-        <button onClick={() => setFilterSheet(true)}>Filters</button>
+        <button
+          data-guide="knowledge.filters"
+          onClick={() => setFilterSheet(true)}
+        >
+          Filters
+        </button>
       </div>
       <div className="library-layout">
         <aside className="library-sidebar" data-guide="knowledge.categories">
@@ -215,9 +308,15 @@ export function KnowledgeLibrary({
             </h2>
             <button
               className="library-desktop-filter"
+              data-guide="knowledge.filters"
               onClick={() => setFilterSheet(true)}
             >
               Filters
+              <SlidersHorizontal
+                size={14}
+                className="ml-2 inline"
+                aria-hidden="true"
+              />
               {filters.status || filters.source || filters.days
                 ? " · Active"
                 : ""}
@@ -427,6 +526,15 @@ function KnowledgeDetail({
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [confirmArchive, setConfirmArchive] = useState(false);
+  const [savedMetadata, setSavedMetadata] = useState("");
+  const archivePending = useRef(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [impact, setImpact] = useState<{
+    knowledge: number;
+    questions: number;
+    proposals: number;
+    related: number;
+  } | null>(null);
   const [editing, setEditing] = useState(false);
   const reviewHref =
     item.entity === "proposal"
@@ -435,6 +543,8 @@ function KnowledgeDetail({
         ? `/app/processes/${item.id}?edit=true&returnTo=%2Fapp%2Fprocesses`
         : `/app/knowledge/${item.id}/history`;
   async function archive() {
+    if (archivePending.current) return;
+    archivePending.current = true;
     setBusy(true);
     setMessage("");
     try {
@@ -448,10 +558,66 @@ function KnowledgeDetail({
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error);
+      showAppToast(
+        "Archived",
+        "This knowledge is no longer available for new answers. Source files and history are kept.",
+      );
       router.refresh();
       onClose();
     } catch (e) {
       setMessage(e instanceof Error ? e.message : "Could not archive.");
+    } finally {
+      setBusy(false);
+      archivePending.current = false;
+    }
+  }
+  async function prepareDelete() {
+    if (item.entity !== "process" || item.status === "approved") return;
+    setBusy(true);
+    setMessage("");
+    try {
+      const response = await fetch(`/api/processes/${item.id}`, {
+        cache: "no-store",
+      });
+      const data = await response.json();
+      if (!response.ok)
+        throw new Error(data.error || "Deletion impact could not be checked.");
+      if (!data.canDelete)
+        throw new Error("Archive approved knowledge instead.");
+      setImpact(data.impact);
+      setConfirmDelete(true);
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Deletion impact could not be checked.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function permanentlyDelete() {
+    setBusy(true);
+    setMessage("");
+    try {
+      const response = await fetch(`/api/processes/${item.id}`, {
+        method: "DELETE",
+      });
+      const data = await response.json();
+      if (!response.ok)
+        throw new Error(data.error || "This process could not be deleted.");
+      showAppToast(
+        "Process deleted",
+        "The draft was removed. Original source files are unchanged.",
+      );
+      router.refresh();
+      onClose();
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "This process could not be deleted.",
+      );
     } finally {
       setBusy(false);
     }
@@ -479,6 +645,7 @@ function KnowledgeDetail({
       setRevision(data.revision);
       if (data.updatedAt) setDecisionUpdatedAt(data.updatedAt);
       setMessage("Classification saved.");
+      setSavedMetadata(JSON.stringify({ category, tags }));
       router.refresh();
     } catch (e) {
       setMessage(
@@ -523,15 +690,24 @@ function KnowledgeDetail({
       onClose={onClose}
       busy={busy}
     >
-      <article className="dialog-content library-sheet">
+      <article className="dialog-content library-sheet product-detail">
         <header>
           <p>Knowledge · {organizationName}</p>
-          <button onClick={onClose} disabled={busy}>
-            Close
+          <button
+            onClick={onClose}
+            disabled={busy}
+            aria-label="Close knowledge detail"
+          >
+            <X size={18} />
           </button>
         </header>
         <h2>{item.title}</h2>
-        <p className="library-status">{statusLabel(item.status)}</p>
+        <p className="library-status">
+          <ProductStatus status={item.status} />
+          <span className="text-xs text-[#566279]">
+            Version {item.version} · {KNOWLEDGE_CATEGORIES[item.category]}
+          </span>
+        </p>
         <p className="library-answer">{item.content}</p>
         <dl className="library-details">
           <div>
@@ -568,42 +744,83 @@ function KnowledgeDetail({
             <dd>{item.version}</dd>
           </div>
         </dl>
+        {item.entity !== "process" ? (
+          <KnowledgeScopePanel
+            id={item.id}
+            entity={item.entity}
+            canManage={canManage}
+            onRevision={onClose}
+          />
+        ) : null}
+        {canManage && item.entity === "knowledge" ? (
+          <Link
+            href={`/app/knowledge/test?knowledgeId=${item.id}`}
+            className="opryn-button-secondary mt-4 inline-flex min-h-11 items-center px-3"
+          >
+            Test this knowledge
+          </Link>
+        ) : null}
+        {canManage && item.entity === "knowledge" ? (
+          <Link
+            href={`/app/knowledge/${item.id}/impact`}
+            className="opryn-button-secondary mt-4 ml-2 inline-flex min-h-11 items-center px-3"
+          >
+            View impact
+          </Link>
+        ) : null}
         {editing && item.entity === "process" ? (
           <Suspense fallback={<p role="status">Loading review…</p>}>
             <LibraryProcessReview id={item.id} />
           </Suspense>
         ) : canManage ? (
-          <div className="library-filter-form">
-            <label>
-              Category
-              <select
-                aria-label="Category"
-                value={category}
-                onChange={(e) => setCategory(e.target.value as typeof category)}
-              >
-                {Object.entries(KNOWLEDGE_CATEGORIES).map(([id, label]) => (
-                  <option key={id} value={id}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Tags
-              <input
-                value={tags}
-                onChange={(e) => setTags(e.target.value)}
-                placeholder="Separate tags with commas"
+          <details className="library-classification">
+            <summary>
+              <SlidersHorizontal size={15} aria-hidden="true" />
+              Organize this knowledge
+            </summary>
+            <div className="library-filter-form">
+              <label>
+                Category
+                <select
+                  aria-label="Category"
+                  value={category}
+                  onChange={(e) =>
+                    setCategory(e.target.value as typeof category)
+                  }
+                >
+                  {Object.entries(KNOWLEDGE_CATEGORIES).map(([id, label]) => (
+                    <option key={id} value={id}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Tags
+                <input
+                  value={tags}
+                  onChange={(e) => setTags(e.target.value)}
+                  placeholder="Separate tags with commas"
+                />
+              </label>
+              <OprynAction
+                label="Save classification"
+                pendingLabel="Saving…"
+                successLabel="Saved"
+                variant="secondary"
+                repeatable
+                state={
+                  busy
+                    ? "pending"
+                    : savedMetadata === JSON.stringify({ category, tags })
+                      ? "success"
+                      : "idle"
+                }
+                disabled={busy}
+                onClick={saveMetadata}
               />
-            </label>
-            <button
-              className="opryn-button-secondary"
-              disabled={busy}
-              onClick={saveMetadata}
-            >
-              Save classification
-            </button>
-          </div>
+            </div>
+          </details>
         ) : (
           <p>
             {KNOWLEDGE_CATEGORIES[item.category]}
@@ -611,7 +828,10 @@ function KnowledgeDetail({
           </p>
         )}
         {message && <p role="status">{message}</p>}
-        <footer className="library-detail-actions">
+        <footer
+          className="library-detail-actions"
+          data-guide="knowledge.detail"
+        >
           {canManage && item.entity === "proposal" && !item.review_required ? (
             <>
               <p>
@@ -635,37 +855,46 @@ function KnowledgeDetail({
             </>
           ) : null}
           {canManage &&
-            (item.entity === "process" ? (
-              <button
-                className="opryn-button-secondary"
-                onClick={() => setEditing((v) => !v)}
-              >
-                {editing
-                  ? "Close editor"
-                  : item.status === "approved"
-                    ? "Edit"
-                    : "Review and edit"}
-              </button>
-            ) : (
-              <Link className="opryn-button-secondary" href={reviewHref}>
-                {item.status === "approved"
-                  ? "Version history / review"
-                  : "Review and edit"}
-              </Link>
-            ))}
-          {canManage && item.entity !== "proposal" && !confirmArchive && (
-            <button
-              className="opryn-button-secondary"
-              onClick={() => setConfirmArchive(true)}
-            >
-              Archive
-              {item.entity === "knowledge" && item.process_id
-                ? " related process"
-                : ""}
-            </button>
-          )}
+          item.entity !== "proposal" &&
+          !confirmArchive &&
+          !confirmDelete ? (
+            <details className="library-actions-menu">
+              <summary>Actions</summary>
+              <div>
+                {item.entity === "process" ? (
+                  <button onClick={() => setEditing((value) => !value)}>
+                    {editing
+                      ? "Close editor"
+                      : item.status === "approved"
+                        ? "Edit"
+                        : "Review and edit"}
+                  </button>
+                ) : (
+                  <Link href={reviewHref}>Version history / review</Link>
+                )}
+                <button
+                  data-guide="knowledge.archive"
+                  onClick={() => setConfirmArchive(true)}
+                >
+                  Archive
+                  {item.entity === "knowledge" && item.process_id
+                    ? " related process"
+                    : ""}
+                </button>
+                {item.entity === "process" && item.status !== "approved" ? (
+                  <button
+                    className="library-delete-action"
+                    data-guide="knowledge.delete"
+                    onClick={() => void prepareDelete()}
+                  >
+                    Delete permanently
+                  </button>
+                ) : null}
+              </div>
+            </details>
+          ) : null}
           {confirmArchive && (
-            <div>
+            <div className="library-confirmation">
               <p>
                 Archive{" "}
                 {item.process_id
@@ -681,15 +910,87 @@ function KnowledgeDetail({
               >
                 Keep knowledge
               </button>
-              <button
-                className="opryn-action"
-                disabled={busy}
+              <OprynAction
+                label="Confirm archive"
+                pendingLabel="Archiving…"
+                successLabel="Archived"
+                variant="secondary"
+                state={busy ? "pending" : message ? "error" : "idle"}
                 onClick={archive}
-              >
-                Confirm archive
-              </button>
+              />
             </div>
           )}
+          {confirmDelete && impact ? (
+            <div
+              className="library-confirmation library-delete-confirmation"
+              role="alertdialog"
+              aria-labelledby="delete-process-title"
+            >
+              <h3 id="delete-process-title">Delete “{item.title}”?</h3>
+              <p>
+                This permanently removes this process from Opryn. This cannot be
+                undone.
+              </p>
+              {impact.knowledge ||
+              impact.questions ||
+              impact.proposals ||
+              impact.related ? (
+                <ul>
+                  {impact.knowledge ? (
+                    <li>
+                      {impact.knowledge} generated knowledge{" "}
+                      {impact.knowledge === 1 ? "record will" : "records will"}{" "}
+                      be removed
+                    </li>
+                  ) : null}
+                  {impact.questions ? (
+                    <li>
+                      {impact.questions} related{" "}
+                      {impact.questions === 1
+                        ? "question keeps"
+                        : "questions keep"}{" "}
+                      its history but loses this process link
+                    </li>
+                  ) : null}
+                  {impact.proposals ? (
+                    <li>
+                      {impact.proposals} related review{" "}
+                      {impact.proposals === 1
+                        ? "proposal keeps"
+                        : "proposals keep"}{" "}
+                      its history but loses this process link
+                    </li>
+                  ) : null}
+                  {impact.related ? (
+                    <li>
+                      {impact.related} replacement{" "}
+                      {impact.related === 1
+                        ? "process keeps"
+                        : "processes keep"}{" "}
+                      its history but loses this lineage link
+                    </li>
+                  ) : null}
+                </ul>
+              ) : (
+                <p>No related Opryn records were found.</p>
+              )}
+              <button
+                className="opryn-button-secondary"
+                disabled={busy}
+                autoFocus
+                onClick={() => setConfirmDelete(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="library-danger-button"
+                disabled={busy}
+                onClick={() => void permanentlyDelete()}
+              >
+                {busy ? "Deleting…" : "Delete process"}
+              </button>
+            </div>
+          ) : null}
           <Link
             href={`/app/ask?q=${encodeURIComponent(`What does our company knowledge say about ${item.title}?`)}`}
           >

@@ -1,6 +1,28 @@
 // Supported capabilities, not an OAuth-provider inventory or private connection state.
 export const marketingIntegrations = [
   {
+    id: "notion",
+    name: "Notion",
+    category: "Knowledge",
+    direction: "learn",
+    purpose: "Choose pages or databases for Opryn to learn from.",
+    status: "Ready to connect",
+    detail:
+      "Import explicitly selected content shared with Opryn, then review the findings. Connecting does not import the entire workspace.",
+    href: "/signup",
+  },
+  {
+    id: "confluence",
+    name: "Confluence",
+    category: "Knowledge",
+    direction: "learn",
+    purpose: "Choose pages or spaces for Opryn to learn from.",
+    status: "Ready to connect",
+    detail:
+      "Select accessible content for review. Imported page knowledge excludes unnecessary author and owner identity fields. Connecting does not import the entire tenant.",
+    href: "/signup",
+  },
+  {
     id: "google_drive",
     name: "Google Workspace",
     category: "Knowledge",
@@ -28,7 +50,7 @@ export const marketingIntegrations = [
     category: "Calls",
     direction: "learn",
     purpose: "Learn from selected, authorized business recordings.",
-    status: "Premium",
+    status: "Pro",
     detail:
       "Upload recordings or configure the supported Twilio connection. Provider setup and recording consent are required. Findings require review before approval.",
     href: "/pricing",
@@ -61,7 +83,7 @@ export const marketingIntegrations = [
     category: "AI",
     direction: "use",
     purpose: "Retrieve permitted company context through remote MCP.",
-    status: "Premium",
+    status: "Pro",
     detail:
       "Configure a supported ChatGPT client with Opryn remote MCP and authorize access. Availability depends on the client's plan and settings. Opryn does not read your entire chat history.",
     href: "/ai",
@@ -72,7 +94,7 @@ export const marketingIntegrations = [
     category: "AI",
     direction: "use",
     purpose: "Use approved knowledge in supported Claude clients.",
-    status: "Premium",
+    status: "Pro",
     detail:
       "Authorize Opryn through a compatible remote MCP client. Learning uses explicitly shared context. Opryn does not train the underlying model.",
     href: "/ai",
@@ -85,7 +107,7 @@ export const marketingIntegrations = [
     purpose: "Give existing agents permission-controlled company context.",
     status: "Advanced setup",
     detail:
-      "Included in Core. Create an Opryn connection key and implement retrieval in your own system. Your developer controls the agent, its prompts and final actions.",
+      "Included in Starter. Create an Opryn connection key and implement retrieval in your own system. Your developer controls the agent, its prompts and final actions.",
     href: "/ai",
   },
   {
@@ -94,7 +116,7 @@ export const marketingIntegrations = [
     category: "AI",
     direction: "use",
     purpose: "Connect compatible external AI tools to approved knowledge.",
-    status: "Premium",
+    status: "Pro",
     detail:
       "A compatible client and authorized grant are required. New approved guidance is available on the next permitted lookup; old conversations and external caches are not rewritten.",
     href: "/docs/mcp-development",

@@ -4,17 +4,55 @@ import { useEffect, useRef, useState, type ComponentProps } from "react";
 import Link from "next/link";
 import { CaptureProcess } from "./capture-process";
 import { TeachGoogle } from "./teach-google";
-import { TeachPipeline, TeachSources } from "./teach-sources";
+import {
+  TeachPipeline,
+  TeachSources,
+  type TeachSourceSummary,
+  type RecentTeachSource,
+  type UseElsewhereSummary,
+} from "./teach-sources";
+import { TeachProvider } from "./teach-provider";
 
 export function TeachWorkspace({
   organizationId,
   organizationName,
   initialSource,
+  sourceSummaries = [
+    {
+      id: "google_drive",
+      connected: false,
+      connectionId: null,
+      selectedCount: 0,
+      status: "healthy",
+      lastLearned: null,
+    },
+    {
+      id: "notion",
+      connected: false,
+      connectionId: null,
+      selectedCount: 0,
+      status: "healthy",
+      lastLearned: null,
+    },
+    {
+      id: "confluence",
+      connected: false,
+      connectionId: null,
+      selectedCount: 0,
+      status: "healthy",
+      lastLearned: null,
+    },
+  ],
+  recentSources = [],
+  useElsewhere = [],
   ...capture
 }: Omit<ComponentProps<typeof CaptureProcess>, "initialMode"> & {
   organizationId: string;
   organizationName: string;
   initialSource?: string;
+  sourceSummaries?: TeachSourceSummary[];
+  recentSources?: RecentTeachSource[];
+  useElsewhere?: UseElsewhereSummary[];
 }) {
   const initialMode =
     initialSource === "documents"
@@ -41,10 +79,29 @@ export function TeachWorkspace({
       <TeachPipeline />
       <div hidden={Boolean(capture.onPrepared && mode)}>
         <TeachSources
+          summaries={sourceSummaries}
+          recent={recentSources}
+          useElsewhere={useElsewhere}
           onExplain={() => choose("text")}
           onUpload={() => choose("documents")}
           google={
             <TeachGoogle
+              organizationId={organizationId}
+              organizationName={organizationName}
+              onPrepared={capture.onPrepared}
+            />
+          }
+          notion={
+            <TeachProvider
+              provider="notion"
+              organizationId={organizationId}
+              organizationName={organizationName}
+              onPrepared={capture.onPrepared}
+            />
+          }
+          confluence={
+            <TeachProvider
+              provider="confluence"
               organizationId={organizationId}
               organizationName={organizationName}
               onPrepared={capture.onPrepared}
@@ -77,9 +134,6 @@ export function TeachWorkspace({
           <CaptureProcess {...capture} initialMode="documents" />
         </div>
       )}
-      <p className="mt-8">
-        <Link href="/app/learning-sources">Your learning sources →</Link>
-      </p>
     </div>
   );
 }

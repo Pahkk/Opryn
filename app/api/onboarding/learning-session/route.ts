@@ -1,16 +1,17 @@
 import { NextResponse } from "next/server";
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { getRequestContext } from "@/lib/api";
+import { getOrganizationPlan } from "@/lib/billing/subscription";
+import { hasFeature } from "@/lib/billing/plans";
+import {
+  conversationIntentSchema,
+  type ConversationIntent,
+} from "@/lib/onboarding/conversation-learning";
 
 const schema = z.object({
   intent: z
-    .object({
-      provider: z.enum(["chatgpt", "claude"]),
-      type: z.enum(["business", "process", "topic"]),
-      name: z.string().max(200),
-      stage: z.enum(["type", "name", "request", "waiting"]),
-      since: z.iso.datetime().optional(),
-    })
+    .lazy(() => conversationIntentSchema)
     .nullable()
     .optional(),
   event: z
@@ -20,6 +21,26 @@ const schema = z.object({
       "external_ai_learn_started",
       "learning_review_opened",
       "first_suggested_question_used",
+      "integration_selected",
+      "integration_connected",
+    ])
+    .optional(),
+  provider: z.enum(["chatgpt", "claude"]).optional(),
+  metric: z
+    .enum([
+      "chatgpt_connect_started",
+      "chatgpt_connected",
+      "chatgpt_learn_started",
+      "claude_connect_started",
+      "claude_connected",
+      "claude_learn_started",
+      "ai_source_review_started",
+      "ai_learning_handoff_created",
+      "provider_opened",
+      "instruction_copied",
+      "learning_review_started",
+      "premium_ai_learning_viewed",
+      "premium_ai_learning_upgrade_started",
     ])
     .optional(),
 });
@@ -68,13 +89,71 @@ export async function POST(request: Request) {
       { error: "Choose a learning source to continue." },
       { status: 400 },
     );
-  if (parsed.data.intent !== undefined) {
+  let savedIntent: ConversationIntent | null | undefined =
+    parsed.data.intent?.stage === "waiting"
+      ? { ...parsed.data.intent, since: new Date().toISOString() }
+      : parsed.data.intent
+        ? {
+            ...parsed.data.intent,
+            requestId: undefined,
+            expiresAt: undefined,
+            jobId: undefined,
+            since: undefined,
+          }
+        : parsed.data.intent;
+  if (savedIntent && ["request", "waiting"].includes(savedIntent.stage)) {
+    const subscription = await getOrganizationPlan(
+      context.supabase,
+      context.membership.organization_id,
+    );
+    if (!hasFeature(subscription.plan, "ai_conversation_learning"))
+      return NextResponse.json(
+        {
+          error: "Conversation learning is available on Opryn Pro.",
+          code: "premium_required",
+        },
+        { status: 403 },
+      );
+    const { data, error } = await context.supabase
+      .from("onboarding_learning_sessions")
+      .select("intent")
+      .eq("organization_id", context.membership.organization_id)
+      .eq("user_id", context.user.id)
+      .maybeSingle();
+    if (error)
+      return NextResponse.json(
+        { error: "Your learning request couldn't be prepared." },
+        { status: 500 },
+      );
+    const previous = conversationIntentSchema.safeParse(data?.intent);
+    const reusable =
+      previous.success &&
+      previous.data.requestId &&
+      previous.data.expiresAt &&
+      Date.parse(previous.data.expiresAt) > Date.now() &&
+      previous.data.provider === savedIntent.provider &&
+      previous.data.name === savedIntent.name &&
+      previous.data.type === savedIntent.type;
+    savedIntent = {
+      ...savedIntent,
+      requestId: reusable ? previous.data.requestId : randomUUID(),
+      expiresAt: reusable
+        ? previous.data.expiresAt
+        : new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+      jobId: reusable ? previous.data.jobId : undefined,
+      since:
+        reusable && previous.data.since
+          ? previous.data.since
+          : savedIntent.since,
+    };
+  }
+  if (savedIntent !== undefined) {
     const { error } = await context.supabase
       .from("onboarding_learning_sessions")
       .upsert({
         organization_id: context.membership.organization_id,
         user_id: context.user.id,
-        intent: parsed.data.intent,
+        intent: savedIntent,
         updated_at: new Date().toISOString(),
       });
     if (error)
@@ -89,9 +168,13 @@ export async function POST(request: Request) {
       user_id: context.user.id,
       event_type: parsed.data.event,
       metadata: {
-        provider: parsed.data.intent?.provider,
+        provider: parsed.data.intent?.provider ?? parsed.data.provider,
         learning_type: parsed.data.intent?.type,
+        metric: parsed.data.metric,
       },
     });
-  return NextResponse.json({ saved: true });
+  return NextResponse.json({
+    saved: true,
+    ...(savedIntent !== undefined ? { intent: savedIntent } : {}),
+  });
 }

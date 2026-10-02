@@ -1,16 +1,22 @@
 "use client";
 
 import { MotionRegion } from "@/components/motion/motion-region";
+import { FeedbackToast } from "@/components/motion/feedback-toast";
 
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, useEffect, useId, useMemo, useRef, useState } from "react";
+import { LayoutGroup, motion } from "motion/react";
+import {
+  OprynIcon,
+  type OprynIconName,
+} from "@/components/opryn-icons/opryn-icon";
+import { useProductReducedMotion } from "@/lib/motion/use-product-motion";
 import {
   ArrowRight,
   BookOpenText,
   Building2,
-  CircleHelp,
   LogOut,
   Menu,
   Search,
@@ -37,13 +43,15 @@ const OprynGuide = dynamic(
   { ssr: false },
 );
 import {
-  ApprovedIcon,
+  NeedsYouIcon,
   AskIcon,
   ConnectionIcon,
   HomeIcon,
   KnowledgeIcon,
   SettingsIcon,
   TeamIcon,
+  TeachIcon,
+  SupportIcon,
   type OprynIconProps,
 } from "@/components/opryn-icons/opryn-icons";
 import {
@@ -60,6 +68,18 @@ type NavigationItem = {
 };
 type NavigationGroup = { label?: string; items: NavigationItem[] };
 
+const navigationIconNames: Record<string, OprynIconName> = {
+  "/app": "home",
+  "/app/ask": "ask",
+  "/app/processes/new": "teach",
+  "/app/processes": "knowledge",
+  "/app/needs-you": "needs-you",
+  "/app/team": "team",
+  "/app/integrations": "connections",
+  "/app/settings": "settings",
+  "/app/help": "support",
+};
+
 const navigationGroups: NavigationGroup[] = [
   {
     items: [
@@ -68,14 +88,15 @@ const navigationGroups: NavigationGroup[] = [
       {
         href: "/app/processes/new",
         label: "Teach Opryn",
-        icon: BookOpenText,
+        icon: TeachIcon,
         admin: true,
       },
       { href: "/app/processes", label: "Knowledge", icon: KnowledgeIcon },
+      { href: "/app/training", label: "Training", icon: KnowledgeIcon },
       {
         href: "/app/needs-you",
         label: "Needs You",
-        icon: ApprovedIcon,
+        icon: NeedsYouIcon,
         admin: true,
       },
       { href: "/app/team", label: "Team", icon: TeamIcon, admin: true },
@@ -95,7 +116,7 @@ const navigationGroups: NavigationGroup[] = [
         label: "Settings",
         icon: SettingsIcon,
       },
-      { href: "/app/help", label: "Help", icon: CircleHelp },
+      { href: "/app/help", label: "Help", icon: SupportIcon },
     ],
   },
 ];
@@ -162,7 +183,7 @@ export function AppShell({
                       {
                         href: "/app/needs-you",
                         label: "Needs You",
-                        icon: ApprovedIcon,
+                        icon: NeedsYouIcon,
                       },
                     ]
                   : []),
@@ -176,7 +197,7 @@ export function AppShell({
                   label: "Settings",
                   icon: SettingsIcon,
                 },
-                { href: "/app/help", label: "Help", icon: CircleHelp },
+                { href: "/app/help", label: "Help", icon: SupportIcon },
               ],
             },
           ]
@@ -351,36 +372,7 @@ export function AppShell({
         <a href="#workspace-main" className="app-skip-link">
           Skip to content
         </a>
-        {toast ? (
-          <div
-            key={toast.id}
-            role="status"
-            aria-live="polite"
-            className="app-success-toast fixed left-4 right-4 top-20 z-[120] overflow-hidden rounded-[13px] border border-[#bfd4f7] bg-white shadow-[var(--opryn-shadow-lg)] sm:left-auto sm:right-6 sm:w-full sm:max-w-sm"
-          >
-            <div className="flex items-start gap-3 p-4 pr-12">
-              <div className="pt-0.5">
-                <p className="text-sm font-semibold text-[var(--opryn-navy)]">
-                  {toast.title}
-                </p>
-                {toast.description ? (
-                  <p className="mt-1 text-xs leading-5 text-[var(--opryn-muted)]">
-                    {toast.description}
-                  </p>
-                ) : null}
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setToast(null)}
-              aria-label="Dismiss notification"
-              className="absolute right-3 top-3 grid size-8 place-items-center rounded-[7px] text-[var(--opryn-muted)] hover:bg-[var(--opryn-neutral)]"
-            >
-              <X className="size-4" />
-            </button>
-            <div className="app-success-toast-progress h-[3px] origin-left bg-[var(--opryn-blue)]" />
-          </div>
-        ) : null}
+        <FeedbackToast toast={toast} onDismiss={() => setToast(null)} />
 
         <DesktopSidebar
           groups={groups}
@@ -488,7 +480,7 @@ export function AppShell({
                   prefetch={false}
                   className="opryn-action app-header-teach mr-1"
                 >
-                  <BookOpenText size={16} /> Teach Opryn
+                  <TeachIcon size={22} /> Teach Opryn
                 </Link>
               ) : null}
               <NotificationBell
@@ -704,37 +696,40 @@ function SidebarNavigation({
   pendingApprovalCount?: number;
   needsYouCount?: number;
 }) {
+  const scope = useId();
   return (
-    <nav
-      className={`flex-1 overflow-y-auto ${mobile ? "mt-5" : "px-3 py-5"}`}
-      aria-label={mobile ? "Mobile navigation" : "Application navigation"}
-    >
-      {groups.map((group, groupIndex) => (
-        <div
-          key={group.label || "primary"}
-          className={groupIndex ? "sidebar-divider mt-5 border-t pt-4" : ""}
-        >
-          {group.label ? (
-            <p className="sidebar-label mb-2 px-3 font-semibold tracking-wide">
-              {group.label}
-            </p>
-          ) : null}
-          <div className="space-y-0.5">
-            {group.items.map((item) => (
-              <NavigationLink
-                key={item.href}
-                item={item}
-                pathname={pathname}
-                plan={plan}
-                onNavigate={onNavigate}
-                pendingApprovalCount={pendingApprovalCount}
-                needsYouCount={needsYouCount}
-              />
-            ))}
+    <LayoutGroup id={`opryn-sidebar-${scope}`}>
+      <nav
+        className={`flex-1 overflow-y-auto ${mobile ? "mt-5" : "px-3 py-5"}`}
+        aria-label={mobile ? "Mobile navigation" : "Application navigation"}
+      >
+        {groups.map((group, groupIndex) => (
+          <div
+            key={group.label || "primary"}
+            className={groupIndex ? "sidebar-divider mt-5 border-t pt-4" : ""}
+          >
+            {group.label ? (
+              <p className="sidebar-label mb-2 px-3 font-semibold tracking-wide">
+                {group.label}
+              </p>
+            ) : null}
+            <div className="space-y-0.5">
+              {group.items.map((item) => (
+                <NavigationLink
+                  key={item.href}
+                  item={item}
+                  pathname={pathname}
+                  plan={plan}
+                  onNavigate={onNavigate}
+                  pendingApprovalCount={pendingApprovalCount}
+                  needsYouCount={needsYouCount}
+                />
+              ))}
+            </div>
           </div>
-        </div>
-      ))}
-    </nav>
+        ))}
+      </nav>
+    </LayoutGroup>
   );
 }
 
@@ -755,6 +750,8 @@ function NavigationLink({
 }) {
   const active = isProductRouteActive(item.href, pathname);
   const Icon = item.icon;
+  const reduced = useProductReducedMotion();
+  const iconName = navigationIconNames[item.href];
   return (
     <Link
       href={item.href}
@@ -763,13 +760,29 @@ function NavigationLink({
       aria-current={active ? "page" : undefined}
       className="sidebar-link group relative flex items-center gap-3 px-3 text-sm font-medium"
     >
-      <Icon
-        size={18}
-        className={
-          active ? "text-[#69abff]" : "text-white/43 group-hover:text-white/70"
-        }
-      />
-      <span>{item.label}</span>
+      {active ? (
+        <motion.span
+          className="opryn-nav-active"
+          layoutId="opryn-nav-active"
+          initial={false}
+          transition={
+            reduced
+              ? { duration: 0 }
+              : { type: "spring", stiffness: 420, damping: 34 }
+          }
+        />
+      ) : null}
+      {iconName ? (
+        <OprynIcon
+          name={iconName}
+          size={30}
+          active={active}
+          attention={iconName === "needs-you" && needsYouCount > 0}
+        />
+      ) : (
+        <Icon size={20} />
+      )}
+      <span className="opryn-nav-label">{item.label}</span>
       {item.href === "/app/processes" && pendingApprovalCount > 0 ? (
         <span className="ml-auto min-w-5 rounded-full bg-[#4a9bff] px-1.5 py-0.5 text-center text-[10px] font-bold text-white">
           {Math.min(pendingApprovalCount, 99)}
@@ -782,7 +795,7 @@ function NavigationLink({
       ) : null}
       {item.feature && !hasFeature(plan, item.feature) ? (
         <span className="opryn-premium-label ml-auto border-white/10 bg-white/7 text-white/50">
-          Premium
+          Pro
         </span>
       ) : null}
     </Link>
@@ -798,6 +811,8 @@ function MobileBottomNavigation({
   pathname: string;
   onMore: () => void;
 }) {
+  const scope = useId();
+  const reduced = useProductReducedMotion();
   const items: Array<NavigationItem & { shortLabel: string }> = isAdmin
     ? [
         { href: "/app", label: "Home", shortLabel: "Home", icon: HomeIcon },
@@ -811,7 +826,7 @@ function MobileBottomNavigation({
           href: "/app/processes/new",
           label: "Teach Opryn",
           shortLabel: "Teach",
-          icon: BookOpenText,
+          icon: TeachIcon,
         },
       ]
     : [
@@ -835,39 +850,59 @@ function MobileBottomNavigation({
         },
       ];
   return (
-    <nav
-      className="product-bottom-nav fixed inset-x-0 bottom-0 z-50 grid grid-cols-4 border-t border-[var(--opryn-line)] bg-white px-2 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 lg:hidden"
-      aria-label="Quick navigation"
-    >
-      {items.map((item) => {
-        const Icon = item.icon;
-        const active =
-          item.href === "/app"
-            ? pathname === item.href
-            : pathname.startsWith(item.href);
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            prefetch={false}
-            className={`relative flex min-h-12 flex-col items-center justify-center gap-1 rounded-[9px] text-[10px] font-semibold ${active ? "text-[var(--opryn-blue)]" : "text-[var(--opryn-muted)]"}`}
-          >
-            {active ? (
-              <span className="absolute top-0 h-[2px] w-5 rounded bg-[var(--opryn-blue)]" />
-            ) : null}
-            <Icon size={20} />
-            {item.shortLabel}
-          </Link>
-        );
-      })}
-      <button
-        type="button"
-        onClick={onMore}
-        className="flex min-h-12 flex-col items-center justify-center gap-1 rounded-[9px] text-[10px] font-semibold text-[var(--opryn-muted)]"
+    <LayoutGroup id={`opryn-bottom-${scope}`}>
+      <nav
+        className="product-bottom-nav fixed inset-x-0 bottom-0 z-50 grid grid-cols-4 border-t border-[var(--opryn-line)] bg-white px-2 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 lg:hidden"
+        aria-label="Quick navigation"
       >
-        <Menu className="size-5" /> More
-      </button>
-    </nav>
+        {items.map((item) => {
+          const Icon = item.icon;
+          const active =
+            item.href === "/app"
+              ? pathname === item.href
+              : pathname.startsWith(item.href);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              prefetch={false}
+              aria-current={active ? "page" : undefined}
+              className={`relative flex min-h-12 flex-col items-center justify-center gap-1 rounded-[9px] text-[10px] font-semibold ${active ? "text-[var(--opryn-blue)]" : "text-[var(--opryn-muted)]"}`}
+            >
+              {active ? (
+                <motion.span
+                  layoutId="opryn-nav-active"
+                  className="opryn-nav-active"
+                  initial={false}
+                  transition={
+                    reduced
+                      ? { duration: 0 }
+                      : { type: "spring", stiffness: 420, damping: 34 }
+                  }
+                />
+              ) : null}
+              {navigationIconNames[item.href] ? (
+                <OprynIcon
+                  name={navigationIconNames[item.href]}
+                  size={28}
+                  active={active}
+                />
+              ) : (
+                <Icon size={20} />
+              )}
+              {item.shortLabel}
+            </Link>
+          );
+        })}
+        <button
+          type="button"
+          onClick={onMore}
+          className="flex min-h-12 flex-col items-center justify-center gap-1 rounded-[9px] text-[10px] font-semibold text-[var(--opryn-muted)]"
+        >
+          <Menu className="size-5" /> More
+        </button>
+      </nav>
+    </LayoutGroup>
   );
 }
 

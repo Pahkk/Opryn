@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { trustedAnswerContext } from "@/lib/opryn/knowledge/trust";
 import { findCompanyExpert } from "@/lib/opryn/knowledge/experts";
 import { z } from "zod";
+import { scopeContextSchema } from "@/lib/opryn/knowledge/scope";
+import { memberScopeContext } from "@/lib/opryn/knowledge/scope-context";
 import { apiError, getRequestContext } from "@/lib/api";
 import {
   answerCompanyQuestion,
@@ -26,6 +28,7 @@ const imageSchema = z.object({
 });
 const schema = z.object({
   question: z.string().trim().min(3).max(4000),
+  scopeContext: scopeContextSchema.optional(),
   image: imageSchema.nullable().optional(),
   conversationId: z.string().uuid().optional(),
   history: z
@@ -51,11 +54,16 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   const { supabase, user, membership } = context;
-  const { data: settings } = await supabase
+  const { data: settings, error: settingsError } = await supabase
     .from("organization_settings")
     .select("employees_can_ask, allow_escalations, confidence_threshold")
     .eq("organization_id", membership.organization_id)
-    .single();
+    .maybeSingle();
+  if (settingsError)
+    return apiError(
+      settingsError,
+      "Your workspace permissions could not be checked. Please retry.",
+    );
   if (settings && !settings.employees_can_ask)
     return NextResponse.json(
       { error: "Ask Opryn is disabled for this workspace." },
@@ -96,6 +104,13 @@ export async function POST(request: Request) {
       supabase,
       membership.organization_id,
       (data ?? []) as RetrievedKnowledge[],
+      await memberScopeContext(
+        supabase,
+        membership.organization_id,
+        user.id,
+        "employee",
+        parsed.data.scopeContext,
+      ),
     );
     const { data: criticalRows } = knowledge.length
       ? await supabase
@@ -139,7 +154,8 @@ export async function POST(request: Request) {
     if (
       !answer.can_answer ||
       answer.confidence < answerThreshold ||
-      !answer.answer.trim()
+      !answer.answer.trim() ||
+      !knowledge.some((item) => answer.cited_source_ids.includes(item.id))
     ) {
       const { data: clusterId, error: clusterError } = await supabase.rpc(
         "record_question_cluster",
@@ -165,13 +181,14 @@ export async function POST(request: Request) {
           question: parsed.data.question,
           status: "needs_owner",
           answered_by_opryn: false,
-          escalated: false,
+          escalated: settings?.allow_escalations ?? true,
           relevance_score: knowledge[0]?.similarity ?? null,
           cluster_id: clusterId,
           assigned_expert_id: expert?.id ?? null,
           assigned_expert_rule_id: expert?.assignmentId ?? null,
           conversation_id: parsed.data.conversationId ?? null,
           conversation_context: parsed.data.history,
+          scope_context: parsed.data.scopeContext ?? {},
           origin: "employee",
         })
         .select("id")
@@ -216,6 +233,7 @@ export async function POST(request: Request) {
         type: "unknown",
         questionId: question.id,
         canEscalate: settings?.allow_escalations ?? true,
+        routed: settings?.allow_escalations ?? true,
         imageAttached: Boolean(image),
         expert: expert ? { id: expert.id, name: expert.name } : null,
         critical: criticalMatch,
@@ -240,6 +258,7 @@ export async function POST(request: Request) {
         asked_by: user.id,
         question: parsed.data.question,
         status: "answered",
+        scope_context: parsed.data.scopeContext ?? {},
         answered_by_opryn: true,
         escalated: false,
         related_process_id: cited[0].process_id,
@@ -314,7 +333,10 @@ export async function POST(request: Request) {
     ]);
     const sourceCards = await buildSourceCards(supabase, cited);
     // Activation is recorded from a real persisted, cited answer, not a browser flag.
-    const activation = await supabase.rpc("record_activation_answer", { workspace_id: membership.organization_id, question_id: question.id });
+    const activation = await supabase.rpc("record_activation_answer", {
+      workspace_id: membership.organization_id,
+      question_id: question.id,
+    });
     if (activation.error)
       console.error(
         "[Opryn setup] Answer saved; activation progress needs retry",
@@ -352,6 +374,17 @@ function decodeImage(
     buffer.length !== input.size
   )
     throw new Error("The attached image is too large or invalid.");
+  const signatureValid =
+    input.mimeType === "image/png"
+      ? buffer.subarray(0, 8).toString("hex") === "89504e470d0a1a0a"
+      : input.mimeType === "image/jpeg"
+        ? buffer.subarray(0, 3).toString("hex") === "ffd8ff"
+        : input.mimeType === "image/webp"
+          ? buffer.toString("ascii", 0, 4) === "RIFF" &&
+            buffer.toString("ascii", 8, 12) === "WEBP"
+          : ["GIF87a", "GIF89a"].includes(buffer.toString("ascii", 0, 6));
+  if (!signatureValid)
+    throw new Error("The attached image does not match its file type.");
   return { dataUrl: input.dataUrl, mimeType: input.mimeType };
 }
 
@@ -418,6 +451,19 @@ function sourceLabel(type: string, content: string) {
   return `${label[type] ?? "Company knowledge"} → ${content.split(/[.:]/)[0].slice(0, 80)}`;
 }
 
+function providerLabel(
+  provider: string | null,
+  learningSource?: string | null,
+) {
+  return provider === "notion"
+    ? "Notion"
+    : provider === "confluence"
+      ? "Confluence"
+      : provider === "google_drive" || learningSource === "google_drive"
+        ? "Google Workspace"
+        : "Opryn";
+}
+
 type SupabaseServerClient = Awaited<
   ReturnType<typeof import("@/lib/supabase/server").createClient>
 >;
@@ -437,7 +483,10 @@ async function buildSourceCards(
   ];
   const [processes, steps, rules] = await Promise.all([
     processIds.length
-      ? supabase.from("processes").select("id,title").in("id", processIds)
+      ? supabase
+          .from("processes")
+          .select("id,title,source_title,source_provider,learning_source")
+          .in("id", processIds)
       : Promise.resolve({ data: [] }),
     sourceIds.length
       ? supabase.from("process_steps").select("id,title").in("id", sourceIds)
@@ -450,7 +499,7 @@ async function buildSourceCards(
       : Promise.resolve({ data: [] }),
   ]);
   const processNames = new Map(
-    (processes.data ?? []).map((row) => [row.id, row.title]),
+    (processes.data ?? []).map((row) => [row.id, row]),
   );
   const stepNames = new Map(
     (steps.data ?? []).map((row) => [row.id, row.title]),
@@ -459,14 +508,15 @@ async function buildSourceCards(
     (rules.data ?? []).map((row) => [row.id, row.title]),
   );
   return items.map((item) => {
-    const processTitle = item.process_id
-      ? processNames.get(item.process_id)
-      : null;
+    const process = item.process_id ? processNames.get(item.process_id) : null;
     const sectionTitle =
       ruleNames.get(item.rule_id ?? item.source_id) ??
       stepNames.get(item.source_id);
-    const label = processTitle
-      ? `${processTitle}${sectionTitle ? ` → ${sectionTitle}` : ""}`
+    const sourceTitle = process?.source_title
+      ? `${providerLabel(process.source_provider, process.learning_source)} · ${process.source_title}`
+      : process?.title;
+    const label = sourceTitle
+      ? `${sourceTitle}${sectionTitle ? ` → ${sectionTitle}` : ""}`
       : (sectionTitle ?? sourceLabel(item.source_type, item.content));
     const anchor = ruleNames.has(item.rule_id ?? item.source_id)
       ? `#rule-${item.rule_id ?? item.source_id}`

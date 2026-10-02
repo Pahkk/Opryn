@@ -1,0 +1,293 @@
+/* Public light world. The authenticated product keeps its own design system. */
+.knowledge-public-site.opryn-public-light {
+  --cinema-bg: #ffffff;
+  --cinema-alt: #f7faff;
+  --cinema-raised: #ffffff;
+  --cinema-text: #14213d;
+  --cinema-muted: #667085;
+  --cinema-line: #dde5f0;
+  --editorial-page: #ffffff;
+  --editorial-surface: #ffffff;
+  --editorial-secondary: #f4f8ff;
+  --editorial-tint: #eaf4ff;
+  --editorial-ink: #14213d;
+  --editorial-copy: #667085;
+  --editorial-brand: #2855f9;
+  --editorial-deep: #2045ce;
+  --editorial-line: #dde5f0;
+  --editorial-subtle-line: #e9eef5;
+  background: #ffffff;
+  color: #14213d;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", Inter,
+    "Segoe UI", sans-serif;
+}
+
+.opryn-public-light
+  :is(.opryn-editorial-home, .opryn-editorial-ai, .opryn-editorial-pricing) {
+  background: #ffffff;
+  color: #14213d;
+  font-family: inherit;
+}
+
+.knowledge-public-site.opryn-public-light .public-nav,
+.knowledge-public-site.opryn-public-light .public-nav.is-scrolled,
+.knowledge-public-site.opryn-public-light .public-nav:not(.is-scrolled) {
+  border-color: rgb(20 33 61 / 8%) !important;
+  background: rgb(255 255 255 / 86%) !important;
+  color: #14213d;
+  backdrop-filter: blur(18px) saturate(130%);
+  -webkit-backdrop-filter: blur(18px) saturate(130%);
+}
+
+.opryn-public-light .public-mobile-menu {
+  border-color: #dde5f0 !important;
+  background: rgb(255 255 255 / 98%) !important;
+  color: #14213d;
+}
+
+.opryn-public-light .public-footer,
+.opryn-public-light .editorial-footer {
+  border-color: #dde5f0 !important;
+  background: #ffffff !important;
+  color: #14213d !important;
+}
+
+.opryn-public-light .cinematic-home {
+  overflow: clip;
+  background:
+    radial-gradient(circle at 79% 7%, rgb(40 85 249 / 8%), transparent 15%),
+    radial-gradient(circle at 16% 57%, rgb(185 210 255 / 16%), transparent 19%),
+    linear-gradient(
+      to bottom,
+      #ffffff 0%,
+      #fbfdff 42%,
+      #f7faff 70%,
+      #ffffff 100%
+    );
+}
+
+.opryn-public-light .cinematic-scene,
+.opryn-public-light .cinematic-scene:nth-of-type(even),
+.opryn-public-light .cinematic-opening,
+.opryn-public-light .cinematic-pricing-scene {
+  background-color: transparent;
+}
+
+.opryn-public-light .cinematic-opening {
+  background-image: radial-gradient(
+    ellipse at 78% 44%,
+    rgb(40 85 249 / 7%),
+    transparent 50%
+  );
+}
+
+.opryn-public-light .cinematic-opening::after {
+  opacity: 0.055;
+}
+
+.opryn-public-light .cinematic-heading,
+.opryn-public-light .cinematic-question,
+.opryn-public-light .cinematic-search-state strong,
+.opryn-public-light .cinematic-answer-peek strong,
+.opryn-public-light .cinematic-source-answer > strong,
+.opryn-public-light .cinematic-source-detail b,
+.opryn-public-light .cinematic-unknown-flow strong,
+.opryn-public-light .cinematic-memory-pair strong,
+.opryn-public-light .premium-connections h3 {
+  color: #14213d;
+}
+
+.opryn-public-light :is(.cinematic-lead, .premium-section-intro > p),
+.opryn-public-light .cinematic-copy p:not(.cinematic-kicker),
+.opryn-public-light .cinematic-final-scene p:not(.cinematic-kicker) {
+  color: #667085;
+}
+
+.opryn-public-light .cinematic-kicker,
+.opryn-public-light .premium-field-label,
+.opryn-public-light .cinematic-example-label,
+.opryn-public-light .cinematic-source-answer > span,
+.opryn-public-light .cinematic-source-detail > span {
+  color: #2855f9;
+}
+
+.opryn-public-light .cinematic-outcome,
+.opryn-public-light .cinematic-opening-bottom,
+.opryn-public-light .cinematic-pricing-note {
+  color: #667085;
+}
+
+.opryn-public-light .cinematic-opening .public-action-text {
+  border-color: #dce3ed;
+  background: rgb(255 255 255 / 82%);
+  color: #14213d !important;
+  box-shadow: 0 8px 24px rgb(30 55 95 / 6%);
+}
+
+.opryn-public-light .cinematic-opening .public-action-text:hover {
+  border-color: #bdc9db;
+  background: #ffffff;
+}
+
+.opryn-public-light .opryn-stack-card {
+  border-color: #dce3ed;
+  background: #ffffff;
+  box-shadow:
+    0 1px 2px rgb(20 33 61 / 4%),
+    0 24px 60px rgb(20 33 61 / 10%);
+}
+
+.opryn-public-light .opryn-stack-card-heading {
+  border-top-color: rgb(40 85 249 / 45%);
+  background: linear-gradient(110deg, #ffffff, #f4f8ff 72%);
+}
+
+.opryn-public-light .opryn-stack-card-heading h3 {
+  color: #14213d;
+}
+
+.opryn-public-light .opryn-stack-card-heading p,
+.opryn-public-light .premium-section-intro > p {
+  color: #667085;
+}
+
+.opryn-public-light .opryn-stack-art {
+  background: #f1f5fb;
+}
+
+.opryn-public-light .premium-trust-item .cinematic-source-answer,
+.opryn-public-light .cinematic-ask-visual,
+.opryn-public-light .cinematic-source-answer {
+  border-color: #dce3ed;
+  background: #ffffff;
+  box-shadow: 0 18px 48px rgb(20 33 61 / 8%);
+}
+
+.opryn-public-light .premium-connections {
+  border-color: #dde5f0;
+}
+
+.opryn-public-light .memory-playback {
+  border-color: #dce3ed;
+  background: #ffffff;
+  box-shadow: 0 20px 56px rgb(20 33 61 / 8%);
+}
+
+.opryn-public-light .memory-controls,
+.opryn-public-light .memory-bottom,
+.opryn-public-light .evidence-toggle {
+  border-color: #e2e7ef;
+}
+
+.opryn-public-light .memory-controls button,
+.opryn-public-light .memory-question,
+.opryn-public-light .memory-detail,
+.opryn-public-light .memory-bottom,
+.opryn-public-light .evidence-toggle,
+.opryn-public-light .evidence-toggle small,
+.opryn-public-light .evidence-excerpt p {
+  color: #667085;
+}
+
+.opryn-public-light .memory-selection,
+.opryn-public-light .memory-bottom button {
+  border-color: #cbd6e6;
+  background: #eaf4ff;
+  color: #14213d;
+}
+
+.opryn-public-light .memory-controls button[aria-pressed="true"],
+.opryn-public-light .memory-stage h3,
+.opryn-public-light .evidence-excerpt blockquote {
+  color: #14213d;
+}
+
+.opryn-public-light .cinematic-plan {
+  border-color: #dce3ed;
+  background: #ffffff;
+  box-shadow: 0 12px 36px rgb(20 33 61 / 6%);
+}
+
+.opryn-public-light .cinematic-plan.premium {
+  border-color: rgb(40 85 249 / 28%);
+  background: #f4f8ff;
+}
+
+.opryn-public-light .cinematic-plan :is(strong, p) {
+  color: #14213d;
+}
+
+.opryn-public-light .cinematic-plan > span,
+.opryn-public-light .cinematic-plan strong small {
+  color: #667085;
+}
+
+.opryn-public-light .cinematic-plan a {
+  color: #2855f9;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .opryn-public-light .cinematic-plan:hover,
+  .opryn-public-light .cinematic-plan:focus-within {
+    border-color: rgb(40 85 249 / 48%);
+    background: #ffffff;
+    box-shadow: 0 22px 52px rgb(20 33 61 / 11%);
+  }
+
+  .opryn-public-light .cinematic-plan.premium:hover,
+  .opryn-public-light .cinematic-plan.premium:focus-within {
+    border-color: #2855f9;
+    background: #eaf4ff;
+  }
+
+  .opryn-public-light .cinematic-plan:hover a,
+  .opryn-public-light .cinematic-plan:focus-within a {
+    color: #2045ce;
+  }
+}
+
+.opryn-public-light .cinematic-final-scene {
+  background:
+    radial-gradient(circle at 80% 42%, rgb(40 85 249 / 10%), transparent 32%),
+    linear-gradient(to bottom, #ffffff, #f4f8ff) !important;
+}
+
+.opryn-public-light .cinematic-final-scene :is(.cinematic-heading, p) {
+  color: #14213d !important;
+}
+
+.opryn-public-light .cinematic-final-scene .cinematic-kicker {
+  color: #2855f9 !important;
+}
+
+.opryn-public-light .opryn-editorial-ai .editorial-section,
+.opryn-public-light .opryn-editorial-ai .editorial-hero,
+.opryn-public-light .opryn-editorial-pricing {
+  background-color: #ffffff;
+}
+
+.opryn-public-light
+  :is(.opryn-editorial-ai, .opryn-editorial-pricing)
+  .editorial-cobalt {
+  background: #f4f8ff;
+  color: #14213d;
+}
+
+.opryn-public-light
+  :is(.opryn-editorial-ai, .opryn-editorial-pricing)
+  .editorial-cobalt
+  :is(h2, p) {
+  color: #14213d !important;
+}
+
+.opryn-public-light .public-info-page,
+.legal-document.opryn-public-light {
+  background: #ffffff;
+  color: #14213d;
+}
+
+.opryn-public-light :is(a, button):focus-visible {
+  outline: 2px solid #2855f9;
+  outline-offset: 4px;
+}

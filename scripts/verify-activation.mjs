@@ -80,6 +80,7 @@ mkdirSync("artifacts/activation", { recursive: true });
 try {
   for (const [engine, width, reduced] of [
     [chromium, 1440, false],
+    [chromium, 768, false],
     [chromium, 390, false],
     [chromium, 360, true],
     [webkit, 430, true],
@@ -88,6 +89,14 @@ try {
     try {
       const page = await browser.newPage({
         viewport: { width, height: 940 },
+        ...(width === 1440
+          ? {
+              recordVideo: {
+                dir: "artifacts/activation/recordings",
+                size: { width: 1440, height: 940 },
+              },
+            }
+          : {}),
         reducedMotion: reduced ? "reduce" : "no-preference",
       });
       let saved = false,
@@ -138,6 +147,13 @@ try {
           body = route.request().postDataJSON();
         let data = {};
         if (p === "/api/onboarding") data = { organizationId: org };
+        else if (p === "/api/onboarding/ai-connections/status")
+          data = {
+            connected: false,
+            learningEnabled: false,
+            entitlement: { feature: "ai_conversation_learning", enabled: true },
+            latestLearning: null,
+          };
         else if (p === "/api/onboarding/activation") {
           if (body?.action === "company") saved = true;
           if (body?.action === "source") source = true;
@@ -188,16 +204,16 @@ try {
               {
                 plan: "core",
                 interval: "month",
-                name: "Opryn Core",
-                amount: 9900,
+                name: "Starter",
+                amount: 4900,
                 currency: "usd",
                 teamLimit: 5,
               },
               {
                 plan: "premium",
                 interval: "month",
-                name: "Opryn Premium",
-                amount: 24900,
+                name: "Pro",
+                amount: 12900,
                 currency: "usd",
                 teamLimit: 20,
               },
@@ -245,6 +261,8 @@ try {
         await route.fulfill({ json: data });
       });
       const shot = async (name) => {
+        // Capture settled preview state rather than an in-flight local reveal.
+        await page.waitForTimeout(350);
         await expect(page.locator("[data-motion-region]").first()).toHaveCSS(
           "opacity",
           "1",
@@ -264,12 +282,12 @@ try {
       await page.goto(origin + "/onboarding");
       await expect(
         page.getByRole("heading", {
-          name: "Let’s set up Opryn around your business.",
+          name: "Tell Opryn about your company.",
         }),
       ).toBeVisible();
-      await shot("goal");
+      await shot("business-start");
       await page
-        .getByRole("button", { name: "Continue →", exact: true })
+        .getByRole("button", { name: "Reduce repeat questions" })
         .click();
       await page.getByLabel("Company name", { exact: true }).fill(company.name);
       await page
@@ -279,14 +297,34 @@ try {
       await page
         .getByLabel("What does your company do?")
         .fill(company.description);
-      await page.getByRole("button", { name: "Help me set this up →" }).click();
+      await page.getByRole("button", { name: "Set up Opryn for me" }).click();
+      const preview = page.getByRole("complementary", {
+        name: "Your Opryn setup",
+      });
+      if (width < 768)
+        await preview
+          .getByRole("button", { name: "View", exact: true })
+          .click();
       await expect(
         page.getByRole("button", { name: "Use these suggestions" }),
       ).toBeVisible();
       await expect(page.getByLabel("What does your company do?")).toHaveValue(
         company.description,
       );
+      await expect(
+        preview.getByText("Suggested", { exact: true }).first(),
+      ).toBeVisible();
+      await expect(
+        preview.getByText("Suggested by Opryn", { exact: true }),
+      ).toBeVisible();
+      await shot("setup-suggested");
       await page.getByRole("button", { name: "Use these suggestions" }).click();
+      await expect(
+        preview.getByText("Confirmed", { exact: true }).first(),
+      ).toBeVisible();
+      await expect(preview.getByText("Suggested", { exact: true })).toHaveCount(
+        0,
+      );
       await expect(page.getByLabel("What does your company do?")).toHaveValue(
         "We design websites and support customer projects.",
       );
@@ -296,13 +334,55 @@ try {
         page.getByRole("combobox", { name: "Industry" }),
       ).toHaveValue("Professional Services");
       await shot("company");
-      await page.getByRole("button", { name: "Save and continue →" }).click();
+      await page.getByRole("button", { name: "Save and continue", exact: true }).click();
       await expect(
         page.getByRole("heading", {
-          name: "Give Opryn something real to learn.",
+          name: "Start with what your business already knows.",
         }),
       ).toBeVisible();
       await shot("teach");
+      await page
+        .getByRole("button", {
+          name: "Choose another source · View all options",
+        })
+        .click();
+      const firstPreview = page.locator(".source-preview").first();
+      await firstPreview
+        .getByRole("button", { name: "See how it works" })
+        .click();
+      await expect(
+        firstPreview.getByText("Example workflow · Silent preview"),
+      ).toBeVisible();
+      await firstPreview
+        .getByRole("button", { name: /Preview step 4/ })
+        .click();
+      await expect(
+        firstPreview.getByText("You review and approve", { exact: true }),
+      ).toBeVisible();
+      await shot("source-preview");
+      await firstPreview.getByRole("button", { name: "Close preview" }).click();
+      await page.getByRole("button", { name: /^ChatGPT.*Start/ }).click();
+      await expect(
+        page.getByRole("button", { name: "Connect ChatGPT", exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "Connect Claude", exact: true }),
+      ).toHaveCount(0);
+      await shot("chatgpt-setup");
+      await page
+        .getByRole("button", { name: "← Choose a different source" })
+        .click();
+      await page.getByRole("button", { name: /^Claude.*Bring/ }).click();
+      await expect(
+        page.getByRole("button", { name: "Connect Claude", exact: true }),
+      ).toBeVisible();
+      await page
+        .getByRole("button", { name: "← Choose a different source" })
+        .click();
+      await expect(
+        page.getByRole("button", { name: /^Confluence Choose/ }),
+      ).toBeVisible();
+      await page.getByRole("button", { name: /^Google Workspace/ }).click();
       await page
         .getByRole("button", { name: "Choose Google files", exact: true })
         .click();
@@ -310,6 +390,9 @@ try {
       assert.equal(new URL(page.url()).pathname, "/onboarding");
       await shot("google-sheet");
       await page.keyboard.press("Escape");
+      await page
+        .getByRole("button", { name: "← Choose a different source" })
+        .click();
       await page.getByRole("button", { name: /Explain it/ }).click();
       await page
         .getByLabel("Give it a clear name")
@@ -334,6 +417,9 @@ try {
         page.getByRole("heading", { name: "Ask your business a question." }),
       ).toBeVisible();
       await shot("try");
+      await expect(
+        page.getByText("Your first knowledge is live."),
+      ).toBeVisible();
       await page.getByRole("button", { name: "Ask Opryn →" }).click();
       await expect(
         page.getByText("Answer from approved knowledge", { exact: true }),
@@ -364,6 +450,12 @@ try {
         page.getByRole("heading", { name: "Opryn is ready." }),
       ).toBeVisible();
       await shot("complete");
+      await expect(
+        page.getByRole("link", { name: "Take a quick tour →" }),
+      ).toHaveAttribute("href", "/app?tour=opryn");
+      await expect(
+        page.getByRole("link", { name: "Go to dashboard · Skip for now" }),
+      ).toHaveAttribute("href", "/app");
       await page.goto(origin + "/onboarding?existing");
       await expect(
         page.getByRole("heading", { name: "Continue setting up Opryn?" }),

@@ -2,8 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
 import { ArrowRight, Check, Compass, X } from "lucide-react";
 import { DialogSurface } from "@/components/app/dialog-surface";
+import {
+  OprynThinkingOrb,
+  type OprynThinkingState,
+} from "@/components/motion/opryn-thinking-orb";
 import { hasUnsavedChanges } from "@/components/app/settings/form-state";
 import {
   guideTargets,
@@ -11,6 +16,7 @@ import {
   pageTargets,
   milestoneLabels,
   canGuideTarget,
+  resolveGuideDestination,
   type GuideId,
   type GuideRole,
   type GuideStep,
@@ -19,7 +25,11 @@ import {
   type Milestone,
 } from "@/lib/guide/registry";
 import { resumeSchema, type GuideReply } from "@/lib/guide/schema";
+import { MotionRegion } from "@/components/motion/motion-region";
+import { PresenceSwap } from "@/components/motion/presence-swap";
+import { prefersReducedMotion } from "@/lib/motion/reduced-motion";
 import { showSpotlight } from "./spotlight";
+import { GuideCompanion } from "./guide-companion";
 import "driver.js/dist/driver.css";
 import "./guide.css";
 
@@ -28,6 +38,13 @@ type State = {
   organizationId: string;
   role: GuideRole;
   facts: SetupFacts;
+  integrations: Array<{
+    provider: string;
+    name: string;
+    status: string;
+    capabilities: string[];
+    label: string | null;
+  }>;
 };
 type Active = { title: string; steps: GuideStep[]; index: number };
 const coreMilestones: Milestone[] = ["source", "approved", "answered"];
@@ -49,7 +66,12 @@ export function OprynGuide({
   const [missing, setMissing] = useState(false);
   const [retry, setRetry] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [thinking, setThinking] = useState<{
+    state: OprynThinkingState;
+    label: string;
+  } | null>(null);
   const [question, setQuestion] = useState("");
+  const [lastQuestion, setLastQuestion] = useState("");
   const [reply, setReply] = useState<GuideReply | null>(null);
   const [notice, setNotice] = useState("");
   const [statusError, setStatusError] = useState("");
@@ -59,7 +81,11 @@ export function OprynGuide({
   const requestBusy = useRef(false);
   const actionEpoch = useRef(0);
   const lastPoint = useRef<{ x: number; y: number } | null>(null);
+  const conversationRef = useRef<HTMLDivElement>(null);
   const restored = useRef(false);
+  const explicitTour = useRef(
+    new URLSearchParams(search).get("tour") === "opryn",
+  );
   const persistKey = state
     ? `opryn:guide:v1:${state.userId}:${organizationId}`
     : null;
@@ -115,7 +141,7 @@ export function OprynGuide({
         );
       return null;
     }
-  }, [api, organizationId]);
+  }, [api, organizationId, setState, setStatusError]);
   useEffect(() => {
     mounted.current = true;
     const timer = setTimeout(() => void refresh(), 0);
@@ -147,6 +173,11 @@ export function OprynGuide({
     const frame = requestAnimationFrame(() => {
       restored.current = true;
       try {
+        // An explicit new tour must not be replaced by an old saved guide.
+        if (explicitTour.current) {
+          sessionStorage.removeItem(persistKey);
+          return;
+        }
         setDismissed(localStorage.getItem(`${persistKey}:dismissed`) === "1");
         const parsed = resumeSchema.safeParse(
           JSON.parse(sessionStorage.getItem(persistKey) || "null"),
@@ -211,7 +242,7 @@ export function OprynGuide({
     setMissing(false);
     setPaused(false);
     setNotice("Guide closed. Your work is unchanged.");
-  }, []);
+  }, [setBusy, setActive, setMissing, setPaused, setNotice]);
   const advance = useCallback(async () => {
     if (!active || requestBusy.current) return;
     const epoch = ++actionEpoch.current;
@@ -255,7 +286,7 @@ export function OprynGuide({
     setPaused(false);
     setMissing(false);
     setNotice("");
-  }, []);
+  }, [setActive, setPaused, setMissing, setNotice]);
 
   const role = state?.role;
   useEffect(() => {
@@ -333,53 +364,117 @@ export function OprynGuide({
     exit,
   ]); // facts changes must not restart a spotlight
 
-  async function start(
-    action:
-      | { action: "start"; guideId: GuideId }
-      | { action: "show"; targetId: TargetId },
-  ) {
-    if (requestBusy.current) return;
-    const epoch = ++actionEpoch.current;
-    requestBusy.current = true;
-    setBusy(true);
-    setNotice("");
-    try {
-      const result = await api(action);
-      if (epoch !== actionEpoch.current) return;
-      if (!result.steps?.length)
-        throw new Error("No available steps in this guide.");
-      setState({
-        userId: result.userId,
-        organizationId: result.organizationId,
-        role: result.role,
-        facts: result.facts,
-      });
-      setActive({ title: result.title, steps: result.steps, index: 0 });
-      setPaused(false);
-      setMissing(false);
-      setOpen(false);
-    } catch (error) {
-      if (mounted.current && epoch === actionEpoch.current)
-        setNotice(
-          error instanceof Error ? error.message : "Guide couldn't start.",
-        );
-    } finally {
-      if (epoch === actionEpoch.current) {
-        requestBusy.current = false;
-        if (mounted.current) setBusy(false);
+  const start = useCallback(
+    async (
+      action:
+        | { action: "start"; guideId: GuideId }
+        | { action: "show"; targetId: TargetId },
+    ) => {
+      if (requestBusy.current) return;
+      const epoch = ++actionEpoch.current;
+      requestBusy.current = true;
+      setBusy(true);
+      setNotice("");
+      try {
+        const result = await api(action);
+        if (epoch !== actionEpoch.current) return;
+        if (!result.steps?.length)
+          throw new Error("No available steps in this guide.");
+        setState({
+          userId: result.userId,
+          organizationId: result.organizationId,
+          role: result.role,
+          facts: result.facts,
+          integrations: result.integrations ?? [],
+        });
+        setActive({ title: result.title, steps: result.steps, index: 0 });
+        setPaused(false);
+        setMissing(false);
+        setOpen(false);
+      } catch (error) {
+        if (mounted.current && epoch === actionEpoch.current)
+          setNotice(
+            error instanceof Error ? error.message : "Guide couldn't start.",
+          );
+      } finally {
+        if (epoch === actionEpoch.current) {
+          requestBusy.current = false;
+          if (mounted.current) setBusy(false);
+        }
       }
+    },
+    [
+      api,
+      setBusy,
+      setNotice,
+      setState,
+      setActive,
+      setPaused,
+      setMissing,
+      setOpen,
+    ],
+  );
+  const tourRequested = useRef(false);
+  useEffect(() => {
+    if (
+      !state ||
+      tourRequested.current ||
+      new URLSearchParams(search).get("tour") !== "opryn"
+    )
+      return;
+    tourRequested.current = true;
+    const params = new URLSearchParams(search);
+    params.delete("tour");
+    router.replace(`${pathname}${params.size ? `?${params}` : ""}`, {
+      scroll: false,
+    });
+    // Explicit completion-screen choice only. The server authorizes each step.
+    void start({ action: "start", guideId: "product-tour" });
+  }, [state, search, pathname, router, start]);
+  async function ask(prompt = question) {
+    const nextQuestion = prompt.trim();
+    if (!nextQuestion || requestBusy.current) return;
+    const destination = state
+      ? resolveGuideDestination(nextQuestion, state.role)
+      : null;
+    if (destination) {
+      if (
+        hasUnsavedChanges() &&
+        !window.confirm("Leave without saving your changes?")
+      )
+        return;
+      setQuestion("");
+      setReply(null);
+      setNotice("");
+      setOpen(false);
+      router.push(destination.route);
+      return;
     }
-  }
-  async function ask() {
-    if (!question.trim() || requestBusy.current) return;
     const epoch = ++actionEpoch.current;
     requestBusy.current = true;
     setBusy(true);
+    const checksConnections =
+      /connect|integration|notion|confluence|google|slack|teams/i.test(
+        nextQuestion,
+      );
+    setThinking({
+      state: checksConnections ? "searching" : "solving",
+      label: checksConnections
+        ? "Checking your connections…"
+        : "Checking Opryn…",
+    });
+    setLastQuestion(nextQuestion);
+    setReply(null);
     setNotice("");
     try {
-      const result = await api({ action: "ask", question, path: pathname });
+      const result = await api({
+        action: "ask",
+        question: nextQuestion,
+        path: pathname,
+      });
       if (epoch !== actionEpoch.current) return;
       setReply(result);
+      setQuestion("");
       setNotice(result.notice || "");
     } catch (error) {
       if (mounted.current && epoch === actionEpoch.current)
@@ -392,10 +487,28 @@ export function OprynGuide({
       if (epoch === actionEpoch.current) {
         requestBusy.current = false;
         if (mounted.current) setBusy(false);
+        if (mounted.current) setThinking(null);
       }
     }
   }
+  useEffect(() => {
+    const conversation = conversationRef.current;
+    if (!conversation || (!lastQuestion && !reply)) return;
+    const messages = conversation.querySelectorAll<HTMLElement>(
+      "[data-guide-message]",
+    );
+    const message = messages.item(messages.length - 1);
+    if (!message) return;
+    const frame = requestAnimationFrame(() => {
+      message.scrollIntoView({
+        block: "nearest",
+        behavior: prefersReducedMotion(conversation) ? "auto" : "smooth",
+      });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [lastQuestion, reply]);
   const targets = state ? pageTargets(pathname, state.role) : [];
+  const quickPrompts = contextualPrompts(pathname);
   const milestones =
     state?.role === "employee" ? ["answered" as Milestone] : coreMilestones;
   const completed = milestones.filter((id) => state?.facts[id] === true).length;
@@ -416,6 +529,7 @@ export function OprynGuide({
     actionEpoch.current++;
     requestBusy.current = false;
     setBusy(false);
+    setThinking(null);
     setOpen(false);
   }
 
@@ -442,7 +556,9 @@ export function OprynGuide({
           />
           <button
             onClick={() => {
-              router.push(state.role === "employee" ? "/app/ask" : "/onboarding");
+              router.push(
+                state.role === "employee" ? "/app/ask" : "/onboarding",
+              );
             }}
           >
             Continue setup <ArrowRight size={15} />
@@ -496,7 +612,7 @@ export function OprynGuide({
             }}
             aria-haspopup="dialog"
           >
-            <Compass size={17} aria-hidden /> Opryn Guide
+            <Compass size={17} aria-hidden /> Ask Opryn
           </button>
         )}
       </div>
@@ -508,163 +624,248 @@ export function OprynGuide({
       </p>
       {open ? (
         <DialogSurface
-          label="Opryn Guide"
+          label="Ask Opryn"
           onClose={closePanel}
           className="dialog-guide"
         >
           <section className="dialog-content guide-panel">
             <header>
               <div>
-                <p className="guide-eyebrow">PRODUCT GUIDANCE</p>
-                <h2>Opryn Guide</h2>
+                <GuideCompanion thinking={busy} />
+                <h2>Ask Opryn</h2>
+                <small>Ask about Opryn or your setup.</small>
               </div>
-              <button aria-label="Close Opryn Guide" onClick={closePanel}>
+              <button aria-label="Close Ask Opryn" onClick={closePanel}>
                 <X size={20} />
               </button>
             </header>
             <div className="guide-panel-scroll">
-              <p className="guide-workspace">
-                Working in <strong>{workspace}</strong>
-              </p>
-              <p className="guide-intro">
-                Ask how Opryn works.
-                <br />
-                <strong>I can show you where to go.</strong>
-              </p>
-              {statusError ? (
-                <div role="alert">
-                  <p>{statusError}</p>
-                  <button onClick={() => void refresh()}>
-                    Retry setup status
-                  </button>
+              <div className="guide-conversation" ref={conversationRef}>
+                <section
+                  className="guide-message guide-message--assistant"
+                  data-guide-message
+                >
+                  <GuideCompanion />
+                  <div>
+                    <p>
+                      Hi — I can answer questions about Opryn or take you where
+                      you need to go.
+                    </p>
+                    <small>
+                      Working in <strong>{workspace}</strong>
+                    </small>
+                  </div>
+                </section>
+
+                {lastQuestion ? (
+                  <MotionRegion variant="status" changeKey={lastQuestion}>
+                    <section
+                      className="guide-message guide-message--user"
+                      data-guide-message
+                    >
+                      <p>{lastQuestion}</p>
+                    </section>
+                  </MotionRegion>
+                ) : null}
+
+                {reply ? (
+                  <MotionRegion variant="status" changeKey={reply.message}>
+                    <section
+                      className="guide-message guide-message--assistant guide-answer"
+                      data-guide-message
+                      aria-live="polite"
+                    >
+                      <span className="guide-message-mark" aria-hidden>
+                        <Image
+                          src="/favicon-32x32.png"
+                          alt=""
+                          width={17}
+                          height={17}
+                        />
+                      </span>
+                      <div>
+                        <p>{reply.message}</p>
+                        <div className="guide-answer-actions">
+                          {reply.suggestedTargets?.map((id) =>
+                            state && canGuideTarget(id, state.role) ? (
+                              <button
+                                key={id}
+                                disabled={busy}
+                                onClick={() =>
+                                  void start({ action: "show", targetId: id })
+                                }
+                              >
+                                Show me: {guideTargets[id].title} →
+                              </button>
+                            ) : null,
+                          )}
+                          {reply.guideId ? (
+                            <button
+                              disabled={busy}
+                              onClick={() =>
+                                void start({
+                                  action: "start",
+                                  guideId: reply.guideId!,
+                                })
+                              }
+                            >
+                              Do it with me →
+                            </button>
+                          ) : null}
+                        </div>
+                      </div>
+                    </section>
+                  </MotionRegion>
+                ) : null}
+
+                {statusError ? (
+                  <section
+                    className="guide-message guide-message--system"
+                    data-guide-message
+                    role="alert"
+                  >
+                    <p>{statusError}</p>
+                    <button onClick={() => void refresh()}>
+                      Retry setup status
+                    </button>
+                  </section>
+                ) : null}
+                {!state && !statusError ? (
+                  <p className="guide-loading" role="status">
+                    Loading your workspace…
+                  </p>
+                ) : null}
+                {notice ? (
+                  <p className="guide-notice" role="status" data-guide-message>
+                    {notice}
+                  </p>
+                ) : null}
+              </div>
+
+              {!lastQuestion && !reply ? (
+                <div
+                  className="guide-quick-prompts"
+                  aria-label="Suggested questions"
+                >
+                  {quickPrompts.slice(0, 3).map((prompt) => (
+                    <button
+                      key={prompt}
+                      disabled={busy || !state}
+                      onClick={() => void ask(prompt)}
+                    >
+                      {prompt}
+                    </button>
+                  ))}
                 </div>
               ) : null}
-              {!state && !statusError ? (
-                <p role="status">Loading your available guides…</p>
-              ) : null}
-              {setupIncomplete ? (
-                <section className="guide-setup-list">
-                  <h3>
-                    Set up Opryn{" "}
-                    <span>
-                      {completed}/{milestones.length}
-                    </span>
-                  </h3>
-                  {milestones.map((id) => (
-                    <p key={id}>
-                      <span aria-hidden>
-                        {state.facts[id] === true ? <Check size={15} /> : "○"}
-                      </span>
-                      {milestoneLabels[id]}
-                      <small>
-                        {state.facts[id] === null
-                          ? "Not verified"
-                          : state.facts[id] === true
-                            ? "Complete"
-                            : ""}
-                      </small>
-                    </p>
-                  ))}
-                  <button
-                    className="guide-primary"
-                    disabled={busy}
-                    onClick={() =>
-                      void start({ action: "start", guideId: "setup-opryn" })
-                    }
-                  >
-                    Let&apos;s do it together <ArrowRight size={15} />
-                  </button>
-                </section>
-              ) : null}
-              <section className="guide-actions">
-                <h3>What can I do here?</h3>
-                {targets.slice(0, 5).map((id) => (
-                  <button
-                    key={id}
-                    disabled={busy}
-                    onClick={() => void start({ action: "show", targetId: id })}
-                  >
-                    <span>{guideTargets[id].title}</span>
-                    <small>Show me →</small>
-                  </button>
-                ))}
-              </section>
-              {reply ? (
-                <section className="guide-answer" aria-live="polite">
-                  <p>{reply.message}</p>
-                  {reply.suggestedTargets?.map((id) =>
-                    state && canGuideTarget(id, state.role) ? (
+
+              <details className="guide-more">
+                <summary>More ways I can help</summary>
+                <div className="guide-more__content">
+                  {setupIncomplete ? (
+                    <section className="guide-setup-list">
+                      <h3>
+                        Setup progress
+                        <span>
+                          {completed}/{milestones.length}
+                        </span>
+                      </h3>
+                      {milestones.map((id) => (
+                        <p key={id}>
+                          <span aria-hidden>
+                            {state.facts[id] === true ? (
+                              <Check size={15} />
+                            ) : (
+                              "○"
+                            )}
+                          </span>
+                          {milestoneLabels[id]}
+                        </p>
+                      ))}
                       <button
-                        key={id}
+                        className="guide-primary"
                         disabled={busy}
                         onClick={() =>
-                          void start({ action: "show", targetId: id })
+                          void start({
+                            action: "start",
+                            guideId: "setup-opryn",
+                          })
                         }
                       >
-                        Show me: {guideTargets[id].title} →
+                        Do setup with me <ArrowRight size={15} />
                       </button>
-                    ) : null,
-                  )}
-                  {reply.guideId && (
-                    <button
-                      disabled={busy}
-                      onClick={() =>
-                        void start({ action: "start", guideId: reply.guideId! })
-                      }
-                    >
-                      Do it with me →
-                    </button>
-                  )}
-                </section>
-              ) : null}
-              <details className="guide-workflows">
-                <summary>Guided workflows</summary>
-                {Object.entries(guides)
-                  .filter(([, guide]) =>
-                    guide.steps.some(
-                      (step) =>
-                        state && canGuideTarget(step.targetId, state.role),
-                    ),
-                  )
-                  .map(([id, guide]) => (
-                    <button
-                      key={id}
-                      disabled={busy}
-                      onClick={() =>
-                        void start({ action: "start", guideId: id as GuideId })
-                      }
-                    >
-                      {guide.title}
-                      <ArrowRight size={14} />
-                    </button>
-                  ))}
-              </details>
-              {active ? (
-                <div className="guide-current">
-                  <p>In progress: {active.title}</p>
-                  <button
-                    onClick={() => {
-                      setOpen(false);
-                      continueHere();
-                    }}
-                  >
-                    Resume guide
-                  </button>
-                  <button
-                    onClick={() => {
-                      setActive({ ...active, index: 0 });
-                      setOpen(false);
-                      continueHere();
-                    }}
-                  >
-                    Restart
-                  </button>
-                  <button onClick={exit}>Exit guide</button>
+                    </section>
+                  ) : null}
+
+                  {targets.length ? (
+                    <section className="guide-actions">
+                      <h3>On this page</h3>
+                      {targets.slice(0, 4).map((id) => (
+                        <button
+                          key={id}
+                          disabled={busy}
+                          onClick={() =>
+                            void start({ action: "show", targetId: id })
+                          }
+                        >
+                          <span>{guideTargets[id].title}</span>
+                          <small>Show me →</small>
+                        </button>
+                      ))}
+                    </section>
+                  ) : null}
+
+                  <details className="guide-workflows">
+                    <summary>Guided workflows</summary>
+                    {Object.entries(guides)
+                      .filter(([, guide]) =>
+                        guide.steps.some(
+                          (step) =>
+                            state && canGuideTarget(step.targetId, state.role),
+                        ),
+                      )
+                      .map(([id, guide]) => (
+                        <button
+                          key={id}
+                          disabled={busy}
+                          onClick={() =>
+                            void start({
+                              action: "start",
+                              guideId: id as GuideId,
+                            })
+                          }
+                        >
+                          {guide.title}
+                          <ArrowRight size={14} />
+                        </button>
+                      ))}
+                  </details>
+
+                  {active ? (
+                    <div className="guide-current">
+                      <p>In progress: {active.title}</p>
+                      <button
+                        onClick={() => {
+                          setOpen(false);
+                          continueHere();
+                        }}
+                      >
+                        Resume
+                      </button>
+                      <button
+                        onClick={() => {
+                          setActive({ ...active, index: 0 });
+                          setOpen(false);
+                          continueHere();
+                        }}
+                      >
+                        Restart
+                      </button>
+                      <button onClick={exit}>Exit</button>
+                    </div>
+                  ) : null}
                 </div>
-              ) : null}
-              <p role="status" className="guide-notice">
-                {notice}
-              </p>
+              </details>
             </div>
             <form
               className="guide-composer"
@@ -673,27 +874,42 @@ export function OprynGuide({
                 void ask();
               }}
             >
-              <label htmlFor="guide-question">Ask about using Opryn</label>
+              <label className="sr-only" htmlFor="guide-question">
+                Ask about using Opryn
+              </label>
               <div>
                 <input
                   id="guide-question"
                   value={question}
                   onChange={(event) => setQuestion(event.target.value)}
                   maxLength={1200}
-                  placeholder="Where do I connect Google?"
+                  placeholder="Ask Opryn…"
                   autoComplete="off"
                 />
                 <button
-                  className="guide-primary"
+                  className={`guide-submit ${thinking ? "guide-submit--thinking" : ""}`}
                   disabled={busy || !question.trim() || !state}
                   type="submit"
+                  aria-label={thinking ? thinking.label : "Ask Opryn"}
                 >
-                  {busy ? "Working…" : "Ask"}
+                  <PresenceSwap value={thinking ? "thinking" : "ask"}>
+                    {thinking ? (
+                      <OprynThinkingOrb
+                        state={thinking.state}
+                        size={20}
+                        label={thinking.label}
+                        decorative
+                      />
+                    ) : (
+                      <>
+                        Ask <ArrowRight aria-hidden size={15} />
+                      </>
+                    )}
+                  </PresenceSwap>
                 </button>
               </div>
               <small>
-                Product help only. Don&apos;t include secrets or company
-                documents.
+                Try “Take me to Knowledge.” Don&apos;t include secrets.
               </small>
             </form>
           </section>
@@ -701,4 +917,33 @@ export function OprynGuide({
       ) : null}
     </>
   );
+}
+
+function contextualPrompts(pathname: string) {
+  if (pathname === "/app/processes/new")
+    return [
+      "What should I teach first?",
+      "Show my connected sources",
+      "Help me use Notion",
+      "How does review work?",
+    ];
+  if (pathname === "/app/processes")
+    return [
+      "How do I organize this?",
+      "Show items needing review",
+      "How do I archive a process?",
+      "What does Approved mean?",
+    ];
+  if (pathname.startsWith("/app/integrations"))
+    return [
+      "Which sources are connected?",
+      "What does Confluence do?",
+      "Help me reconnect Teams",
+    ];
+  return [
+    "What can I do here?",
+    "Show my connected sources",
+    "Where are settings?",
+    "How do approvals work?",
+  ];
 }

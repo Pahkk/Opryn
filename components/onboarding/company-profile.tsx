@@ -1,6 +1,10 @@
 "use client";
-import { useRef, useState } from "react";
-import { knowledgeAreas, type CompanyProfile } from "@/lib/activation";
+import { useRef, useState, type ReactNode } from "react";
+import {
+  activationGoals,
+  knowledgeAreas,
+  type CompanyProfile,
+} from "@/lib/activation";
 import { industries } from "@/lib/onboarding/industries";
 import {
   setupSuggestionSchema,
@@ -8,17 +12,21 @@ import {
 } from "@/lib/onboarding/suggestions";
 import { IndustryPicker } from "./industry-picker";
 import { MotionRegion } from "@/components/motion/motion-region";
+import { SetupContext } from "./setup-context";
+import { MotionButton } from "@/components/motion/motion-button";
 
 export function CompanyProfileFields({
   value,
   onChange,
   organizationId,
   goal = "",
+  goalChoices,
 }: {
   value: CompanyProfile;
   onChange: (value: CompanyProfile) => void;
   organizationId?: string;
   goal?: string;
+  goalChoices?: ReactNode;
 }) {
   const [suggestion, setSuggestion] = useState<SetupSuggestion | null>(null);
   const [busy, setBusy] = useState(false),
@@ -42,6 +50,10 @@ export function CompanyProfileFields({
           description: value.description || industryQuery,
           goal,
           industryQuery,
+          name: value.name,
+          website: value.website,
+          industry: value.industry,
+          employeeCount: value.employee_count,
         }),
       });
       const data = await response.json();
@@ -86,16 +98,16 @@ export function CompanyProfileFields({
           />
         </label>
         <div className="setup-assist-action">
-          <button
+          <MotionButton
             type="button"
             disabled={busy || value.description.trim().length < 5}
             onClick={() => void suggest()}
           >
-            {busy ? "Preparing suggestions…" : "Help me set this up →"}
-          </button>
+            {busy ? "Preparing your Opryn setup…" : "Set up Opryn for me"}
+          </MotionButton>
           <small>
-            Suggest an industry, clearer description and useful starting points.
-            You decide what to use.
+            Opryn suggests a starting structure. You provide the facts and
+            choose what to accept.
           </small>
           {error && (
             <p role="alert" className="activation-error">
@@ -134,65 +146,75 @@ export function CompanyProfileFields({
             onChange={(e) => onChange({ ...value, website: e.target.value })}
           />
         </label>
-        <label>
-          Teams / departments <small>Optional</small>
-          <input
-            maxLength={500}
-            placeholder="Operations, sales, support"
-            value={value.departments}
-            onChange={(e) =>
-              onChange({ ...value, departments: e.target.value })
-            }
-          />
-        </label>
-        <h2>What should Opryn understand?</h2>
-        <div className="activation-areas" aria-label="Knowledge areas">
-          {knowledgeAreas.map((area) => (
-            <button
-              type="button"
-              key={area}
-              aria-pressed={value.knowledge_areas.includes(area)}
-              onClick={() =>
-                onChange({
-                  ...value,
-                  knowledge_areas: value.knowledge_areas.includes(area)
-                    ? value.knowledge_areas.filter((a) => a !== area)
-                    : [...value.knowledge_areas, area],
-                })
+        {goalChoices}
+        <details className="setup-optional-details">
+          <summary>
+            More about your business <small>Optional</small>
+          </summary>
+          <label>
+            Teams / departments <small>Optional</small>
+            <input
+              maxLength={500}
+              placeholder="Operations, sales, support"
+              value={value.departments}
+              onChange={(e) =>
+                onChange({ ...value, departments: e.target.value })
               }
-            >
-              {area}
-            </button>
-          ))}
-        </div>
+            />
+          </label>
+          <h2>What should Opryn understand?</h2>
+          <div className="activation-areas" aria-label="Knowledge areas">
+            {knowledgeAreas.map((area) => (
+              <button
+                type="button"
+                key={area}
+                aria-pressed={value.knowledge_areas.includes(area)}
+                onClick={() =>
+                  onChange({
+                    ...value,
+                    knowledge_areas: value.knowledge_areas.includes(area)
+                      ? value.knowledge_areas.filter((a) => a !== area)
+                      : [...value.knowledge_areas, area],
+                  })
+                }
+              >
+                {area}
+              </button>
+            ))}
+          </div>
+          <label>
+            Anything else Opryn should know? <small>Optional</small>
+            <textarea
+              rows={2}
+              maxLength={2000}
+              value={value.notes}
+              onChange={(e) => onChange({ ...value, notes: e.target.value })}
+            />
+          </label>
+        </details>
         <p className="activation-note">
-          <strong>Who approves company knowledge?</strong>
-          <br />
-          Workspace owners and admins. Expertise alone does not grant approval
-          permission. Manage scoped expert permissions in Settings → Knowledge &
-          Approvals.
+          Nothing becomes company knowledge until an authorized person reviews
+          and approves it.
         </p>
-        <label>
-          Anything else Opryn should know? <small>Optional</small>
-          <textarea
-            rows={2}
-            maxLength={2000}
-            value={value.notes}
-            onChange={(e) => onChange({ ...value, notes: e.target.value })}
-          />
-        </label>
       </div>
-      <aside
-        className="activation-company-preview"
-        aria-label="Company profile preview"
-        data-suggested={!!suggestion}
-        data-applied={accepted}
+      <SetupContext
+        company={value.name}
+        industry={value.industry}
+        employeeCount={value.name.trim() ? value.employee_count : undefined}
+        goal={activationGoals.find(([id]) => id === goal)?.[1] || ""}
+        approved={false}
+        areas={value.knowledge_areas}
+        recommendedSource={value.recommendedSource}
+        suggestedAreas={accepted ? [] : suggestion?.knowledgeAreas}
+        suggestedSource={accepted ? undefined : suggestion?.firstSource}
+        sourceReason={value.sourceReason || suggestion?.sourceReason}
+        busy={busy}
+        next="Confirm your company profile"
       >
-        <p className="activation-eyebrow">Opryn suggestions</p>
-        {suggestion ? (
+        {suggestion && !busy ? (
           <MotionRegion variant="quiet">
-            <h2>A useful place to start.</h2>
-            <div className="setup-suggestion-copy">
+            <details className="setup-suggestion-copy">
+              <summary>Review Opryn’s suggestions</summary>
               <p>{suggestion.explanation}</p>
               <small>DESCRIPTION · EDITABLE SUGGESTION</small>
               <p>{suggestion.description}</p>
@@ -216,7 +238,7 @@ export function CompanyProfileFields({
                     : "Explain it"}{" "}
                 — {suggestion.sourceReason}
               </p>
-            </div>
+            </details>
             <button
               type="button"
               className="activation-primary"
@@ -246,40 +268,8 @@ export function CompanyProfileFields({
               </p>
             )}
           </MotionRegion>
-        ) : (
-          <>
-            <h2>Let’s make this yours.</h2>
-            <p>
-              Describe your business, then ask Opryn for a starting point. No
-              policies or permissions change.
-            </p>
-            <div className="setup-suggestion-outline">
-              <span>01 Industry & description</span>
-              <span>02 Knowledge areas</span>
-              <span>03 Your first useful question</span>
-            </div>
-          </>
-        )}
-        <div className="setup-profile-preview-content">
-          <hr />
-          <p className="activation-eyebrow">Company profile</p>
-          <h2>{value.name || "Your company"}</h2>
-          <p>{value.industry || "Your industry"}</p>
-          <hr />
-          <small>KNOWLEDGE AREAS</small>
-          <p>
-            {value.knowledge_areas.join(" · ") || "Choose what matters first"}
-          </p>
-          <small>REVIEW</small>
-          <p>Workspace owners & admins</p>
-          <hr />
-          <p className="activation-note">
-            Company context, not approved policy.
-            <br />
-            Edit later in Settings → Workspace → Company Profile.
-          </p>
-        </div>
-      </aside>
+        ) : null}
+      </SetupContext>
     </div>
   );
 }

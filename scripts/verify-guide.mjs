@@ -65,6 +65,18 @@ assert.equal(
   "ask.question",
 );
 assert.equal(registry.guideSteps("setup-opryn", "employee", facts).length, 1);
+assert.equal(
+  registry.resolveGuideDestination("Take me to Knowledge", "employee").route,
+  "/app/processes",
+);
+assert.equal(
+  registry.resolveGuideDestination("Please take me to billing", "employee"),
+  null,
+);
+assert.equal(
+  registry.resolveGuideDestination("Take me to https://example.com", "owner"),
+  null,
+);
 for (const target of Object.values(registry.guideTargets))
   assert.ok(
     existsSync(
@@ -166,6 +178,7 @@ try {
       };
       let mutations = 0;
       let delayShow = false;
+      let askRequests = 0;
       await page.route("**/api/**", async (route) => {
         const request = route.request();
         if (!request.url().endsWith("/api/guide")) {
@@ -198,7 +211,9 @@ try {
               title: registry.guides[action.guideId].title,
             },
           });
-        if (action?.action === "ask")
+        if (action?.action === "ask") {
+          askRequests++;
+          await new Promise((resolve) => setTimeout(resolve, 220));
           return route.fulfill({
             json: {
               message:
@@ -207,19 +222,20 @@ try {
               guideId: "connect-google",
             },
           });
+        }
         return route.fulfill({ json: state });
       });
       await page.goto(`${origin}/app`);
-      await page
-        .getByRole("button", { name: "Opryn Guide", exact: true })
-        .click();
+      await page.locator(".guide-launcher").click();
       await expect(
-        page.getByRole("dialog", { name: "Opryn Guide", exact: true }),
+        page.getByRole("dialog", { name: "Ask Opryn", exact: true }),
       ).toBeVisible();
       await page.waitForFunction(() => {
         const el = document.querySelector(".guide-panel");
         return (
-          el && getComputedStyle(el).opacity === "1" && !el.style.transform
+          el &&
+          getComputedStyle(el).opacity === "1" &&
+          getComputedStyle(el).transform === "none"
         );
       });
       await page.screenshot({
@@ -227,8 +243,33 @@ try {
       });
       await page
         .getByLabel("Ask about using Opryn", { exact: true })
+        .fill("Take me to Knowledge");
+      await page
+        .getByRole("dialog", { name: "Ask Opryn", exact: true })
+        .getByRole("button", { name: "Ask Opryn", exact: true })
+        .click();
+      await expect(page).toHaveURL(`${origin}/app/processes`);
+      assert.equal(askRequests, 0, "known destinations bypass the AI request");
+      await page.goto(`${origin}/app`);
+      await page.locator(".guide-launcher").click();
+      await page
+        .getByLabel("Ask about using Opryn", { exact: true })
         .fill("Where do I connect Google?");
-      await page.getByRole("button", { name: "Ask", exact: true }).click();
+      await page
+        .getByRole("dialog", { name: "Ask Opryn", exact: true })
+        .getByRole("button", { name: "Ask Opryn", exact: true })
+        .click();
+      await expect(
+        page.getByRole("button", {
+          name: "Checking your connections…",
+          exact: true,
+        }),
+      ).toBeVisible();
+      await expect(
+        page
+          .getByRole("dialog", { name: "Ask Opryn", exact: true })
+          .getByRole("button", { name: "Ask Opryn", exact: true }),
+      ).toBeVisible();
       await page
         .getByRole("button", {
           name: "Show me: Choose Google files →",
@@ -292,8 +333,9 @@ try {
 
       // Real target click pauses the overlay, without the guide doing the click itself.
       await page
-        .getByRole("button", { name: "Opryn Guide", exact: true })
+        .getByRole("button", { name: "Ask Opryn", exact: true })
         .click();
+      await page.getByText("More ways I can help", { exact: true }).click();
       await page
         .getByRole("button", {
           name: "Teach in your own words Show me →",
@@ -320,10 +362,11 @@ try {
       if (width === 1440) {
         // Advancing a tour is NOT backend completion. Follow verified milestones only.
         await page
-          .getByRole("button", { name: "Opryn Guide", exact: true })
+          .getByRole("button", { name: "Ask Opryn", exact: true })
           .click();
+        await page.getByText("More ways I can help", { exact: true }).click();
         await page
-          .getByRole("button", { name: "Let's do it together", exact: false })
+          .getByRole("button", { name: "Do setup with me", exact: false })
           .click();
         await expect(page.locator(".opryn-guide-coach")).toBeVisible();
         await page.getByRole("button", { name: "Next", exact: true }).click();
@@ -353,7 +396,7 @@ try {
         await expect(page.locator(".driver-overlay")).toHaveCount(0);
         await page.goto(`${origin}/app`);
         await expect(
-          page.getByRole("button", { name: "Opryn Guide", exact: true }),
+          page.getByRole("button", { name: "Ask Opryn", exact: true }),
         ).toBeVisible();
         await expect(page.locator(".guide-setup-strip")).toHaveCount(0);
 
@@ -363,8 +406,9 @@ try {
           .locator('[data-guide="teach.upload"]')
           .evaluate((el) => el.removeAttribute("data-guide"));
         await page
-          .getByRole("button", { name: "Opryn Guide", exact: true })
+          .getByRole("button", { name: "Ask Opryn", exact: true })
           .click();
+        await page.getByText("More ways I can help", { exact: true }).click();
         await page
           .getByRole("button", {
             name: "Start with a file Show me →",
@@ -388,8 +432,9 @@ try {
         );
         delayShow = true;
         await page
-          .getByRole("button", { name: "Opryn Guide", exact: true })
+          .getByRole("button", { name: "Ask Opryn", exact: true })
           .click();
+        await page.getByText("More ways I can help", { exact: true }).click();
         const delayed = page.waitForResponse(
           (response) =>
             response.url().endsWith("/api/guide") &&
@@ -402,7 +447,7 @@ try {
           })
           .click();
         await page
-          .getByRole("button", { name: "Close Opryn Guide", exact: true })
+          .getByRole("button", { name: "Close Ask Opryn", exact: true })
           .click();
         await delayed;
         await expect(page.locator(".opryn-guide-coach")).toHaveCount(0);
@@ -415,13 +460,28 @@ try {
       state = { ...state, organizationId: "other-org", role: "employee" };
       await page.goto(`${origin}/app?org=other-org&employee=1`);
       await page
-        .getByRole("button", { name: "Opryn Guide", exact: true })
+        .getByRole("button", { name: "Ask Opryn", exact: true })
         .click();
+      await page.getByText("More ways I can help", { exact: true }).click();
       await expect(page.locator(".guide-resume")).toHaveCount(0);
       await page.getByText("Guided workflows", { exact: true }).click();
       await expect(
         page.getByRole("button", { name: "Invite your team", exact: true }),
       ).toHaveCount(0);
+      await page.keyboard.press("Escape");
+      state = {
+        ...state,
+        organizationId: "fixture-org",
+        role: "owner",
+        facts: { ...facts, source: true, approved: true, answered: true },
+      };
+      await page.goto(origin + "/app?tour=opryn");
+      await expect(page.locator(".opryn-guide-coach")).toBeVisible();
+      await expect(page.locator(".driver-popover-title")).toHaveText(
+        "Your workspace",
+      );
+      await expect(page.locator(".opryn-guide-pointer")).toBeHidden();
+      assert.equal(new URL(page.url()).searchParams.has("tour"), false);
       await page.keyboard.press("Escape");
       assert.deepEqual(errors, []);
       console.log(

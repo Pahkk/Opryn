@@ -86,14 +86,14 @@ export default function TermsPage() {
 
       <LegalSection title="7. Pricing and subscriptions">
         <p>
-          Onboarding offers a 5-day Premium trial for organizations that have
-          not previously used it. Core does not include that trial. Checkout
+          Onboarding offers a 5-day Pro trial for organizations that have
+          not previously used it. Starter does not include that trial. Checkout
           shows payment requirements and renewal amounts; cancel before the
           trial ends to avoid the next charge. Existing subscriptions are
           managed through the billing portal.
         </p>
         <p>
-          Core includes up to 5 employee seats and Premium up to 20, in addition
+          Starter includes up to 5 employee seats and Pro up to 20, in addition
           to one owner. Pending invitations count toward the limit. Standard
           checkout does not sell extra seats. Contact us before purchasing for a
           larger team.

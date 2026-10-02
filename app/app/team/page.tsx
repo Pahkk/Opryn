@@ -16,6 +16,7 @@ export default async function TeamPage() {
     { data: processAssignments, error: assignmentsError },
     { count: invitedCount, error: inviteCountError },
     { data: experts, error: expertsError },
+    { data: ownedProcesses, error: ownedProcessesError },
   ] = await Promise.all([
     supabase
       .from("roles")
@@ -47,10 +48,19 @@ export default async function TeamPage() {
     context.isAdmin
       ? supabase
           .from("knowledge_experts")
-          .select("id,user_id,category,can_approve")
+          .select("id,user_id,category,can_approve,assignment_type")
           .eq("organization_id", context.organization.id)
           .is("knowledge_chunk_id", null)
           .order("category")
+      : Promise.resolve({ data: [], error: null }),
+    context.isAdmin
+      ? supabase
+          .from("processes")
+          .select("id,title")
+          .eq("organization_id", context.organization.id)
+          .eq("status", "approved")
+          .order("title")
+          .limit(200)
       : Promise.resolve({ data: [], error: null }),
   ]);
   if (
@@ -59,7 +69,8 @@ export default async function TeamPage() {
     invitesError ||
     assignmentsError ||
     inviteCountError ||
-    expertsError
+    expertsError ||
+    ownedProcessesError
   )
     throw new Error("Your team could not be loaded. Please try again.");
   const shaped = (members ?? []).map((member) => {
@@ -106,7 +117,8 @@ export default async function TeamPage() {
           <Link href="/app/team" aria-current="page">
             People
           </Link>
-          <Link href="/app/training">Learning</Link>
+          <Link href="/app/training">Training readiness</Link>
+          <Link href="/app/training?view=roles">Role knowledge</Link>
           <Link href="/app/roles">Roles & access</Link>
         </nav>
       ) : null}
@@ -144,6 +156,7 @@ export default async function TeamPage() {
       />
       {context.isAdmin ? (
         <KnowledgeExperts
+          processes={ownedProcesses ?? []}
           people={shaped.map((member) => ({
             id: member.user_id,
             name:
@@ -162,6 +175,7 @@ export default async function TeamPage() {
                 "Teammate",
               category: expert.category || "Company knowledge",
               canApprove: expert.can_approve,
+              assignmentType: expert.assignment_type,
             };
           })}
         />

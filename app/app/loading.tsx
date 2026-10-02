@@ -1,6 +1,9 @@
+import { SystemLoading } from "@/components/motion/system-loading";
+
 export default function AppLoading() {
   return (
     <div className="space-y-7" aria-label="Opening your workspace" aria-busy>
+      <SystemLoading />
       <div className="space-y-3">
         <div className="h-8 w-40 animate-pulse rounded-lg bg-[#e7ebf1]" />
         <div className="h-4 w-72 max-w-full animate-pulse rounded bg-[#eef1f5]" />

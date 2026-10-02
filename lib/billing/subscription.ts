@@ -63,7 +63,7 @@ export class FeatureUnavailableError extends Error {
   readonly feature: PlanFeature;
 
   constructor(feature: PlanFeature) {
-    super("This capability requires Opryn Premium.");
+    super("This capability requires Opryn Pro.");
     this.name = "FeatureUnavailableError";
     this.feature = feature;
   }

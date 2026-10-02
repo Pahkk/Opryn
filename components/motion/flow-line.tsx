@@ -45,6 +45,7 @@ export function FlowLine({ vertical = false }: { vertical?: boolean }) {
   return (
     <svg
       ref={ref}
+      data-motion-owner="gsap"
       className="opryn-flow-line"
       width={vertical ? 20 : 48}
       height={vertical ? 40 : 20}

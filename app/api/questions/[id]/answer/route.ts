@@ -6,6 +6,7 @@ import { suggestRuleFromOwnerAnswer } from "@/lib/ai/services";
 const schema = z.object({
   answer: z.string().trim().min(1).max(10000),
   answerId: z.string().uuid().optional(),
+  oneTimeException: z.boolean().default(false),
   clarificationAnswers: z
     .array(
       z.object({
@@ -56,7 +57,7 @@ export async function POST(
     if (answerId) {
       const { data: existing } = await supabase
         .from("question_answers")
-        .select("id")
+        .select("id,reusable_intent")
         .eq("id", answerId)
         .eq("question_id", id)
         .eq("answered_by", user.id)
@@ -65,6 +66,35 @@ export async function POST(
         return NextResponse.json(
           { error: "That answer could not be updated." },
           { status: 404 },
+        );
+      if (existing.reusable_intent !== "undecided")
+        return NextResponse.json(
+          {
+            error:
+              "This answer was already submitted. Its history cannot be edited.",
+          },
+          { status: 409 },
+        );
+      const { data: updatedAnswer, error: updateError } = await supabase
+        .from("question_answers")
+        .update({
+          answer: parsed.data.answer,
+          is_one_time_exception: parsed.data.oneTimeException,
+        })
+        .eq("id", answerId)
+        .eq("organization_id", membership.organization_id)
+        .eq("answered_by", user.id)
+        .eq("reusable_intent", "undecided")
+        .select("id")
+        .maybeSingle();
+      if (updateError) throw updateError;
+      if (!updatedAnswer)
+        return NextResponse.json(
+          {
+            error:
+              "This answer was submitted in another session. Refresh to see its latest state.",
+          },
+          { status: 409 },
         );
     } else {
       const { data: answer, error } = await supabase
@@ -76,6 +106,7 @@ export async function POST(
           answered_by: user.id,
           answer_type: isAdmin ? "owner" : "expert",
           proposed_rule: null,
+          is_one_time_exception: parsed.data.oneTimeException,
         })
         .select("id")
         .single();
@@ -100,6 +131,16 @@ export async function POST(
             "Is this the complete rule, including any limits, approvals, and exceptions?",
           ],
     };
+    if (parsed.data.oneTimeException)
+      return NextResponse.json({
+        answerId,
+        title: "One-time exception",
+        rule: parsed.data.answer,
+        complete: true,
+        clarificationQuestions: [],
+        canApprove: false,
+        oneTimeException: true,
+      });
     try {
       suggested = await suggestRuleFromOwnerAnswer(
         question.question,
@@ -115,10 +156,24 @@ export async function POST(
             : "Unknown error",
       });
     }
-    await supabase
+    const { data: preparedAnswer, error: prepareError } = await supabase
       .from("question_answers")
       .update({ proposed_rule: suggested.rule })
-      .eq("id", answerId);
+      .eq("id", answerId)
+      .eq("organization_id", membership.organization_id)
+      .eq("answered_by", user.id)
+      .eq("reusable_intent", "undecided")
+      .select("id")
+      .maybeSingle();
+    if (prepareError) throw prepareError;
+    if (!preparedAnswer)
+      return NextResponse.json(
+        {
+          error:
+            "This answer was already submitted. Refresh before continuing.",
+        },
+        { status: 409 },
+      );
 
     const [{ data: settings }, { data: expertAuthority }] = await Promise.all([
       supabase

@@ -1,15 +1,16 @@
 "use client";
-
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { TypingHeadline } from "@/components/brand/TypingHeadline";
 import { MaskedHeadline } from "@/components/motion/signature-story";
-import { useVisiblePlayback } from "@/components/brand/use-visible-playback";
+import { MotionTabs, ActiveIndicator } from "@/components/motion/motion-tabs";
+import { useProductReducedMotion } from "@/lib/motion/use-product-motion";
+import { uiTransition } from "@/lib/motion/motion-tokens";
 import {
   activeHeroVariant,
   heroStaticLine,
   heroVariants,
 } from "@/lib/marketing/home-content";
-
 export function KnowledgeHeroHeading() {
   const variant = heroVariants[activeHeroVariant];
   const [paused, setPaused] = useState(false);
@@ -36,99 +37,87 @@ export function KnowledgeHeroHeading() {
     </div>
   );
 }
-
 const consumers = [
   {
-    name: "Team member",
-    question: "How many revisions are included?",
-    answer: "Two revision rounds.",
-    detail: "Additional rounds require project lead approval.",
+    name: "Team",
+    question: "Can I approve a $300 refund?",
+    answer: "Yes — if you’re a manager.",
   },
   {
-    name: "Website bot",
-    question: "A customer is asking for a third revision.",
-    answer: "Additional rounds require project lead approval.",
-    detail:
-      "Retrieved company context. The connected bot decides how to present it.",
+    name: "Connected AI",
+    question: "Who approves a $700 refund?",
+    answer: "Owner approval is required.",
   },
 ];
-
 export function SharedKnowledgeDemo() {
   const [index, setIndex] = useState(0);
-  const [paused, setPaused] = useState(false);
-  const { ref, playing } = useVisiblePlayback<HTMLDivElement>(paused);
-  useEffect(() => {
-    if (!playing) return;
-    const timer = window.setInterval(
-      () => setIndex((value) => (value + 1) % consumers.length),
-      5200,
-    );
-    return () => window.clearInterval(timer);
-  }, [playing]);
+  const reduced = useProductReducedMotion();
+  const consumer = consumers[index];
   return (
-    <div
-      className="shared-knowledge-demo editorial-demo"
-      ref={ref}
-      aria-label="Example: one approved source helps a person and a connected agent"
+    <motion.div
+      className="hero-product"
+      data-animation-owner="motion"
+      aria-label="Interactive example of approved company knowledge"
+      initial={false}
+      animate={reduced ? {} : { y: [12, 0], scale: [0.99, 1] }}
+      transition={uiTransition(reduced, 0.65)}
     >
       <header>
-        <span>Example workflow</span>
-        <button
-          type="button"
-          onClick={() => setPaused(!paused)}
-          aria-pressed={paused}
-        >
-          {paused ? "Play demo" : "Pause demo"}
-        </button>
+        <span>Opryn / Approved knowledge</span>
+        <span className="source-tab">Example workspace</span>
       </header>
-      <div className="shared-policy">
-        <div className="editorial-source-heading">
-          <span>Source · Website projects</span>
-          <span className="editorial-approved">✓ Approved</span>
+      <div className="hero-policy">
+        <span className="hero-status">Approved · Version 3</span>
+        <h2>Refund approval limits</h2>
+        <dl>
+          <div>
+            <dt>MANAGER APPROVAL</dt>
+            <dd>Up to $500</dd>
+          </div>
+          <div>
+            <dt>ABOVE $500</dt>
+            <dd>Owner approval</dd>
+          </div>
+        </dl>
+      </div>
+      <MotionTabs>
+        <div
+          className="hero-demo-controls"
+          role="group"
+          aria-label="Choose example consumer"
+        >
+          {consumers.map((c, i) => (
+            <button
+              key={c.name}
+              type="button"
+              aria-pressed={i === index}
+              onClick={() => setIndex(i)}
+            >
+              {c.name}
+              {index === i && <ActiveIndicator />}
+            </button>
+          ))}
         </div>
-        <h2>Revision rounds</h2>
-        <p>
-          Website projects include two revision rounds. Additional rounds
-          require project lead approval.
-        </p>
-      </div>
-      <div className="editorial-demo-path" aria-hidden="true">
-        <span />↓<span />
-      </div>
-      <div
-        className="shared-consumers"
-        role="group"
-        aria-label="Choose example consumer"
-      >
-        {consumers.map((consumer, i) => (
-          <button
-            type="button"
-            key={consumer.name}
-            aria-pressed={i === index}
-            onClick={() => {
-              setIndex(i);
-              setPaused(true);
-            }}
+      </MotionTabs>
+      <div className="hero-answer" aria-live="polite">
+        <AnimatePresence initial={false}>
+          <motion.article
+            key={index}
+            initial={{ opacity: 0, y: reduced ? 0 : 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={uiTransition(reduced, 0.22)}
           >
-            {consumer.name}
-          </button>
-        ))}
-      </div>
-      <div className="shared-answer-stack">
-        {consumers.map((consumer, i) => (
-          <article
-            key={consumer.name}
-            className={i === index ? "is-current" : ""}
-            aria-hidden={i !== index}
-          >
-            <p className="shared-question">{consumer.question}</p>
+            <p className="hero-question">“{consumer.question}”</p>
             <h3>{consumer.answer}</h3>
-            <p>{consumer.detail}</p>
-            <span>Website projects → Revision rounds</span>
-          </article>
-        ))}
+            <small>Source: Refund Policy · Approved company guidance</small>
+          </motion.article>
+        </AnimatePresence>
       </div>
-      <footer>One source. Consistent guidance.</footer>
-    </div>
+      <footer>
+        <span>ONE APPROVED SOURCE</span>
+        <span>PERMISSION-CONTROLLED ACCESS</span>
+      </footer>
+    </motion.div>
   );
 }

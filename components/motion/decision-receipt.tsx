@@ -1,10 +1,10 @@
 "use client";
-
-import { useLayoutEffect, useRef, type ReactNode } from "react";
-import { gsap, motionScope } from "@/lib/motion/gsap";
-import { motion } from "@/lib/motion/presets";
-
-/** Mounted only after confirmed server success. A compact receipt retains context. */
+import type { ReactNode } from "react";
+import { motion } from "motion/react";
+import { uiTransition } from "@/lib/motion/motion-tokens";
+import { useProductReducedMotion } from "@/lib/motion/use-product-motion";
+import { SuccessCheck } from "./success-check";
+/** Only mounted after server confirmation; no fabricated approval state. */
 export function DecisionReceipt({
   children,
   previousHeight,
@@ -12,42 +12,19 @@ export function DecisionReceipt({
   children: ReactNode;
   previousHeight: number;
 }) {
-  const ref = useRef<HTMLElement>(null);
-  useLayoutEffect(() => {
-    const root = ref.current;
-    if (!root) return;
-    const scope = motionScope(root);
-    const height = root.getBoundingClientRect().height;
-    scope.run(() => {
-      gsap
-        .timeline({ defaults: { ease: motion.ease.drawer } })
-        .fromTo(
-          root,
-          { height: previousHeight, overflow: "hidden" },
-          {
-            height,
-            duration: motion.duration.standard,
-            clearProps: "height,overflow",
-          },
-          0,
-        )
-        .fromTo(
-          root.firstElementChild,
-          { opacity: 0, scale: 0.97 },
-          {
-            opacity: 1,
-            scale: 1,
-            duration: motion.duration.fast,
-            clearProps: "opacity,transform",
-          },
-          0,
-        );
-    });
-    return () => scope.dispose();
-  }, [previousHeight]);
+  const reduced = useProductReducedMotion();
   return (
-    <article ref={ref} className="review-result decision-receipt" role="status">
+    <motion.article
+      className="review-result decision-receipt"
+      role="status"
+      data-motion-owner="motion"
+      initial={reduced ? false : { height: previousHeight }}
+      animate={{ height: "auto" }}
+      transition={uiTransition(reduced)}
+      style={{ overflow: "hidden" }}
+    >
+      <SuccessCheck variant="normal" />
       {children}
-    </article>
+    </motion.article>
   );
 }

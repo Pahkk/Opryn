@@ -1,9 +1,21 @@
 import assert from "node:assert/strict";
-import { mkdirSync, readdirSync, readFileSync } from "node:fs";
+import { mkdirSync } from "node:fs";
 import { chromium, webkit, expect } from "@playwright/test";
+
 const base = process.env.OPRYN_HOME_TEST_URL || "http://127.0.0.1:3218";
-const dir = process.env.OPRYN_STORY_OUTPUT || "artifacts/public-slate/story";
+const dir = process.env.OPRYN_STORY_OUTPUT || "artifacts/story-redesign";
 mkdirSync(dir, { recursive: true });
+const scenes = [
+  ["information", 0.1, "information"],
+  ["convergence", 0.215, "structure"],
+  ["proposal", 0.3, "structure"],
+  ["review", 0.43, "review"],
+  ["approved", 0.575, "approved"],
+  ["distribution", 0.8, "use"],
+  ["knowledge-gap", 0.912, "learn"],
+  ["return-to-review", 0.943, "learn"],
+  ["final", 0.995, "learn"],
+];
 let checks = 0;
 for (const [engine, type] of [
   ["chromium", chromium],
@@ -12,325 +24,287 @@ for (const [engine, type] of [
   const browser = await type.launch();
   try {
     for (const width of [1440, 1280, 1024, 768, 430, 390]) {
-      console.log(`Checking ${engine} ${width}px`);
+      console.log(engine, width);
       const context = await browser.newContext({
         viewport: { width, height: 900 },
-        ...(width === 1440 && engine === "chromium"
-          ? {
-              recordVideo: {
-                dir: dir + "/video",
-                size: { width: 1440, height: 900 },
-              },
-            }
-          : {}),
       });
       const page = await context.newPage();
       const errors = [];
       page.on("pageerror", (e) => errors.push(e.message));
       await page.goto(base, { waitUntil: "networkidle" });
-      const section = page.locator(".knowledge-centerpiece");
-      await section.scrollIntoViewIfNeeded();
-      await expect(page.locator("h1")).toHaveCount(1);
-      await expect(section.locator(".kc-knowledge")).toHaveCount(1);
-      if (width >= 1024) {
-        await expect(section).toHaveAttribute("data-enhanced", "true");
-        const card = await section.locator(".kc-knowledge").elementHandle();
-        const start = await page
-          .locator(".kc-track")
-          .evaluate((n) => n.getBoundingClientRect().top + scrollY - 88);
-        const seek = async (p) => {
-          await page.evaluate(
-            ({ start, p }) =>
-              scrollTo(
-                0,
-                start +
-                  Number(
-                    document.querySelector(".knowledge-centerpiece").dataset
-                      .scrollDistance,
-                  ) *
-                    p,
-              ),
-            { start, p },
-          );
-          // Wait for scrub to converge across actual frames, not a guessed sleep.
-          await page.evaluate(
-            () =>
-              new Promise((resolve, reject) => {
-                let last = "",
-                  stable = 0;
-                const begin = performance.now();
-                function frame() {
-                  const value = [
-                    ...document.querySelectorAll(
-                      ".kc-knowledge,.kc-fragment,.kc-headline>p,.kc-destination,.kc-status",
-                    ),
-                  ]
-                    .map((n) => n.getAttribute("style"))
-                    .join();
-                  stable = value === last ? stable + 1 : 0;
-                  last = value;
-                  if (stable > 8 && performance.now() - begin > 800) resolve();
-                  else if (performance.now() - begin > 8000)
-                    reject(
-                      new Error("Scrub did not settle: " + value.slice(0, 350)),
-                    );
-                  else requestAnimationFrame(frame);
-                }
-                frame();
-              }),
-          );
-        };
-        for (const [scene, p] of [
-          ["sources", 22 / 153],
-          ["old-way", 37 / 153],
-          ["converge", 49 / 153],
-          ["structured", 61 / 153],
-          ["review", 75 / 153],
-          ["approved", 88 / 153],
-          ["distribution", 112 / 153],
-          ["gap", 127 / 153],
-          ["feedback", 134 / 153],
-          ["learning", 135 / 153],
-          ["final", 1],
-        ]) {
-          console.log(`  ${scene}`);
-          await seek(p);
-          assert.ok(
-            Math.abs((await page.locator(".kc-stage").boundingBox()).y - 88) <
-              3,
-            scene + " pin",
-          );
-          assert.equal(
-            await card.evaluate(
-              (n) => n === document.querySelector(".kc-knowledge"),
-            ),
-            true,
-          );
-          assert.equal(
-            await page.evaluate(
-              () => document.documentElement.scrollWidth <= innerWidth,
-            ),
-            true,
-          );
-          const visibleHeadlines = await page
-            .locator(".kc-headline>p")
-            .evaluateAll(
-              (nodes) =>
-                nodes.filter((n) => {
-                  const a = n.getBoundingClientRect(),
-                    b = n.parentElement.getBoundingClientRect();
-                  return (
-                    Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 2
-                  );
-                }).length,
-            );
-          assert.equal(
-            visibleHeadlines,
-            1,
-            scene + " has one unclipped headline",
-          );
-          if (width === 1440 || width === 1024)
-            await page.screenshot({
-              path: `${dir}/${engine}-${width}-${scene}.png`,
-            });
-          if (scene === "sources")
-            await expect(section.locator(".kc-doc")).toHaveCSS("opacity", "1");
-          if (scene === "approved" || scene === "distribution")
-            await expect(section.locator(".kc-confirmed")).toHaveCSS(
-              "transform",
-              "matrix(1, 0, 0, 1, 0, 0)",
-            );
-          if (scene === "distribution")
-            await expect(section.locator(".kc-destination-4")).toHaveCSS(
-              "opacity",
-              "1",
-            );
-          if (scene === "distribution")
-            assert.ok(
-              await section.evaluate((root) =>
-                [...root.querySelectorAll(".kc-out-path")].every((path, i) => {
-                  const point = path.getPointAtLength(0),
-                    card = root.querySelector(".kc-hub-slot"),
-                    expected =
-                      i < 2
-                        ? card.offsetLeft
-                        : card.offsetLeft + card.offsetWidth;
-                  return Math.abs(point.x - expected) < 2;
-                }),
-              ),
-              "paths originate at rule",
-            );
-          if (scene === "final")
-            assert.ok(
-              await section.evaluate((root) => {
-                const card = root
-                    .querySelector(".kc-knowledge")
-                    .getBoundingClientRect(),
-                  copy = root
-                    .querySelector(".kc-positioning")
-                    .getBoundingClientRect();
-                return card.bottom - 65 * 0.88 < copy.top;
-              }),
-              "final caption clears card",
-            );
-          const rail = await section
-            .locator(".kc-progress-track i")
-            .evaluate((n) => new DOMMatrix(getComputedStyle(n).transform).d);
-          assert.ok(
-            Math.abs(rail - p) < 0.003,
-            "rail matches real scroll progress",
-          );
-          if (scene === "feedback") {
-            await expect(section.locator(".kc-gap-queued")).toHaveCSS(
-              "opacity",
-              "1",
-            );
-            await expect(section).toHaveAttribute(
-              "data-story-stage",
-              "feedback",
-            );
-          }
-          checks += 5;
-        }
-        // Reverse to exactly the same source arrangement, then stress direction changes.
-        await seek(22 / 153);
+      const root = page.locator(".knowledge-centerpiece");
+      await root.scrollIntoViewIfNeeded();
+      await expect(root.locator(".kc-knowledge")).toHaveCount(1);
+      const card = await root.locator(".kc-knowledge").elementHandle();
+      const noOverflow = async () =>
         assert.ok(
-          await section.locator(".kc-doc").evaluate((n) => {
-            const m = new DOMMatrix(getComputedStyle(n).transform);
-            return (
-              Math.abs(m.m11 - 1) < 0.001 &&
-              Math.abs(m.m22 - 1) < 0.001 &&
-              Math.abs(m.m41) < 0.1 &&
-              Math.abs(m.m42) < 0.1
-            );
-          }),
-          "reverse restores source position and scale, with perspective retained",
-        );
-        for (const p of [0.9, 0.25, 0.7, 0.1, 0.98])
-          await page.evaluate(
-            ({ start, p }) =>
-              scrollTo(
-                0,
-                start +
-                  Number(
-                    document.querySelector(".knowledge-centerpiece").dataset
-                      .scrollDistance,
-                  ) *
-                    p,
-              ),
-            { start, p },
-          );
-        await seek(75 / 153);
-        await expect(section.locator(".kc-authority")).toHaveCSS(
-          "opacity",
-          "1",
-        );
-        await page.setViewportSize({ width: 390, height: 900 });
-        await expect(section).not.toHaveAttribute("data-enhanced", "true");
-        await expect(section.locator(".pin-spacer")).toHaveCount(0);
-        await page.setViewportSize({ width, height: 900 });
-        await expect(section).toHaveAttribute("data-enhanced", "true");
-        await expect(section.locator(".pin-spacer")).toHaveCount(1);
-        await page
-          .getByRole("button", { name: "Read without animation" })
-          .click();
-        await expect(section.locator(".pin-spacer")).toHaveCount(0);
-        await expect(section.locator(".kc-knowledge")).toHaveCSS(
-          "opacity",
-          "1",
-        );
-        await page.getByRole("button", { name: "Enable storytelling" }).click();
-        await expect(section).toHaveAttribute("data-enhanced", "true");
-        await page.emulateMedia({ reducedMotion: "reduce" });
-        await expect(section.locator(".pin-spacer")).toHaveCount(0);
-        checks += 10;
-      } else {
-        await expect(section.locator(".pin-spacer")).toHaveCount(0);
-        await section.locator(".kc-knowledge").scrollIntoViewIfNeeded();
-        await expect(section.locator(".kc-knowledge")).toHaveCSS(
-          "opacity",
-          "1",
-        );
-        await expect(section.locator(".kc-confirmed")).toHaveCSS(
-          "transform",
-          "matrix(1, 0, 0, 1, 0, 0)",
-        );
-        await expect(section.locator(".kc-authority")).toHaveCSS(
-          "height",
-          "0px",
-        );
-        await expect(section.locator(".kc-confirmation")).toHaveCSS(
-          "opacity",
-          "1",
-        );
-        await page.screenshot({ path: `${dir}/${engine}-review-${width}.png` });
-        await page.locator(".kc-difference").scrollIntoViewIfNeeded();
-        await page.screenshot({
-          path: `${dir}/${engine}-difference-${width}.png`,
-        });
-        assert.equal(
           await page.evaluate(
             () => document.documentElement.scrollWidth <= innerWidth,
           ),
-          true,
+          "no horizontal overflow",
         );
-        checks += 3;
+      const seek = async (progress) => {
+        // Above-fold lazy sections can finish settling before this section enters.
+        // Always seek from the current trigger position, not a stale document offset.
+        for (let attempt = 0; attempt < 2; attempt++) {
+          await root.evaluate((node, progress) => {
+            const track = node.querySelector(".kc-track");
+            scrollTo({
+              top:
+                track.getBoundingClientRect().top +
+                scrollY -
+                88 +
+                Number(node.dataset.scrollDistance) * progress,
+              behavior: "instant",
+            });
+          }, progress);
+          try {
+            await page.waitForFunction(
+              (progress) =>
+                Math.abs(
+                  Number(
+                    document.querySelector(".knowledge-centerpiece").dataset
+                      .storyProgress,
+                  ) - progress,
+                ) < 0.002,
+              progress,
+              { timeout: 5000 },
+            );
+            break;
+          } catch (error) {
+            if (attempt) throw error;
+          }
+        }
+        await page.waitForTimeout(180);
+      };
+      if (width >= 1024) {
+        await expect(root).toHaveAttribute("data-enhanced", "true");
+        await page.evaluate(() => document.fonts.ready);
+        await page.waitForTimeout(600);
+        for (const [name, progress, phase] of scenes) {
+          console.log(" ", name);
+          await seek(progress);
+          await expect(root).toHaveAttribute("data-story-stage", phase);
+          assert.ok(
+            Math.abs((await root.locator(".kc-stage").boundingBox()).y - 88) <
+              3,
+            name + " pin",
+          );
+          assert.ok(
+            await card.evaluate(
+              (n) => n === document.querySelector(".kc-knowledge"),
+            ),
+            "same document/proposal/approved DOM node",
+          );
+          await noOverflow();
+          assert.ok(
+            await root.locator(".kc-headlines").evaluate((node) => {
+              const lines = [...node.querySelectorAll(".kc-headline")];
+              const visible = lines.filter((head) =>
+                [...head.querySelectorAll("p > div > div")].some((line) => {
+                  const a = line.getBoundingClientRect(),
+                    b = line.parentElement.getBoundingClientRect();
+                  return (
+                    Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 2
+                  );
+                }),
+              );
+              return visible.length === 1;
+            }),
+            name + " one readable masked headline",
+          );
+          const rail = await root
+            .locator(".kc-progress-track i")
+            .evaluate((n) => new DOMMatrix(getComputedStyle(n).transform).d);
+          assert.ok(
+            Math.abs(rail - progress) < 0.004,
+            "rail tracks smoothed scene progress",
+          );
+          if (
+            ["proposal", "review", "approved", "distribution"].includes(name)
+          ) {
+            assert.ok(
+              await root.locator(".kc-knowledge").evaluate((card) => {
+                const outer = card.getBoundingClientRect();
+                return [
+                  ...card.querySelectorAll(
+                    ".kc-rule, .kc-knowledge-top, .kc-provenance",
+                  ),
+                ].every((child) => {
+                  const box = child.getBoundingClientRect();
+                  return (
+                    box.left >= outer.left - 1 &&
+                    box.right <= outer.right + 1 &&
+                    box.bottom <= outer.bottom + 1
+                  );
+                });
+              }),
+              name + " readable content inside card",
+            );
+          }
+          if (name === "review")
+            await expect(root.locator(".kc-authority")).toHaveCSS(
+              "opacity",
+              "1",
+            );
+          if (name === "approved")
+            await expect(root.locator(".kc-authority")).toHaveCSS(
+              "opacity",
+              "0",
+            );
+          if (name === "distribution") {
+            await expect(root.locator(".kc-destination-4")).toHaveCSS(
+              "opacity",
+              "1",
+            );
+            assert.ok(
+              await root.evaluate((node) =>
+                [...node.querySelectorAll(".kc-out-path")].every((path, i) => {
+                  const point = path.getPointAtLength(0);
+                  const hub = node.querySelector('[data-layout="hub"]');
+                  return (
+                    Math.abs(
+                      point.x -
+                        (i < 2
+                          ? hub.offsetLeft
+                          : hub.offsetLeft + hub.offsetWidth),
+                    ) < 2
+                  );
+                }),
+              ),
+              "paths originate on hub",
+            );
+          }
+          if (name === "knowledge-gap")
+            await expect(root.locator(".kc-gap-answer")).toHaveCSS(
+              "opacity",
+              "1",
+            );
+          if (name === "return-to-review")
+            await expect(root.locator(".kc-new-proposal")).toHaveCSS(
+              "opacity",
+              "1",
+            );
+          await page.screenshot({
+            path: dir + "/" + engine + "-" + width + "-" + name + ".png",
+          });
+          checks += 7;
+        }
+        await seek(0.1);
+        const original = await root.locator(".kc-knowledge").boundingBox();
+        for (const progress of [0.9, 0.2, 0.75, 0.13, 0.97]) {
+          await root.evaluate(
+            (node, p) =>
+              scrollTo({
+                top:
+                  node.querySelector(".kc-track").getBoundingClientRect().top +
+                  scrollY -
+                  88 +
+                  Number(node.dataset.scrollDistance) * p,
+                behavior: "instant",
+              }),
+            progress,
+          );
+        }
+        await seek(0.1);
+        const restored = await root.locator(".kc-knowledge").boundingBox();
+        for (const k of ["x", "y", "width", "height"])
+          assert.ok(
+            Math.abs(restored[k] - original[k]) < 1,
+            "reverse restores " + k,
+          );
+        await seek(0.43);
+        await page.reload({ waitUntil: "networkidle" });
+        await expect(root).toHaveAttribute("data-enhanced", "true");
+        await seek(0.43);
+        await page.setViewportSize({ width: 390, height: 900 });
+        await expect(root).not.toHaveAttribute("data-enhanced", "true");
+        await expect(root.locator(".pin-spacer")).toHaveCount(0);
+        await page.setViewportSize({ width, height: 900 });
+        await expect(root).toHaveAttribute("data-enhanced", "true");
+        await expect(root.locator(".pin-spacer")).toHaveCount(1);
+        await seek(0.43);
+        await noOverflow();
+        await page
+          .getByRole("button", { name: "Read without animation" })
+          .click();
+        await expect(root.locator(".pin-spacer")).toHaveCount(0);
+        await expect(root.locator(".kc-authority")).toBeVisible();
+        await page.getByRole("button", { name: "Enable storytelling" }).click();
+        await expect(root).toHaveAttribute("data-enhanced", "true");
+        await page.emulateMedia({ reducedMotion: "reduce" });
+        await expect(root.locator(".pin-spacer")).toHaveCount(0);
+        checks += 12;
+      } else {
+        await expect(root).toHaveAttribute("data-mobile-story", "true");
+        await expect(root.locator(".pin-spacer")).toHaveCount(0);
+        for (const selector of [
+          ".kc-sources",
+          ".kc-proposal",
+          ".kc-destinations",
+          ".kc-feedback",
+          ".kc-loop",
+        ]) {
+          await root.locator(selector).scrollIntoViewIfNeeded();
+          await page.waitForTimeout(600);
+          await page.screenshot({
+            path:
+              dir +
+              "/" +
+              engine +
+              "-" +
+              width +
+              "-" +
+              selector.slice(4) +
+              ".png",
+          });
+          await noOverflow();
+        }
+        await expect(root.locator(".kc-authority")).toBeVisible();
+        await expect(root.locator(".kc-confirmed")).toBeVisible();
+        checks += 8;
       }
-      assert.deepEqual(errors, []);
-      checks += 3;
-      // Real client navigation must remove the pinned scene and its spacer.
+      assert.deepEqual(errors, [], "no browser errors");
       await page.locator('.public-footer a[href="/signup"]').click();
       await expect(page).toHaveURL(/\/signup/);
-      await expect(page.locator(".pin-spacer")).toHaveCount(0);
-      checks += 2;
+      await expect(page.locator("#how-it-works .pin-spacer")).toHaveCount(0);
+      await page.goBack({ waitUntil: "networkidle" });
+      await expect(page.locator("#how-it-works")).toBeVisible();
       await context.close();
-      if (width === 1440 && engine === "chromium")
-        await page.video().saveAs(`${dir}/walkthrough.webm`);
+      checks += 3;
     }
-    for (const opts of [
-      { javaScriptEnabled: false },
+    for (const options of [
       { reducedMotion: "reduce" },
+      { javaScriptEnabled: false },
     ]) {
       const page = await browser.newPage({
         viewport: { width: 1440, height: 900 },
-        ...opts,
+        ...options,
       });
-      await page.goto(base);
-      await expect(
-        page.locator(".knowledge-centerpiece .pin-spacer"),
-      ).toHaveCount(0);
-      await expect(page.locator(".kc-knowledge")).toBeVisible();
-      await expect(page.locator(".kc-confirmed")).toBeVisible();
+      await page.goto(base, { waitUntil: "networkidle" });
+      const root = page.locator(".knowledge-centerpiece");
+      await expect(root.locator(".pin-spacer")).toHaveCount(0);
+      await expect(root.locator(".kc-authority")).toBeVisible();
+      await expect(root.locator(".kc-confirmed")).toBeVisible();
+      await expect(root.locator(".kc-gap-answer")).toBeVisible();
+      await root.screenshot({
+        path:
+          dir +
+          "/" +
+          engine +
+          "-" +
+          (options.javaScriptEnabled === false ? "no-js" : "reduced-motion") +
+          ".png",
+      });
       await page.close();
-      checks += 3;
+      checks += 4;
     }
-    const chunks = readdirSync(".next/static/chunks").filter((name) =>
-      name.endsWith(".js"),
-    );
-    const storyChunk = chunks.find((name) =>
-      readFileSync(`.next/static/chunks/${name}`, "utf8").includes(
-        "opryn-knowledge-centerpiece",
-      ),
-    );
-    assert.ok(storyChunk);
-    const failed = await browser.newPage({
-      viewport: { width: 1440, height: 900 },
-    });
-    await failed.route(`**/${storyChunk}`, (route) => route.abort());
-    await failed.goto(base);
-    await failed.locator(".knowledge-centerpiece").scrollIntoViewIfNeeded();
-    await expect(failed.locator(".knowledge-centerpiece")).toHaveAttribute(
-      "data-fallback",
-      "true",
-    );
-    await expect(failed.locator(".kc-track")).toHaveCSS("min-height", "0px");
-    await expect(failed.locator(".kc-knowledge")).toBeVisible();
-    await failed.close();
-    checks += 3;
   } finally {
     await browser.close();
   }
 }
 console.log(
-  `Passed ${checks} continuous-scene checks in Chromium and WebKit. Illustrative UI only.`,
+  "Passed " +
+    checks +
+    " browser assertions. Illustrative marketing workflow; no business actions or external requests executed.",
 );

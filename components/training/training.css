@@ -1,0 +1,323 @@
+.training-workspace {
+  max-width: 1180px;
+  margin: 0 auto;
+  color: var(--opryn-navy, #18273e);
+}
+.training-header {
+  padding: 12px 0 28px;
+  border-bottom: 1px solid #dfe5ed;
+}
+.training-eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #5c6b80;
+}
+.training-header h1 {
+  font-size: clamp(32px, 5vw, 48px);
+  letter-spacing: -0.055em;
+  font-weight: 600;
+  line-height: 1.15;
+  margin: 10px 0;
+}
+.training-header p {
+  max-width: 660px;
+  color: #5c6b80;
+  line-height: 1.65;
+}
+.training-tabs {
+  display: flex;
+  gap: 24px;
+  border-bottom: 1px solid #dfe5ed;
+  margin-bottom: 24px;
+  overflow: auto;
+}
+.training-tabs a {
+  padding: 16px 2px;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 600;
+  border-bottom: 2px solid transparent;
+}
+.training-tabs a[aria-current="page"] {
+  border-color: #2855f9;
+  color: #2855f9;
+}
+.training-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 28px;
+  padding: 18px 0;
+  font-size: 13px;
+  color: #5c6b80;
+}
+.training-summary strong {
+  color: #18273e;
+}
+.training-section {
+  margin: 24px 0;
+}
+.training-section h2 {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  margin-bottom: 8px;
+}
+.training-section > p,
+.training-muted {
+  font-size: 13px;
+  line-height: 1.65;
+  color: #647187;
+}
+.training-row {
+  border-bottom: 1px solid #e1e7f0;
+  padding: 18px 0;
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  justify-content: space-between;
+}
+.training-row h3 {
+  font-size: 15px;
+  font-weight: 600;
+}
+.training-row p {
+  font-size: 13px;
+  color: #647187;
+  margin-top: 5px;
+}
+.training-status {
+  font-size: 11px;
+  font-weight: 650;
+  padding: 5px 9px;
+  border-radius: 6px;
+  display: inline-flex;
+  white-space: nowrap;
+  background: #edf1f6;
+  color: #45546a;
+}
+.training-status[data-state="Ready"] {
+  background: #e7f5ee;
+  color: #24674a;
+}
+.training-status[data-state="Update Required"],
+.training-status[data-state="Needs Attention"] {
+  background: #eaf0ff;
+  color: #2855f9;
+}
+.training-status[data-state="Blocked"] {
+  background: #f1edf5;
+  color: #625470;
+}
+.training-learn {
+  border: 1px solid #dfe5ed;
+  border-radius: 16px;
+  background: white;
+  padding: 24px;
+  margin: 16px 0;
+}
+.training-learn h2 {
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  margin: 12px 0;
+}
+.training-guidance {
+  white-space: pre-wrap;
+  font-size: 15px;
+  line-height: 1.8;
+  margin: 20px 0;
+}
+.training-source {
+  font-size: 12px;
+  color: #52617a;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.training-source a {
+  color: #2855f9;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.training-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+.training-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 10px 16px;
+  border-radius: 9px;
+  background: #2855f9;
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+.training-button.secondary {
+  background: white;
+  color: #2855f9;
+  border-color: #d9e2f0;
+}
+.training-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.training-workspace :focus-visible {
+  outline: 3px solid #91afff;
+  outline-offset: 3px;
+}
+.training-field {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin: 14px 0;
+}
+.training-field input,
+.training-field select,
+.training-field textarea {
+  display: block;
+  width: 100%;
+  font: inherit;
+  font-weight: 400;
+  padding: 12px;
+  margin-top: 7px;
+  border: 1px solid #d5deeb;
+  border-radius: 9px;
+  background: #fff;
+  min-height: 44px;
+}
+.training-field textarea {
+  min-height: 105px;
+  resize: vertical;
+}
+.training-config {
+  border: 1px solid #dfe5ed;
+  border-radius: 14px;
+  padding: 20px;
+  background: #f8faff;
+  margin: 22px 0;
+}
+.training-config summary {
+  cursor: pointer;
+  font-weight: 600;
+  min-height: 28px;
+}
+.training-checks {
+  max-height: 240px;
+  overflow: auto;
+  margin: 12px 0;
+}
+.training-checks label {
+  display: flex;
+  gap: 12px;
+  min-height: 44px;
+  align-items: center;
+  font-size: 13px;
+  border-bottom: 1px solid #e6ebf2;
+}
+.training-checks input {
+  width: 17px;
+  height: 17px;
+  accent-color: #2855f9;
+}
+.training-diff {
+  border-left: 3px solid #2855f9;
+  background: #f0f5ff;
+  padding: 16px;
+  margin: 18px 0;
+  font-size: 14px;
+  line-height: 1.7;
+}
+.training-result {
+  background: #f3f6fa;
+  border-radius: 10px;
+  padding: 16px;
+  margin-top: 18px;
+  white-space: pre-wrap;
+  font-size: 14px;
+  line-height: 1.7;
+}
+.training-search {
+  max-width: 420px;
+}
+.training-empty {
+  padding: 40px 0;
+  color: #647187;
+  line-height: 1.8;
+}
+.training-identity {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 12px;
+}
+.training-monogram {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  background: #eef2f8;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.training-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+}
+.training-workspace details > summary {
+  list-style: revert;
+}
+.training-event {
+  padding: 10px 0;
+  border-bottom: 1px solid #e1e7f0;
+  font-size: 12px;
+}
+.training-event span {
+  color: #647187;
+}
+@media (max-width: 640px) {
+  .training-row {
+    align-items: flex-start;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .training-learn {
+    padding: 18px 16px;
+    border-radius: 12px;
+  }
+  .training-grid {
+    grid-template-columns: 1fr;
+  }
+  .training-header {
+    padding-top: 0;
+  }
+  .training-config {
+    padding: 16px;
+  }
+  .training-actions > .training-button {
+    flex: 1;
+  }
+  .training-summary {
+    gap: 9px 16px;
+  }
+  .training-tabs {
+    gap: 20px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .training-workspace * {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

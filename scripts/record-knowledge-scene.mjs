@@ -4,15 +4,18 @@ try {
   const context = await browser.newContext({
     viewport: { width: 1440, height: 900 },
     recordVideo: {
-      dir: "artifacts/knowledge-scene-v3/video",
+      dir: "artifacts/story-redesign/video",
       size: { width: 1440, height: 900 },
     },
   });
   const page = await context.newPage();
-  await page.goto("http://127.0.0.1:3218", { waitUntil: "networkidle" });
+  await page.goto(process.env.OPRYN_HOME_TEST_URL || "http://127.0.0.1:3218", {
+    waitUntil: "networkidle",
+  });
   const section = page.locator(".knowledge-centerpiece");
   await section.scrollIntoViewIfNeeded();
   await expect(section).toHaveAttribute("data-enhanced", "true");
+  await page.waitForTimeout(800);
   const start = await page
     .locator(".kc-track")
     .evaluate((n) => n.getBoundingClientRect().top + scrollY - 88);
@@ -44,14 +47,14 @@ try {
       }),
     start,
   );
-  await expect(page.locator(".kc-ecosystem")).toHaveCSS("opacity", "1");
+  await expect(page.locator(".kc-loop")).toHaveCSS("opacity", "1");
   await page.screenshot({
-    path: "artifacts/knowledge-scene-v3/recording-final.png",
+    path: "artifacts/story-redesign/recording-final.png",
   });
   await context.close();
   await page
     .video()
-    .saveAs("artifacts/knowledge-scene-v3/signature-walkthrough.webm");
+    .saveAs("artifacts/story-redesign/signature-walkthrough.webm");
   console.log(
     "Saved signature-walkthrough.webm: continuous 32-second forward scroll.",
   );

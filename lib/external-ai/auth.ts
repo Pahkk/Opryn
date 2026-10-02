@@ -1,3 +1,4 @@
+import { hasFeature } from "@/lib/billing/plans";
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -26,6 +27,7 @@ type ConnectionRow = {
   organization_id: string;
   name: string;
   status: "active" | "paused";
+  unknown_behavior?: "route_expert" | "record_only";
 };
 
 export type ExternalAIContext = {
@@ -59,7 +61,7 @@ export async function authenticateExternalAI(
   const [{ data: connection }, { data: scopeRows }, plan] = await Promise.all([
     service
       .from("external_ai_connections")
-      .select("id,agent_id,organization_id,name,status")
+      .select("id,agent_id,organization_id,name,status,unknown_behavior")
       .eq("id", key.connection_id)
       .eq("organization_id", key.organization_id)
       .maybeSingle(),
@@ -73,7 +75,7 @@ export async function authenticateExternalAI(
   if (!connection) throw new ExternalAIAuthError("invalid_api_key", 401);
   if (connection.status !== "active")
     throw new ExternalAIAuthError("connection_paused", 403);
-  if (plan.plan !== "premium")
+  if (!hasFeature(plan.plan, "aiConnections"))
     throw new ExternalAIAuthError("premium_required", 403);
   const scopes = new Set((scopeRows ?? []).map((item) => item.scope));
   if (!scopes.has(requiredScope))

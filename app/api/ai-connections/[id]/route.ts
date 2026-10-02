@@ -28,6 +28,11 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  if (request.headers.get("origin") !== new URL(request.url).origin)
+    return NextResponse.json(
+      { error: "Open connection settings in Opryn." },
+      { status: 403 },
+    );
   const context = await getExternalAIAdminContext();
   if ("error" in context) return context.error;
   const parsed = updateSchema.safeParse(await request.json().catch(() => null));
@@ -50,58 +55,15 @@ export async function PATCH(
       { status: 404 },
     );
   try {
-    const updates: Record<string, unknown> = {};
-    if (parsed.data.name !== undefined) updates.name = parsed.data.name;
-    if (parsed.data.description !== undefined)
-      updates.description = parsed.data.description;
-    if (parsed.data.status !== undefined) updates.status = parsed.data.status;
-    if (parsed.data.knowledgeMode !== undefined)
-      updates.knowledge_mode = parsed.data.knowledgeMode;
-    if (Object.keys(updates).length) {
-      const { error } = await context.supabase
-        .from("external_ai_connections")
-        .update(updates)
-        .eq("id", id)
-        .eq("organization_id", org);
-      if (error) throw error;
-    }
-    if (parsed.data.scopes) {
-      await context.supabase
-        .from("external_ai_scopes")
-        .delete()
-        .eq("connection_id", id)
-        .eq("organization_id", org);
-      const { error } = await context.supabase
-        .from("external_ai_scopes")
-        .insert(
-          parsed.data.scopes.map((scope) => ({
-            organization_id: org,
-            connection_id: id,
-            scope,
-          })),
-        );
-      if (error) throw error;
-    }
-    if (parsed.data.access) {
-      await context.supabase
-        .from("external_ai_knowledge_access")
-        .delete()
-        .eq("connection_id", id)
-        .eq("organization_id", org);
-      if (parsed.data.access.length) {
-        const { error } = await context.supabase
-          .from("external_ai_knowledge_access")
-          .insert(
-            parsed.data.access.map((item) => ({
-              organization_id: org,
-              connection_id: id,
-              source_type: item.sourceType,
-              source_id: item.sourceId ?? null,
-            })),
-          );
-        if (error) throw error;
-      }
-    }
+    const { error } = await context.supabase.rpc(
+      "update_training_agent_connection",
+      {
+        target_org: org,
+        target_connection: id,
+        settings_value: parsed.data,
+      },
+    );
+    if (error) throw error;
     return NextResponse.json({ ok: true });
   } catch (error) {
     return apiError(error, "The connection settings could not be saved.");
@@ -109,17 +71,25 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  if (request.headers.get("origin") !== new URL(request.url).origin)
+    return NextResponse.json(
+      { error: "Open connection settings in Opryn." },
+      { status: 403 },
+    );
   const context = await getExternalAIAdminContext();
   if ("error" in context) return context.error;
   const { id } = await params;
-  const { error } = await context.supabase
-    .from("external_ai_connections")
-    .delete()
-    .eq("id", id)
-    .eq("organization_id", context.membership.organization_id);
-  if (error) return apiError(error, "The connection could not be deleted.");
+  const { error } = await context.supabase.rpc("disconnect_training_agent", {
+    target_org: context.membership.organization_id,
+    target_connection: id,
+  });
+  if (error)
+    return apiError(
+      error,
+      "The agent could not be disconnected. Its history is retained.",
+    );
   return NextResponse.json({ ok: true });
 }

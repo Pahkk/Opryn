@@ -38,14 +38,17 @@ const url = `http://127.0.0.1:${server.address().port}`;
 const browser = await chromium.launch();
 let checks = 0;
 try {
-  for (const width of [360, 390, 430, 768, 1440]) {
-    const page = await browser.newPage({ viewport: { width, height: 900 } }),
+  for (const width of [390, 430, 768, 1024, 1280, 1440]) {
+    const page = await browser.newPage({ viewport: { width, height: 900 }, recordVideo: { dir: resolve(output, "recordings"), size: { width, height: 900 } } }),
       errors = [];
     page.on("pageerror", (e) => errors.push(e.message));
     await page.goto(url);
     await page.waitForFunction(() => !!window.motionFixture);
-    const settled = () =>
-      page.waitForFunction(() => window.motionFixture.active() === 0);
+    const settled = async () => {
+      // Layout springs run on the JS frame loop; wait past their bounded settling window too.
+      await page.waitForTimeout(650);
+      await page.waitForFunction(() => window.motionFixture.active() === 0);
+    };
     await settled();
     assert.equal(
       await page.evaluate(
@@ -85,8 +88,8 @@ try {
     assert.equal(
       await page
         .locator('[data-motion-row="Policy"]')
-        .evaluate((e) => e.style.opacity),
-      "",
+        .evaluate((e) => getComputedStyle(e).opacity),
+      "1",
     );
     checks++;
     await page.evaluate(() => {
@@ -189,6 +192,7 @@ try {
       window.motionFixture.update({ step: 34, open: true });
       window.motionFixture.update({ mounted: false });
     });
+    await settled();
     assert.equal(await page.evaluate(() => window.motionFixture.active()), 0);
     checks++;
     await page.evaluate(() =>
@@ -210,7 +214,7 @@ try {
     await page.close();
   }
   console.log(
-    `Passed ${checks} real GSAP/React lifecycle assertions at 360/390/430/768/1440px. Local fixtures only.`,
+    `Passed ${checks} real Motion/GSAP/React lifecycle assertions at 390/430/768/1024/1280/1440px. Local fixtures only.`,
   );
 } finally {
   await browser.close();

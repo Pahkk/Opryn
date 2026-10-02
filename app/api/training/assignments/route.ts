@@ -40,7 +40,7 @@ export async function PUT(request: Request) {
           : Promise.resolve({ data: [] as Array<{ user_id: string }> }),
         supabase
           .from("training_assignments")
-          .select("id,user_id,status")
+          .select("id,user_id,status,origin_role_id")
           .eq("organization_id", organizationId)
           .eq("process_id", parsed.data.processId),
       ]);
@@ -60,7 +60,7 @@ export async function PUT(request: Request) {
     const requestedIds = new Set(requestedUserIds);
     const additions = requestedUserIds.filter((id) => !existingIds.has(id));
     const removals = (existing ?? []).filter(
-      (item) => !requestedIds.has(item.user_id),
+      (item) => !requestedIds.has(item.user_id) && !item.origin_role_id,
     );
 
     if (additions.length) {

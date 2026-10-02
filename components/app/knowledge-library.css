@@ -18,7 +18,7 @@
   display: flex;
   gap: 16px;
   align-items: center;
-  background: #fcfcfa;
+  background: #fff;
   border: 1px solid var(--library-line);
   border-radius: 10px;
   padding: 8px 16px;
@@ -52,7 +52,7 @@
   gap: 10px;
   min-height: 42px;
   padding: 8px 10px;
-  border-radius: 6px;
+  border-radius: 10px;
   font-size: 14px;
 }
 .library-sidebar nav a[aria-current],
@@ -104,7 +104,12 @@
   transition: background 160ms ease;
 }
 .library-row:hover {
-  background: #e8ece680;
+  background: #f4f8ff;
+}
+.library-row:focus-visible,
+.library-sidebar nav a:focus-visible {
+  outline: 2px solid #2855f9;
+  outline-offset: 2px;
 }
 .library-row > span:first-child {
   min-width: 0;
@@ -252,6 +257,78 @@
   display: inline-flex;
   align-items: center;
   font-size: 14px;
+}
+.library-actions-menu {
+  position: relative;
+}
+.library-actions-menu summary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  border: 1px solid #cbd4dd;
+  border-radius: 7px;
+  padding: 8px 13px;
+  cursor: pointer;
+  font-size: 14px;
+  list-style: none;
+}
+.library-actions-menu summary::-webkit-details-marker {
+  display: none;
+}
+.library-actions-menu > div {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 7px);
+  z-index: 4;
+  min-width: 210px;
+  padding: 6px;
+  border: 1px solid #d2d8de;
+  border-radius: 9px;
+  background: #fafaf9;
+  box-shadow: 0 10px 30px rgba(38, 56, 74, 0.12);
+}
+.library-actions-menu button,
+.library-actions-menu a {
+  width: 100%;
+  text-align: left;
+  padding: 9px 10px;
+  border-radius: 6px;
+  min-height: 38px;
+}
+.library-actions-menu button:hover,
+.library-actions-menu a:hover {
+  background: #e9edf1;
+}
+.library-actions-menu .library-delete-action {
+  color: #a13f3f;
+}
+.library-confirmation {
+  width: 100%;
+  padding: 18px;
+  border: 1px solid #d2d8de;
+  border-radius: 10px;
+  background: #f4f5f6;
+}
+.library-confirmation h3 {
+  font-size: 17px;
+  font-weight: 650;
+}
+.library-confirmation ul {
+  margin: 10px 0 16px;
+  padding-left: 20px;
+  font-size: 13px;
+  color: #65707b;
+}
+.library-danger-button {
+  min-height: 44px;
+  border-radius: 7px;
+  background: #9c3f3f;
+  color: #fff;
+  padding: 9px 14px;
+  font-size: 14px;
+}
+.library-delete-confirmation .opryn-button-secondary {
+  margin-right: 9px;
 }
 .teach-google {
   margin-bottom: 24px;

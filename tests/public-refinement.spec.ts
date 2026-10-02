@@ -1,55 +1,33 @@
 import { expect, test } from "@playwright/test";
 
-test("typing line reserves space for every phrase and can pause", async ({
+test("homepage explains the product without rotating positioning", async ({
   page,
 }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Pause headline" }).click();
-  const heights = await page.locator(".knowledge-rotator").evaluate((root) => {
-    const line = root.querySelector(".is-current")!;
-    const original = line.textContent;
-    const result = [
-      "",
-      "Help your team get answers.",
-      "Get new people up to speed.",
-      "Give your agents company context.",
-      "Keep knowledge in one place.",
-    ].map((text) => {
-      line.textContent = text || "\u00a0";
-      return root.getBoundingClientRect().height;
-    });
-    line.textContent = original;
-    return result;
-  });
-  expect(Math.max(...heights) - Math.min(...heights)).toBeLessThan(1);
-  await expect(page.locator(".knowledge-rotator")).toHaveAttribute(
-    "aria-hidden",
-    "true",
+  await expect(page.locator(".knowledge-rotator")).toHaveCount(0);
+  await expect(page.locator(".editorial-hero .editorial-lead")).toContainText(
+    "processes, policies, and answers",
   );
+  await expect(
+    page.locator(".editorial-hero .editorial-footnote"),
+  ).toContainText("Decide what becomes official");
 });
 
-test("product proof presents sharp real images in a reduced-motion sequence", async ({
+test("product proof is one readable static example with no pinning", async ({
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/#inside-opryn");
+  await page.goto("/");
   await expect(page.locator("h1")).toHaveCount(1);
   await expect(page.locator(".typing-reserve")).toHaveCount(0);
-  const proof = page.locator("#inside-opryn");
-  await expect(proof.locator("figure")).toHaveCount(4);
-  await expect(proof.locator(".pin-spacer")).toHaveCount(0);
-  for (const view of ["teach", "knowledge", "needs-you", "connections"]) {
-    const image = proof.locator(`#proof-${view} img`);
-    await image.scrollIntoViewIfNeeded();
-    await expect
-      .poll(() =>
-        image.evaluate(
-          (img: HTMLImageElement) => img.complete && img.naturalWidth >= 1170,
-        ),
-      )
-      .toBe(true);
-    await expect(image).toHaveAttribute("src", /retina\.webp$/);
-  }
+  await expect(page.locator(".knowledge-flow")).toHaveCount(1);
+  await expect(page.locator(".pin-spacer")).toHaveCount(0);
+  await expect(
+    page.locator(".flow-caption").getByText("Example workflow"),
+  ).toBeVisible();
+  await expect(
+    page.locator(".flow-answer").getByText("Approved · Revision policy"),
+  ).toBeVisible();
 });
 
 test("integration discovery searches, filters and expands without connecting", async ({

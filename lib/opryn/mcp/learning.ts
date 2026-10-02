@@ -15,6 +15,8 @@ export type ExternalLearningInput = {
   context: string;
   notes?: string;
   sourceTitle?: string;
+  expectedJobId?: string;
+  learningRequestId?: string;
 };
 
 export type ExternalLearningSummary = {
@@ -83,6 +85,20 @@ export async function startExternalLearning(
       ].join("\u001f"),
     )
     .digest("hex");
+  if (input.learningRequestId) {
+    const { data: requestJob, error } = await service
+      .from("external_learning_jobs")
+      .select("id,content_hash")
+      .eq("organization_id", auth.organizationId)
+      .eq("created_by", auth.userId)
+      .eq("learning_request_id", input.learningRequestId)
+      .maybeSingle();
+    if (error) throw error;
+    if (requestJob && requestJob.content_hash !== contentHash)
+      throw new Error(
+        "This request already received another conversation. Prepare a new instruction in Opryn.",
+      );
+  }
   const { data: existing, error: existingError } = await service
     .from("external_learning_jobs")
     .select("id,status,result_summary,process_id")
@@ -92,10 +108,19 @@ export async function startExternalLearning(
     .eq("content_hash", contentHash)
     .maybeSingle();
   if (existingError) throw existingError;
+  if (input.expectedJobId && existing?.id !== input.expectedJobId)
+    throw new Error(
+      "This request already received another conversation. Prepare a new instruction in Opryn.",
+    );
   if (existing && existing.status !== "failed") {
     const { error: touchError } = await service
       .from("external_learning_jobs")
-      .update({ last_requested_at: new Date().toISOString() })
+      .update({
+        last_requested_at: new Date().toISOString(),
+        ...(input.learningRequestId
+          ? { learning_request_id: input.learningRequestId }
+          : {}),
+      })
       .eq("id", existing.id)
       .eq("organization_id", auth.organizationId);
     if (touchError) throw touchError;
@@ -113,6 +138,9 @@ export async function startExternalLearning(
       .from("external_learning_jobs")
       .update({
         status: "received",
+        ...(input.learningRequestId
+          ? { learning_request_id: input.learningRequestId }
+          : {}),
         last_requested_at: new Date().toISOString(),
         context_text: input.context,
         notes: input.notes ?? null,
@@ -147,10 +175,36 @@ export async function startExternalLearning(
       source_title: input.sourceTitle ?? null,
       content_hash: contentHash,
       status: "received",
+      ...(input.learningRequestId
+        ? { learning_request_id: input.learningRequestId }
+        : {}),
     })
     .select("id")
     .single();
-  if (error) throw error;
+  if (error) {
+    if (error.code === "23505" && input.learningRequestId) {
+      const { data: retried, error: retryError } = await service
+        .from("external_learning_jobs")
+        .select("id,content_hash,status,result_summary,process_id")
+        .eq("organization_id", auth.organizationId)
+        .eq("created_by", auth.userId)
+        .eq("learning_request_id", input.learningRequestId)
+        .maybeSingle();
+      if (retryError) throw retryError;
+      if (retried?.content_hash === contentHash)
+        return {
+          id: retried.id,
+          status: retried.status,
+          summary: parseSummary(retried.result_summary),
+          processId: retried.process_id as string | null,
+          duplicate: true,
+        };
+      throw new Error(
+        "This request already received another conversation. Prepare a new instruction in Opryn.",
+      );
+    }
+    throw error;
+  }
   await service.from("onboarding_events").insert({
     organization_id: auth.organizationId,
     user_id: auth.userId,
@@ -165,7 +219,14 @@ export async function startExternalLearning(
     organization_id: auth.organizationId,
     user_id: auth.userId,
     event_type: "external_ai_context_received",
-    metadata: { source: auth.clientKind, job_id: job.id },
+    metadata: {
+      source: auth.clientKind,
+      job_id: job.id,
+      metric: "learning_context_received",
+      provider_metric: ["chatgpt", "claude"].includes(auth.clientKind)
+        ? `${auth.clientKind}_learn_received`
+        : undefined,
+    },
   });
   return {
     id: job.id as string,
@@ -183,22 +244,37 @@ export async function processExternalLearningJob(
   const { data: job, error: jobError } = await service
     .from("external_learning_jobs")
     .select(
-      "id,organization_id,created_by,client_kind,name,learning_type,context_text,notes,source_title,status,process_id,started_at",
+      "id,organization_id,created_by,client_kind,name,learning_type,context_text,notes,source_title,status,process_id,started_at,updated_at",
     )
     .eq("id", jobId)
     .maybeSingle();
   if (jobError) throw jobError;
   if (!job || ["needs_review", "complete"].includes(job.status)) return;
+  // Provider retries and cron can reach the same job simultaneously. Respect
+  // an active worker; abandoned leases can be retried after fifteen minutes.
+  if (
+    ["processing", "extracting", "organizing"].includes(job.status) &&
+    Date.parse(job.updated_at) > Date.now() - 15 * 60 * 1000
+  )
+    return;
   if (!job.context_text?.trim())
     throw new Error("This learning request no longer contains source context.");
 
   try {
     const startedAt = new Date().toISOString();
-    await updateJob(service, job.id, {
-      status: "processing",
-      started_at: job.started_at ?? startedAt,
-      error_message: null,
-    });
+    const { data: claimed, error: claimError } = await service
+      .from("external_learning_jobs")
+      .update({
+        status: "processing",
+        started_at: job.started_at ?? startedAt,
+        error_message: null,
+      })
+      .eq("id", job.id)
+      .eq("updated_at", job.updated_at)
+      .select("id")
+      .maybeSingle();
+    if (claimError) throw claimError;
+    if (!claimed) return;
     await service.from("onboarding_events").insert({
       organization_id: job.organization_id,
       user_id: job.created_by,
@@ -428,6 +504,7 @@ export function formatExternalLearningResponse(input: {
   if (["needs_review", "complete"].includes(input.job.status))
     return {
       status: "learned",
+      duplicate: input.job.duplicate,
       name: input.name,
       summary: input.job.summary,
       message: `${input.name} learned. Important findings are ready for owner review.`,
@@ -439,9 +516,11 @@ export function formatExternalLearningResponse(input: {
     };
   return {
     status: "learning_started",
+    duplicate: input.job.duplicate,
     name: input.name,
     job_id: input.job.id,
-    message: `Opryn is learning ${input.name}. Findings will remain Observed until reviewed.`,
+    message:
+      "Opryn received this conversation and is preparing it for review. Nothing is approved automatically.",
     review_url: reviewUrl,
   };
 }

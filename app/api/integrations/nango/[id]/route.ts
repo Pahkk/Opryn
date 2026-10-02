@@ -12,6 +12,7 @@ import {
   requireNangoCapability,
 } from "@/lib/integrations/nango-capabilities";
 import { z } from "zod";
+import { disconnectTeamsNango } from "@/lib/integrations/teams-nango";
 
 export async function GET(
   _request: Request,
@@ -149,6 +150,8 @@ export async function DELETE(
     });
     if (stopped.error || stopped.data !== true)
       throw new Error("Could not stop connection");
+    if (connection.provider === "teams")
+      await disconnectTeamsNango(context.membership.organization_id, id);
     try {
       await nangoRequest(
         connectionPath(

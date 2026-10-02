@@ -7,12 +7,13 @@ import {
   nangoRequest,
   readNangoConnection,
 } from "@/lib/integrations/nango";
+import type { IntegrationCapability } from "@/lib/integrations/types";
 
 export async function requireNangoCapability(
   db: SupabaseClient,
   organizationId: string,
   id: string,
-  capability: "knowledge_import",
+  capability: IntegrationCapability,
 ) {
   const { data, error } = await db
     .from("integrations")
@@ -60,6 +61,28 @@ export async function driveRequest(
 ) {
   return nangoRequest(`/proxy/drive/v3/${path}`, {
     headers: {
+      "Provider-Config-Key": connection.provider_config_key,
+      "Connection-Id": connection.external_connection_id,
+    },
+  });
+}
+
+/** Fixed, server-authored provider paths only. Never pass a browser URL here. */
+export async function providerProxyRequest(
+  connection: Awaited<ReturnType<typeof requireNangoCapability>>,
+  path: string,
+  init: RequestInit = {},
+) {
+  if (
+    !path.startsWith("/") ||
+    path.includes("..") ||
+    /^\/\/|https?:/i.test(path)
+  )
+    throw new ConnectionError("Invalid provider request.", 400);
+  return nangoRequest(`/proxy${path}`, {
+    ...init,
+    headers: {
+      ...init.headers,
       "Provider-Config-Key": connection.provider_config_key,
       "Connection-Id": connection.external_connection_id,
     },

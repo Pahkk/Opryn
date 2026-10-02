@@ -131,14 +131,16 @@ export function getCommunicationBot() {
       );
       if (!mapping) return;
       if (event.actionId === "opryn_ask_expert") {
-        await escalateChannelQuestion(
+        const sent = await escalateChannelQuestion(
           mapping.organizationId,
           mapping.userId,
           questionId,
         );
         if (event.thread)
           await event.thread.post(
-            "I sent this to the right person. Opryn will notify you when they answer.",
+            sent
+              ? "I sent this to the right person. Opryn will notify you when they answer."
+              : "This question can't be routed right now. Open Opryn to check its status.",
           );
         return;
       }
@@ -315,13 +317,26 @@ export function renderAnswerCard(result: ChannelAnswerResult) {
           ? `Related information:\n${result.related.content}`
           : "I couldn’t find approved company knowledge that answers this.",
       ),
+      ...(result.routed
+        ? [
+            CardText(
+              `Sent to ${result.expert?.name || "workspace owners"} for an answer.`,
+            ),
+          ]
+        : []),
       Actions([
-        Button({
-          id: "opryn_ask_expert",
-          label: result.expert ? `Ask ${result.expert.name}` : "Ask Owner",
-          value: result.questionId,
-          style: "primary",
-        }),
+        ...(result.routed === undefined
+          ? [
+              Button({
+                id: "opryn_ask_expert",
+                label: result.expert
+                  ? `Ask ${result.expert.name}`
+                  : "Ask Owner",
+                value: result.questionId,
+                style: "primary",
+              }),
+            ]
+          : []),
         LinkButton({
           url: `${OPRYN_SITE_URL}/app?question=${result.questionId}#needs-you`,
           label: "Open in Opryn",
@@ -395,44 +410,35 @@ async function escalateChannelQuestion(
   questionId: string,
 ) {
   const service = createServiceClient();
+  const { data: settings, error: settingsError } = await service
+    .from("organization_settings")
+    .select("allow_escalations")
+    .eq("organization_id", organizationId)
+    .maybeSingle();
+  if (settingsError) throw settingsError;
+  if (settings?.allow_escalations === false) return false;
   const { data: question } = await service
     .from("employee_questions")
-    .select("id,question,assigned_expert_id")
+    .select("id,status,escalated")
     .eq("id", questionId)
     .eq("organization_id", organizationId)
     .eq("asked_by", userId)
     .maybeSingle();
-  if (!question) return;
-  await service
+  if (!question || question.status !== "needs_owner") return false;
+  if (question.escalated) return true;
+  const { data: updated, error } = await service
     .from("employee_questions")
     .update({ escalated: true })
-    .eq("id", question.id);
-  const targetIds = question.assigned_expert_id
-    ? [question.assigned_expert_id]
-    : ((
-        await service
-          .from("organization_members")
-          .select("user_id")
-          .eq("organization_id", organizationId)
-          .in("permission_level", ["owner", "admin"])
-      ).data?.map((item) => item.user_id) ?? []);
-  if (targetIds.length)
-    await service.from("notifications").insert(
-      targetIds.map((targetId) => ({
-        organization_id: organizationId,
-        user_id: targetId,
-        type: question.assigned_expert_id
-          ? "expert_question"
-          : "owner_question",
-        title: "Opryn needs your help",
-        body: question.question,
-        link: `/app?question=${questionId}#needs-you`,
-        entity_type: "question",
-        entity_id: questionId,
-        action: "answer",
-        target_url: `/app?question=${questionId}#needs-you`,
-      })),
-    );
+    .eq("id", question.id)
+    .eq("organization_id", organizationId)
+    .eq("asked_by", userId)
+    .eq("status", "needs_owner")
+    .eq("escalated", false)
+    .select("id")
+    .maybeSingle();
+  if (error) throw error;
+  // The canonical SQL trigger owns notification delivery and deduplication.
+  return Boolean(updated);
 }
 
 async function saveChannelFeedback(input: {

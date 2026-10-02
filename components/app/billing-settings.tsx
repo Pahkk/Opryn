@@ -13,6 +13,8 @@ import { PLAN_DETAILS } from "@/lib/billing/plans";
 
 type Props = {
   plan: PlanId;
+  actualPrice: string | null;
+  actualCadence: string | null;
   interval: BillingInterval;
   status: string;
   periodEnd: string | null;
@@ -52,7 +54,7 @@ export function BillingSettings(props: Props) {
     }
   }
   return (
-    <section className="rounded-2xl border border-[#dfe5ed] bg-white p-5 sm:p-7">
+    <section className="billing-preferences">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
@@ -91,7 +93,7 @@ export function BillingSettings(props: Props) {
           update as soon as Stripe confirms the subscription.
         </div>
       ) : null}
-      <div className="mt-6 grid gap-3 sm:grid-cols-3">
+      <div className="billing-preferences-values mt-6">
         <BillingValue
           label="Current plan"
           value={props.hasSubscription ? details.name : "No paid plan"}
@@ -100,14 +102,18 @@ export function BillingSettings(props: Props) {
           label="Price"
           value={
             props.hasSubscription
-              ? `$${props.interval === "year" ? details.annualMonthlyEquivalent : details.monthlyPrice}/month`
+              ? props.actualPrice
+                ? `${props.actualPrice}/${props.actualCadence === "year" ? "year" : "month"}`
+                : "See billing portal"
               : "Not billing"
           }
           note={
             props.hasSubscription
-              ? props.interval === "year"
+              ? props.actualCadence === "year"
                 ? "billed annually"
-                : "billed monthly"
+                : props.actualPrice
+                  ? "billed monthly"
+                  : "Your current rate is in Stripe"
               : undefined
           }
         />
@@ -178,7 +184,7 @@ function BillingValue({
   note?: string;
 }) {
   return (
-    <div className="rounded-xl bg-[#f7f9fc] p-4">
+    <div className="billing-preferences-value">
       <p className="text-[11px] font-bold uppercase tracking-[.1em] text-[#7a8798]">
         {label}
       </p>

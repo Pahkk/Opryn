@@ -147,8 +147,8 @@ export function Comparison() {
 
 const plans = [
   {
-    name: "Opryn Core",
-    price: "99",
+    name: "Starter",
+    price: "49",
     copy: "Get company knowledge out of your head.",
     items: [
       "Up to 5 employees",
@@ -159,11 +159,11 @@ const plans = [
     ],
   },
   {
-    name: "Opryn Premium",
-    price: "249",
+    name: "Pro",
+    price: "129",
     copy: "Let Opryn learn from how work actually happens.",
     items: [
-      "Everything in Core",
+      "Everything in Starter",
       "Up to 20 employees",
       "Video and screen-recording learning",
       "Learn From Calls and advanced insights",
@@ -212,7 +212,7 @@ export function Pricing() {
                 href="/pricing"
                 className={`button mt-auto ${plan.featured ? "button-primary" : "button-secondary"}`}
               >
-                {plan.featured ? "Start Premium" : "Start with Core"}
+                {plan.featured ? "Choose Pro" : "Choose Starter"}
               </Link>
             </article>
           ))}

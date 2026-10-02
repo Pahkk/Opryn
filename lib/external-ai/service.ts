@@ -2,6 +2,7 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { trustedAnswerContext } from "@/lib/opryn/knowledge/trust";
+import type { ScopeContext } from "@/lib/opryn/knowledge/scope";
 import {
   answerCompanyQuestion,
   embedKnowledge,
@@ -15,6 +16,7 @@ export async function searchExternalKnowledge(
   query: string,
   limit = 12,
   scopes: Set<string> = new Set(["processes:read", "policies:read"]),
+  scopeContext: ScopeContext = {},
 ) {
   const result = await searchExternalKnowledgeWithEmbedding(
     service,
@@ -23,6 +25,7 @@ export async function searchExternalKnowledge(
     query,
     limit,
     scopes,
+    scopeContext,
   );
   return result.knowledge;
 }
@@ -34,6 +37,7 @@ export async function searchExternalKnowledgeWithEmbedding(
   query: string,
   limit = 12,
   scopes: Set<string> = new Set(["processes:read", "policies:read"]),
+  scopeContext: ScopeContext = {},
 ) {
   const sourceTypes = [
     "role_instruction",
@@ -55,13 +59,30 @@ export async function searchExternalKnowledgeWithEmbedding(
     match_count: Math.min(Math.max(limit, 1), 20),
   });
   if (error) throw error;
+  const raw = (data ?? []) as RetrievedKnowledge[];
+  const versions = raw.length
+    ? await service
+        .from("knowledge_chunks")
+        .select("id,current_version,content")
+        .eq("organization_id", organizationId)
+        .in(
+          "id",
+          raw.map((k) => k.id),
+        )
+    : { data: [], error: null };
+  if (versions.error) throw versions.error;
+  const stable = raw.filter((k) =>
+    versions.data?.some((v) => v.id === k.id && v.content === k.content),
+  );
   return {
-    knowledge: await trustedAnswerContext(
-      service,
-      organizationId,
-      (data ?? []) as RetrievedKnowledge[],
-    ),
+    knowledge: await trustedAnswerContext(service, organizationId, stable, {
+      ...scopeContext,
+      channels: ["external_ai"],
+    }),
     embedding,
+    versions: (versions.data ?? [])
+      .filter((v) => stable.some((k) => k.id === v.id))
+      .map((v) => ({ id: v.id, version: v.current_version })),
   };
 }
 
@@ -87,6 +108,7 @@ export async function logExternalActivity(
     resultStatus: "answered" | "unknown" | "created" | "error" | "rate_limited";
     startedAt: number;
     sourceCount?: number;
+    knowledgeVersions?: Array<{ id: string; version: number }>;
   },
 ) {
   await service.from("external_ai_activity").insert({
@@ -96,6 +118,7 @@ export async function logExternalActivity(
     result_status: input.resultStatus,
     latency_ms: Math.max(0, Date.now() - input.startedAt),
     source_count: input.sourceCount ?? 0,
+    knowledge_versions: input.knowledgeVersions ?? [],
   });
 }
 

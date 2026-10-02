@@ -23,6 +23,7 @@ import { createClient } from "@/lib/supabase/client";
 import { TeachPipeline } from "./teach-sources";
 import { SourceImport } from "@/components/onboarding/source-import";
 import { CallsIcon, DocumentIcon } from "@/components/opryn-icons/opryn-icons";
+import { OprynThinkingOrb } from "@/components/motion/opryn-thinking-orb";
 
 type Role = { id: string; name: string };
 type InitialCapture = {
@@ -51,7 +52,7 @@ export function CaptureProcess({
   initial?: InitialCapture;
   returnTo: string;
   plan: PlanId;
-  initialMode?: "text" | "drive" | "documents";
+  initialMode?: "text" | "drive" | "documents" | "voice";
   onPrepared?: (processId: string) => void;
 }) {
   const router = useRouter();
@@ -548,6 +549,23 @@ export function CaptureProcess({
     return (
       <div className="opryn-surface mx-auto max-w-3xl overflow-hidden p-7 sm:p-10">
         <TeachPipeline />
+        <div
+          className="mx-auto mt-3 grid w-fit place-items-center"
+          aria-hidden="true"
+        >
+          <OprynThinkingOrb
+            state={
+              mode === "text"
+                ? "solving"
+                : stage === 0
+                  ? "weaving"
+                  : "composing"
+            }
+            size={64}
+            label="Opryn is preparing findings"
+            decorative
+          />
+        </div>
         <h2 className="mt-5 text-center text-2xl font-semibold tracking-[-.035em] text-[var(--opryn-navy)]">
           Opryn is learning this process
         </h2>
@@ -649,7 +667,7 @@ export function CaptureProcess({
                 className="relative inline-flex min-h-11 items-center gap-2 rounded-[9px] border border-[var(--opryn-line)] bg-white px-3.5 text-xs font-semibold text-[#56647a] hover:border-[#9eb5d4] hover:text-[var(--opryn-blue)]"
               >
                 <CallsIcon size={16} /> Calls
-                <span className="opryn-premium-label">Premium</span>
+                <span className="opryn-premium-label">Pro</span>
               </Link>
             )}
           </div>
@@ -993,7 +1011,7 @@ function ModeButton({
         {locked ? <Lock className="size-4" /> : icon}
       </span>
       <span>{title}</span>
-      {premium ? <span className="opryn-premium-label">Premium</span> : null}
+      {premium ? <span className="opryn-premium-label">Pro</span> : null}
       <span className="sr-only">{note}</span>
     </button>
   );

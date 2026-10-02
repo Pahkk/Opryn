@@ -1,0 +1,103 @@
+.opryn-asset-icon {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  vertical-align: middle;
+  isolation: isolate;
+  overflow: visible;
+}
+.opryn-icon-art {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: 100%;
+  height: 100%;
+  padding: 1px;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+.opryn-icon-art img {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: contain;
+  user-select: none;
+}
+.opryn-icon-highlight {
+  position: absolute;
+  inset: -15%;
+  pointer-events: none;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(40, 85, 249, 0.14),
+    rgba(40, 85, 249, 0.06) 50%,
+    transparent 72%
+  );
+}
+.opryn-icon-halo {
+  position: absolute;
+  inset: 1px;
+  border: 1px solid #2855f9;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.opryn-icon-shell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 14px;
+  background: #eaf4ff;
+  border: 1px solid #dbe7f5;
+  overflow: visible;
+}
+.opryn-app .sidebar-link {
+  isolation: isolate;
+}
+.opryn-app .product-sidebar .sidebar-link[aria-current="page"] {
+  background: transparent;
+}
+.product-bottom-nav a {
+  isolation: isolate;
+}
+.opryn-asset-icon[data-icon-state="disabled"] {
+  opacity: 0.45;
+}
+.opryn-nav-active {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: 12px;
+  background: #eaf4ff;
+  border: 1px solid #d6e5fa;
+  pointer-events: none;
+}
+.opryn-app .sidebar-link:hover,
+.opryn-app .sidebar-link:focus-visible {
+  background: rgba(234, 244, 255, 0.6);
+}
+.opryn-app .sidebar-link:focus-visible {
+  outline: 2px solid #2855f9;
+  outline-offset: 2px;
+}
+.opryn-nav-label {
+  transition:
+    transform 180ms ease,
+    color 180ms ease;
+}
+.sidebar-link:hover .opryn-nav-label,
+.sidebar-link:focus-visible .opryn-nav-label {
+  transform: translateX(2px);
+  color: #2855f9;
+}
+@media (prefers-reduced-motion: reduce) {
+  .opryn-nav-label {
+    transition: none;
+    transform: none !important;
+  }
+}
+[data-motion="reduced"] .opryn-nav-label {
+  transition: none;
+  transform: none !important;
+}

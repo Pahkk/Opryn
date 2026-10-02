@@ -1,11 +1,18 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { apiError } from "@/lib/api";
-import { embedKnowledge, suggestRuleFromOwnerAnswer } from "@/lib/ai/services";
-import { getExternalAIAdminContext } from "@/lib/external-ai/admin";
+import { suggestRuleFromOwnerAnswer } from "@/lib/ai/services";
+import { getExternalAIAnswerContext } from "@/lib/external-ai/admin";
 
 const schema = z.object({
-  action: z.enum(["suggest", "approve", "answer_only", "dismiss"]),
+  action: z.enum([
+    "suggest",
+    "request_approval",
+    "approve",
+    "answer_only",
+    "dismiss",
+  ]),
+  oneTimeException: z.boolean().default(false),
   answer: z.string().trim().max(10000).default(""),
   rule: z.string().trim().max(10000).default(""),
   clarificationAnswers: z
@@ -23,7 +30,7 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string; escalationId: string }> },
 ) {
-  const context = await getExternalAIAdminContext();
+  const context = await getExternalAIAnswerContext();
   if ("error" in context) return context.error;
   const parsed = schema.safeParse(await request.json().catch(() => null));
   if (!parsed.success)
@@ -32,10 +39,17 @@ export async function POST(
       { status: 400 },
     );
   const { id, escalationId } = await params;
+  if (
+    !z.string().uuid().safeParse(id).success ||
+    !z.string().uuid().safeParse(escalationId).success
+  )
+    return NextResponse.json({ error: "Invalid escalation." }, { status: 400 });
   const org = context.membership.organization_id;
   const { data: escalation } = await context.supabase
     .from("external_ai_escalations")
-    .select("id,question,status,resolution,proposed_rule,cluster_id")
+    .select(
+      "id,question,status,resolution,proposed_rule,is_one_time_exception,assigned_to",
+    )
     .eq("id", escalationId)
     .eq("connection_id", id)
     .eq("organization_id", org)
@@ -45,34 +59,58 @@ export async function POST(
       { error: "Escalation not found." },
       { status: 404 },
     );
+  if (
+    !["owner", "admin"].includes(context.membership.permission_level) &&
+    escalation.assigned_to !== context.user.id
+  )
+    return NextResponse.json(
+      { error: "This question is assigned to another person." },
+      { status: 403 },
+    );
   try {
-    if (parsed.data.action === "dismiss") {
-      const { error } = await context.supabase
-        .from("external_ai_escalations")
-        .update({ status: "dismissed", resolved_at: new Date().toISOString() })
-        .eq("id", escalationId)
-        .eq("organization_id", org);
-      if (error) throw error;
-      return NextResponse.json({ ok: true });
-    }
     const answer = parsed.data.answer || escalation.resolution || "";
-    if (!answer)
+    if (!answer && parsed.data.action !== "dismiss")
       return NextResponse.json(
         { error: "Write an answer first." },
         { status: 400 },
       );
     if (parsed.data.action === "suggest") {
+      if (parsed.data.oneTimeException || escalation.is_one_time_exception)
+        return NextResponse.json(
+          {
+            error:
+              "Save this as an answer only. One-time exceptions cannot become company policy.",
+          },
+          { status: 400 },
+        );
+      if (escalation.status !== "open")
+        return NextResponse.json(
+          { error: "This escalation is already answered." },
+          { status: 409 },
+        );
       const suggested = await suggestRuleFromOwnerAnswer(
         escalation.question,
         answer,
         parsed.data.clarificationAnswers,
       );
-      const { error } = await context.supabase
-        .from("external_ai_escalations")
-        .update({ resolution: answer, proposed_rule: suggested.rule })
-        .eq("id", escalationId)
-        .eq("organization_id", org);
+      const { data: saved, error } = await context.supabase.rpc(
+        "submit_external_human_answer",
+        {
+          target_organization_id: org,
+          target_connection_id: id,
+          target_escalation_id: escalationId,
+          answer_action: "save_draft",
+          answer_text: answer,
+          proposal_content: suggested.rule,
+          one_time_exception: false,
+        },
+      );
       if (error) throw error;
+      if (!saved)
+        return NextResponse.json(
+          { error: "This escalation changed. Refresh before continuing." },
+          { status: 409 },
+        );
       return NextResponse.json({
         title: suggested.title,
         rule: suggested.rule,
@@ -80,81 +118,38 @@ export async function POST(
         clarificationQuestions: suggested.clarification_questions,
       });
     }
-    if (parsed.data.action === "approve") {
-      const ruleText = parsed.data.rule || escalation.proposed_rule;
-      if (!ruleText)
-        return NextResponse.json(
-          { error: "Add a reusable rule before approving." },
-          { status: 400 },
-        );
-      const title = escalation.question.slice(0, 120);
-      const { data: rule, error: ruleError } = await context.supabase
-        .from("process_rules")
-        .insert({
-          organization_id: org,
-          process_id: null,
-          title,
-          text: ruleText,
-          status: "approved",
-          created_by: context.user.id,
-          approved_by: context.user.id,
-          approved_at: new Date().toISOString(),
-        })
-        .select("id")
-        .single();
-      if (ruleError) throw ruleError;
-      const [embedding] = await embedKnowledge([`${title}: ${ruleText}`]);
-      const now = new Date().toISOString();
-      const { data: chunk, error: knowledgeError } = await context.supabase
-        .from("knowledge_chunks")
-        .insert({
-          organization_id: org,
-          content: `${title}: ${ruleText}`,
-          embedding,
-          source_type: "owner_answer",
-          source_id: escalation.id,
-          rule_id: rule.id,
-          approved: true,
-          last_confirmed_at: now,
-          current_version: 1,
-        })
-        .select("id")
-        .single();
-      if (knowledgeError) throw knowledgeError;
-      const { error: versionError } = await context.supabase
-        .from("knowledge_versions")
-        .insert({
-          organization_id: org,
-          knowledge_chunk_id: chunk.id,
-          version_number: 1,
-          title,
-          content: `${title}: ${ruleText}`,
-          changed_by: context.user.id,
-          change_reason: "Remembered from an AI connection question",
-        });
-      if (versionError) throw versionError;
-      if (escalation.cluster_id)
-        await context.supabase
-          .from("question_clusters")
-          .update({ status: "resolved" })
-          .eq("id", escalation.cluster_id)
-          .eq("organization_id", org);
+    // Legacy clients' "approve" now requests review, never directly publishes policy.
+    const { data, error } = await context.supabase.rpc(
+      "submit_external_human_answer",
+      {
+        target_organization_id: org,
+        target_connection_id: id,
+        target_escalation_id: escalationId,
+        answer_action:
+          parsed.data.action === "approve"
+            ? "request_approval"
+            : parsed.data.action,
+        answer_text: answer,
+        proposal_content: parsed.data.rule,
+        one_time_exception: parsed.data.oneTimeException,
+      },
+    );
+    if (error) {
+      const status =
+        error.code === "42501"
+          ? 403
+          : error.code === "P0002"
+            ? 404
+            : error.code === "40001"
+              ? 409
+              : ["23514", "22023"].includes(error.code)
+                ? 400
+                : 500;
+      if (status !== 500)
+        return NextResponse.json({ error: error.message }, { status });
+      throw error;
     }
-    const { error } = await context.supabase
-      .from("external_ai_escalations")
-      .update({
-        resolution: answer,
-        proposed_rule: parsed.data.rule || escalation.proposed_rule,
-        status: "answered",
-        resolved_at: new Date().toISOString(),
-      })
-      .eq("id", escalationId)
-      .eq("organization_id", org);
-    if (error) throw error;
-    return NextResponse.json({
-      ok: true,
-      learned: parsed.data.action === "approve",
-    });
+    return NextResponse.json(data);
   } catch (error) {
     return apiError(error, "The owner answer could not be saved.");
   }

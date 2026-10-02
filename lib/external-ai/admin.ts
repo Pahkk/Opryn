@@ -28,3 +28,23 @@ export async function getExternalAIAdminContext() {
     throw error;
   }
 }
+
+/** Assignment authorization is enforced on the exact escalation by its route and RPC. */
+export async function getExternalAIAnswerContext() {
+  const context = await getRequestContext();
+  if ("error" in context) return context;
+  try {
+    await requireFeature(
+      context.supabase,
+      context.membership.organization_id,
+      "aiConnections",
+    );
+    return context;
+  } catch (error) {
+    if (error instanceof FeatureUnavailableError)
+      return {
+        error: NextResponse.json({ error: error.message }, { status: 403 }),
+      } as const;
+    throw error;
+  }
+}

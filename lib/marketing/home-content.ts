@@ -4,9 +4,8 @@ export const heroVariants = {
     headline: "Teach your business once.",
     lines: [
       "Help your team get answers.",
-      "Get new people up to speed.",
-      "Give your agents company context.",
-      "Keep knowledge in one place.",
+      "Give your AI company context.",
+      "Keep approved guidance consistent.",
     ],
   },
   B: {

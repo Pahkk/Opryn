@@ -7,8 +7,10 @@ import { ArrowRight } from "lucide-react";
 import type { AccountSettings } from "@/lib/account-settings";
 import { createClient } from "@/lib/supabase/client";
 import { DialogSurface } from "@/components/app/dialog-surface";
+import { MotionRegion } from "@/components/motion/motion-region";
 import { SettingsFeedback, SettingsToggle } from "./primitives";
 import { useSaveFeedback, useUnsavedChanges } from "./form-state";
+import { OprynAction } from "@/components/motion/opryn-action";
 
 export function AccountForm({
   section,
@@ -274,12 +276,24 @@ export function AccountForm({
         ) : null}
         <SettingsFeedback error={feedback.error} message={feedback.message} />
         <div className="settings-actions">
-          <button
-            className="settings-button primary"
+          <OprynAction
+            type="submit"
+            label="Save changes"
+            pendingLabel="Saving…"
+            successLabel="Saved"
+            repeatable
+            state={
+              feedback.saving
+                ? "pending"
+                : feedback.error
+                  ? "error"
+                  : feedback.message && !dirty
+                    ? "success"
+                    : "idle"
+            }
             disabled={!dirty || feedback.saving}
-          >
-            {feedback.saving ? "Saving…" : "Save changes"}
-          </button>
+            announce={false}
+          />
           {dirty ? (
             <span className="text-xs text-[var(--opryn-muted)]">
               Unsaved changes
@@ -406,7 +420,11 @@ function AvatarEditor({
   return (
     <>
       <div className="settings-avatar-row">
-        <span className="settings-avatar">
+        <MotionRegion
+          variant="quiet"
+          changeKey={url || "initials"}
+          className="settings-avatar"
+        >
           {url ? (
             <Image
               src={url}
@@ -418,7 +436,7 @@ function AvatarEditor({
           ) : (
             name.slice(0, 1).toUpperCase()
           )}
-        </span>
+        </MotionRegion>
         <div>
           <div className="settings-actions">
             <button

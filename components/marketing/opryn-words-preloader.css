@@ -1,0 +1,159 @@
+.opryn-words-preloader {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  /* The opener is a visual introduction, never an interaction gate. */
+  pointer-events: none;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-height: 100svh;
+  overflow: hidden;
+  padding: clamp(24px, 4vw, 52px);
+  background:
+    radial-gradient(circle at 72% 46%, rgb(40 85 249 / 16%), transparent 31%),
+    #050608;
+  color: #f7f9fc;
+  transform-origin: top;
+}
+
+.opryn-words-preloader.is-skipping {
+  display: none;
+}
+
+.opryn-words-preloader::before {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(
+    rgb(154 180 232 / 13%) 0.65px,
+    transparent 0.65px
+  );
+  background-size: 24px 24px;
+  opacity: 0.24;
+  content: "";
+  mask-image: linear-gradient(
+    90deg,
+    transparent,
+    black 22%,
+    black 76%,
+    transparent
+  );
+}
+
+.opryn-preloader-top,
+.opryn-preloader-progress,
+.opryn-preloader-word-window {
+  position: relative;
+  z-index: 1;
+}
+
+.opryn-preloader-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  color: #8f9bae;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.opryn-preloader-top img {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+}
+
+.opryn-preloader-word-window {
+  display: grid;
+  min-height: 1.08em;
+  align-self: center;
+  overflow: hidden;
+  perspective: 700px;
+  font-size: clamp(58px, 10.8vw, 164px);
+  font-weight: 720;
+  letter-spacing: -0.075em;
+  line-height: 1;
+}
+
+.opryn-preloader-word-window > span {
+  grid-area: 1 / 1;
+  align-self: center;
+}
+
+.opryn-preloader-progress {
+  display: grid;
+  grid-template-columns: auto minmax(80px, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  color: #8995a8;
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.opryn-preloader-progress > div {
+  height: 1px;
+  overflow: hidden;
+  background: rgb(255 255 255 / 13%);
+}
+
+.opryn-preloader-progress i {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-origin: left;
+  background: #4b73ff;
+}
+
+.opryn-preloader-curve {
+  position: absolute;
+  right: -12%;
+  bottom: -37vw;
+  left: -12%;
+  height: 39vw;
+  border-top: 1px solid rgb(75 115 255 / 42%);
+  border-radius: 50% 50% 0 0;
+  background: rgb(40 85 249 / 5%);
+  pointer-events: none;
+}
+
+@media (max-width: 700px) {
+  .opryn-words-preloader {
+    padding: 22px 20px 30px;
+  }
+
+  .opryn-preloader-top span {
+    max-width: 155px;
+    text-align: right;
+    line-height: 1.4;
+  }
+
+  .opryn-preloader-word-window {
+    font-size: clamp(54px, 18vw, 78px);
+    letter-spacing: -0.065em;
+  }
+
+  .opryn-preloader-progress {
+    grid-template-columns: auto 1fr;
+  }
+
+  .opryn-preloader-progress > span:last-child {
+    display: none;
+  }
+
+  .opryn-preloader-curve {
+    right: -34%;
+    bottom: -29vw;
+    left: -34%;
+    height: 58vw;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .opryn-words-preloader {
+    display: none;
+  }
+}

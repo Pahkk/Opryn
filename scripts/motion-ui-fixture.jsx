@@ -1,4 +1,4 @@
-// Local-only: real GSAP/React, no services or credentials.
+// Local-only: real Motion/GSAP/React, no services or credentials.
 import React, { useEffect, useState, StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { flushSync } from "react-dom";
@@ -22,7 +22,7 @@ function Fixture() {
         flushSync(() => setState((s) => ({ ...s, ...patch })));
       },
       active: () =>
-        gsap.globalTimeline
+        document.getAnimations().filter(a => a.playState === "running").length + gsap.globalTimeline
           .getChildren(true, true, true)
           .filter((t) => t.totalProgress() < 1).length,
       fail() {

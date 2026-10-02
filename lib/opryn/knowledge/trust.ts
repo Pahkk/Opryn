@@ -2,6 +2,8 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { RetrievedKnowledge } from "@/lib/ai/services";
 import { answeringMustWait } from "./health-model";
+import { scopedKnowledgeContext } from "./scoped-context";
+import type { ScopeContext } from "./scope";
 
 export class KnowledgeConflictError extends Error {
   constructor() {
@@ -45,7 +47,16 @@ export async function trustedAnswerContext(
   service: SupabaseClient,
   organizationId: string,
   knowledge: RetrievedKnowledge[],
+  scopeContext: ScopeContext = {},
 ) {
+  knowledge = (
+    await scopedKnowledgeContext(
+      service,
+      organizationId,
+      knowledge,
+      scopeContext,
+    )
+  ).knowledge;
   if (!knowledge.length) return knowledge;
   const ids = [...new Set(knowledge.map((item) => item.id))];
   const [rows, review] = await Promise.all([

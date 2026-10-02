@@ -41,7 +41,7 @@ export async function POST(request: Request) {
   if (employeeSeats >= teamLimit)
     return NextResponse.json(
       {
-        error: `${subscription.plan === "premium" ? "Premium" : "Core"} includes up to ${teamLimit} employees. Upgrade or remove a pending invite to add another teammate.`,
+        error: `${subscription.plan === "premium" ? "Pro" : "Starter"} includes up to ${teamLimit} employees. Upgrade or remove a pending invite to add another teammate.`,
         code: "team_limit_reached",
       },
       { status: 402 },

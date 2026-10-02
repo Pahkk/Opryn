@@ -23,7 +23,7 @@ export function CallsLocked() {
         <div className="grid gap-8 p-6 sm:p-10 lg:grid-cols-[1fr_.75fr]">
           <div>
             <span className="inline-flex items-center gap-2 rounded-full bg-[#eaf7f1] px-3 py-1 text-xs font-bold text-[#177257]">
-              <LockKeyhole className="size-3.5" /> Premium
+              <LockKeyhole className="size-3.5" /> Pro
             </span>
             <h2 className="mt-5 text-3xl font-semibold tracking-[-.04em]">
               Learn from the conversations already happening.
@@ -36,7 +36,7 @@ export function CallsLocked() {
               onClick={() => setOpen(true)}
               className="mt-7 inline-flex min-h-12 items-center gap-2 rounded-xl bg-[#3158d8] px-5 text-sm font-semibold text-white"
             >
-              Upgrade to Premium <ArrowRight className="size-4" />
+              Upgrade to Pro <ArrowRight className="size-4" />
             </button>
           </div>
           <div className="rounded-2xl bg-[#111d34] p-6 text-white">
@@ -195,7 +195,7 @@ export function CallUploader({ organizationId }: { organizationId: string }) {
           </p>
         </div>
         <span className="rounded-full bg-[#eaf7f1] px-3 py-1 text-[10px] font-bold uppercase text-[#177257]">
-          Premium
+          Pro
         </span>
       </div>
       <div className="mt-5 grid gap-4 sm:grid-cols-2">

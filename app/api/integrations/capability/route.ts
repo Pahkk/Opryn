@@ -6,21 +6,30 @@ export async function GET(request: Request) {
   const context = await getRequestContext({ admin: true });
   if ("error" in context) return context.error;
   const params = new URL(request.url).searchParams;
+  const provider = params.get("provider");
+  const capability = params.get("capability");
   if (
-    params.get("provider") !== "google_drive" ||
-    params.get("capability") !== "knowledge_import"
+    !provider ||
+    !["google_drive", "notion", "confluence", "teams"].includes(provider) ||
+    !capability ||
+    !["knowledge_import", "ask_opryn"].includes(capability)
   )
     return NextResponse.json(
       { error: "This action is not supported." },
       { status: 400 },
     );
   try {
-    getNangoProvider("google_drive");
+    const configured = getNangoProvider(provider);
+    if (!configured.capabilities.includes(capability as never))
+      return NextResponse.json(
+        { error: "This action is not supported." },
+        { status: 400 },
+      );
     const { data, error } = await context.supabase
       .from("integrations")
       .select("id,status,auth_platform,capabilities")
       .eq("organization_id", context.membership.organization_id)
-      .eq("provider", "google_drive")
+      .eq("provider", provider)
       .maybeSingle();
     if (error) throw error;
     return NextResponse.json(
@@ -28,7 +37,7 @@ export async function GET(request: Request) {
         connectionId:
           data?.auth_platform === "nango" &&
           data.status === "connected" &&
-          data.capabilities?.includes("knowledge_import")
+          data.capabilities?.includes(capability)
             ? data.id
             : null,
       },
@@ -36,7 +45,7 @@ export async function GET(request: Request) {
     );
   } catch {
     return NextResponse.json(
-      { error: "Google Workspace is unavailable right now. Please try again." },
+      { error: "This connection is unavailable right now. Please try again." },
       { status: 503 },
     );
   }

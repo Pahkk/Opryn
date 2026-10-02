@@ -1,8 +1,11 @@
 "use client";
 
-import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { showAppToast } from "@/lib/client-toast";
+import {
+  OprynAction,
+  useActionFeedback,
+} from "@/components/motion/opryn-action";
 
 type Action =
   | { action: "confirm_knowledge"; knowledgeId: string; version: number }
@@ -30,63 +33,49 @@ export function InboxAction({
   primary?: boolean;
 }) {
   const router = useRouter();
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const [busy, setBusy] = useState(false);
+  const feedback = useActionFeedback();
   async function run() {
-    setBusy(true);
-    let response: Response;
-    try {
-      response = await fetch("/api/learning-inbox", {
+    await feedback.run(async () => {
+      const response = await fetch("/api/learning-inbox", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(action),
       });
-    } catch {
-      setBusy(false);
+      const body = (await response.json().catch(() => ({}))) as {
+        error?: string;
+      };
+      if (!response.ok) {
+        throw new Error(
+          body.error || "That review wasn't saved. Please try again.",
+        );
+      }
       showAppToast(
-        "That review wasn't saved.",
-        "Check your connection and try again.",
+        action.action === "confirm_knowledge"
+          ? "Still accurate."
+          : "Learning Inbox updated.",
+        action.action === "confirm_knowledge"
+          ? "Opryn will keep using this approved knowledge."
+          : "Your review was saved.",
       );
-      return;
-    }
-    const body = (await response.json().catch(() => ({}))) as {
-      error?: string;
-    };
-    setBusy(false);
-    if (!response.ok) {
-      showAppToast(
-        "That review wasn't saved.",
-        body.error || "Please try again.",
-      );
-      return;
-    }
-    buttonRef.current
-      ?.closest("[data-inbox-card]")
-      ?.classList.add("is-resolving");
-    showAppToast(
-      action.action === "confirm_knowledge"
-        ? "Still accurate."
-        : "Learning Inbox updated.",
-      action.action === "confirm_knowledge"
-        ? "Opryn will keep using this approved knowledge."
-        : "Your review was saved.",
-    );
-    window.setTimeout(() => router.refresh(), 260);
+      router.refresh();
+    });
   }
   return (
-    <button
-      ref={buttonRef}
-      type="button"
-      disabled={busy}
+    <OprynAction
+      label={typeof children === "string" ? children : "Save review"}
+      pendingLabel="Saving…"
+      successLabel={
+        action.action === "resolve_conflict"
+          ? "Resolved"
+          : action.action === "confirm_knowledge"
+            ? "Confirmed"
+            : "Saved"
+      }
+      state={feedback.state}
+      errorMessage={feedback.error}
+      variant={primary ? "primary" : "secondary"}
       onClick={() => void run()}
-      className={`min-h-10 rounded-lg px-3.5 text-xs font-semibold disabled:opacity-50 ${
-        primary
-          ? "bg-[#3158d8] text-white"
-          : "border border-[#d5dde7] bg-white text-[#536176]"
-      }`}
-    >
-      {busy ? "Saving…" : children}
-    </button>
+    />
   );
 }
 
@@ -100,45 +89,43 @@ export function SuggestedKnowledgeApproval({
   rule: string;
 }) {
   const router = useRouter();
-  const [busy, setBusy] = useState(false);
+  const feedback = useActionFeedback();
   async function approve() {
-    setBusy(true);
-    const response = await fetch(`/api/questions/${questionId}/resolve`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        answerId,
-        action: "approve",
-        title: "Expert guidance",
-        rule,
-      }),
-    });
-    const body = (await response.json().catch(() => ({}))) as {
-      error?: string;
-    };
-    setBusy(false);
-    if (!response.ok) {
+    await feedback.run(async () => {
+      const response = await fetch(`/api/questions/${questionId}/resolve`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          answerId,
+          action: "approve",
+          title: "Expert guidance",
+          rule,
+        }),
+      });
+      const body = (await response.json().catch(() => ({}))) as {
+        error?: string;
+      };
+      if (!response.ok) {
+        throw new Error(
+          body.error || "That approval wasn't saved. Please try again.",
+        );
+      }
       showAppToast(
-        "That approval wasn't saved.",
-        body.error || "Please try again.",
+        "Opryn remembered it.",
+        "Your team can use this approved answer now.",
       );
-      return;
-    }
-    showAppToast(
-      "Opryn remembered it.",
-      "Your team can use this approved answer now.",
-    );
-    router.refresh();
+      router.refresh();
+    });
   }
   return (
-    <button
-      type="button"
-      disabled={busy}
+    <OprynAction
+      label="Remember It"
+      pendingLabel="Approving…"
+      successLabel="Approved"
+      state={feedback.state}
+      errorMessage={feedback.error}
       onClick={() => void approve()}
-      className="min-h-10 rounded-lg bg-[#3158d8] px-3.5 text-xs font-semibold text-white disabled:opacity-50"
-    >
-      {busy ? "Approving…" : "Remember It"}
-    </button>
+    />
   );
 }
 
@@ -151,6 +138,7 @@ export function KnowledgeCriticalityToggle({
 }) {
   return (
     <InboxAction
+      key={critical ? "critical" : "normal"}
       action={{
         action: "set_criticality",
         knowledgeId,

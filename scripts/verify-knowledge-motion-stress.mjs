@@ -54,14 +54,14 @@ for (const [name, engine] of [
     await expect
       .poll(() => page.evaluate(() => scrollY))
       .toBeLessThan(beforeReverse - 200);
-    await seek(112 / 153);
+    await seek(0.8);
     await expect(page.locator(".kc-destination-4")).toHaveCSS("opacity", "1");
     for (const width of [1280, 1024, 1440]) {
       await page.setViewportSize({ width, height: 900 });
       await expect
         .poll(() => root.getAttribute("data-scroll-distance"))
-        .toBe("3420");
-      await seek(112 / 153);
+        .toBe("4860");
+      await seek(0.8);
       await expect(page.locator(".kc-destination-4")).toHaveCSS("opacity", "1");
       await expect
         .poll(() =>
@@ -91,7 +91,7 @@ for (const [name, engine] of [
                 .getBoundingClientRect()
                 .toJSON(),
               slot: root
-                .querySelector(".kc-hub-slot")
+                .querySelector('[data-layout="hub"]')
                 .getBoundingClientRect()
                 .toJSON(),
               style: root.querySelector(".kc-knowledge").getAttribute("style"),
@@ -104,7 +104,7 @@ for (const [name, engine] of [
         });
     }
     // Rapid navigation and Back must rebuild one scene, not retain orphaned pins.
-    await page.locator(".kc-after a").click();
+    await page.locator('.public-footer a[href="/signup"]').click();
     await expect(page).toHaveURL(/\/signup/);
     await page.goBack();
     await root.scrollIntoViewIfNeeded();
@@ -125,7 +125,7 @@ for (const [name, engine] of [
         path: `artifacts/public-slate/story/${name}-mobile-progress-${width}.png`,
       });
       await root.locator(".kc-feedback").scrollIntoViewIfNeeded();
-      await expect(root.locator(".kc-gap-queued")).toBeVisible();
+      await expect(root.locator(".kc-new-proposal")).toBeVisible();
       await page.screenshot({
         path: `artifacts/public-slate/story/${name}-feedback-${width}.png`,
       });
@@ -138,7 +138,7 @@ for (const [name, engine] of [
     await page.emulateMedia({ reducedMotion: "reduce" });
     await expect(root).not.toHaveAttribute("data-mobile-story", "true");
     await expect(root.locator(".kc-progress")).toBeHidden();
-    await expect(root.locator(".kc-gap-queued")).toHaveCSS("opacity", "1");
+    await expect(root.locator(".kc-new-proposal")).toHaveCSS("opacity", "1");
     await page.close();
     console.log(
       `${name}: wheel, trackpad-like deltas, same-breakpoint resize alignment, Back, mobile sticky progress, feedback, reduced motion passed.`,

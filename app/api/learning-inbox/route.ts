@@ -23,7 +23,9 @@ const schema = z.discriminatedUnion("action", [
   z.object({
     action: z.literal("resolve_conflict"),
     conflictId: z.string().uuid(),
-    resolution: z.enum(["use_first", "use_second", "keep_both"]),
+    resolution: z.enum(["use_first", "use_second", "keep_both", "keep_scoped"]),
+    expectedFirstVersion: z.number().int().positive(),
+    expectedSecondVersion: z.number().int().positive(),
   }),
   z.object({
     action: z.literal("set_criticality"),
@@ -69,6 +71,8 @@ export async function POST(request: Request) {
               target_organization_id: organizationId,
               target_conflict_id: action.conflictId,
               decision: action.resolution,
+              expected_first_version: action.expectedFirstVersion,
+              expected_second_version: action.expectedSecondVersion,
             });
       if (result.error) {
         if (result.error.code === "53300")
@@ -138,18 +142,16 @@ export async function POST(request: Request) {
           { error: "Review this item's conflict before updating it." },
           { status: 409 },
         );
-      const event = await supabase
-        .from("knowledge_events")
-        .insert({
-          organization_id: organizationId,
-          event_type: "knowledge_updated",
-          actor_id: user.id,
-          knowledge_chunk_id: action.knowledgeId,
-          metadata:
-            action.action === "set_criticality"
-              ? { criticality: action.criticality }
-              : { review_requested: true },
-        });
+      const event = await supabase.from("knowledge_events").insert({
+        organization_id: organizationId,
+        event_type: "knowledge_updated",
+        actor_id: user.id,
+        knowledge_chunk_id: action.knowledgeId,
+        metadata:
+          action.action === "set_criticality"
+            ? { criticality: action.criticality }
+            : { review_requested: true },
+      });
       if (event.error) throw event.error;
     }
     return NextResponse.json({ ok: true });

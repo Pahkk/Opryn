@@ -4,6 +4,7 @@ import { getRequestContext } from "@/lib/api";
 import { createServiceClient } from "@/lib/supabase/service";
 import { getNangoProvider } from "@/lib/integrations/nango-providers";
 import { ConnectionError, readNangoConnection } from "@/lib/integrations/nango";
+import { reconcileTeamsNangoConnection } from "@/lib/integrations/teams-nango";
 
 export async function GET(
   _request: Request,
@@ -157,6 +158,13 @@ export async function POST(
     });
     if (saved.error || !saved.data)
       throw new ConnectionError("Connection confirmation failed.");
+
+    if (attempt.provider === "teams")
+      await reconcileTeamsNangoConnection({
+        organizationId: attempt.organization_id,
+        userId: attempt.user_id,
+        integrationId: saved.data,
+      });
 
     return NextResponse.json(
       { connectionId: saved.data },

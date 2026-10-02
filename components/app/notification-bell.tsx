@@ -4,6 +4,8 @@ import Link from "next/link";
 import { DialogSurface } from "@/components/app/dialog-surface";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { motion } from "motion/react";
+import { useProductReducedMotion } from "@/lib/motion/use-product-motion";
 import { Bell, Check, CircleHelp, Inbox, UserPlus, X } from "lucide-react";
 
 export type AppNotification = {
@@ -25,6 +27,7 @@ export function NotificationBell({
   initialCount: number;
 }) {
   const router = useRouter();
+  const reduced = useProductReducedMotion();
   const [open, setOpen] = useState(false);
   const [locallyRead, setLocallyRead] = useState<Set<string>>(() => new Set());
   const [marking, setMarking] = useState(false);
@@ -88,9 +91,16 @@ export function NotificationBell({
       >
         <Bell className="size-[19px]" />
         {count ? (
-          <span className="absolute -right-1 -top-1 grid min-w-5 place-items-center rounded-full bg-[#3158d8] px-1 text-[10px] font-bold leading-5 text-white ring-2 ring-white">
+          <motion.span
+            key={count}
+            aria-hidden="true"
+            initial={reduced ? false : { scale: 0.7, opacity: 0 }}
+            animate={{ scale: reduced ? 1 : [0.7, 1.08, 1], opacity: 1 }}
+            transition={{ duration: reduced ? 0 : 0.22 }}
+            className="absolute -right-1 -top-1 grid min-w-5 place-items-center rounded-full bg-[#3158d8] px-1 text-[10px] font-bold leading-5 text-white ring-2 ring-white"
+          >
             {count > 99 ? "99+" : count}
-          </span>
+          </motion.span>
         ) : null}
       </button>
 

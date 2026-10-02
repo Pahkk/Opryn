@@ -15,6 +15,10 @@ const inputSchema = z
     description: z.string().trim().min(5).max(2000),
     goal: z.string().max(80).default(""),
     industryQuery: z.string().max(150).default(""),
+    name: z.string().trim().max(160).default(""),
+    website: z.string().max(2000).default(""),
+    industry: z.string().max(100).default(""),
+    employeeCount: z.number().int().min(1).max(100000).optional(),
   })
   .strict();
 export async function POST(request: Request) {

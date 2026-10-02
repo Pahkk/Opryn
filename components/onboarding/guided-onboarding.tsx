@@ -147,7 +147,7 @@ const goals = [
     "ai_tools",
     "Giving AI tools company context",
     "Connect ChatGPT, Claude, or an existing agent.",
-    "Premium",
+    "Pro",
   ],
 ] as const;
 const goalPlans: Record<string, { title: string; description: string }> = {
@@ -225,13 +225,13 @@ const learningSources = [
     "twilio",
     "Calls",
     "Learn from selected recorded business conversations.",
-    "Premium",
+    "Pro",
   ],
   [
     "video",
     "Video / Screen Recording",
     "Show Opryn how you perform a process.",
-    "Premium",
+    "Pro",
   ],
 ] as const;
 const aiTools = [
@@ -262,7 +262,7 @@ const aiTools = [
     "custom_agent",
     "Custom AI Agent",
     "Connect an agent through Opryn's MCP or API.",
-    "Premium",
+    "Pro",
   ],
   [
     "voice_agent",
@@ -2232,7 +2232,7 @@ function ConnectionRow({
                 : skipped
                   ? "Skipped"
                   : premiumLocked
-                    ? "Premium"
+                    ? "Pro"
                     : "Needs setup"}
             </span>
           </div>
@@ -2266,7 +2266,7 @@ function ConnectionRow({
                 className="inline-flex min-h-10 items-center gap-1 rounded-xl border border-[#cbd5e2] bg-white px-4 text-xs font-semibold transition hover:-translate-y-0.5 hover:border-[#146bff] hover:shadow-sm motion-reduce:transform-none"
               >
                 {premiumLocked
-                  ? "Explore Premium"
+                  ? "Explore Pro"
                   : provider.id === "google_drive"
                     ? "Connect"
                     : "Connect"}

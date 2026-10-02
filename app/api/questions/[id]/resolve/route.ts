@@ -8,6 +8,7 @@ const schema = z.object({
   action: z.enum(["approve", "answer_only", "request_approval"]),
   title: z.string().trim().max(200).optional(),
   rule: z.string().trim().max(10000).optional(),
+  oneTimeException: z.boolean().default(false),
 });
 
 export async function POST(
@@ -27,7 +28,9 @@ export async function POST(
   const isAdmin = ["owner", "admin"].includes(membership.permission_level);
   const { data: question } = await supabase
     .from("employee_questions")
-    .select("id,question,asked_by,status,cluster_id,assigned_expert_id,assigned_expert_rule_id")
+    .select(
+      "id,question,asked_by,status,cluster_id,assigned_expert_id,assigned_expert_rule_id",
+    )
     .eq("id", id)
     .eq("organization_id", membership.organization_id)
     .maybeSingle();
@@ -46,7 +49,7 @@ export async function POST(
   const { data: answer } = await supabase
     .from("question_answers")
     .select(
-      "id,answer,proposed_rule,answer_type,answered_by,approved_as_knowledge",
+      "id,answer,proposed_rule,answer_type,answered_by,approved_as_knowledge,is_one_time_exception",
     )
     .eq("id", parsed.data.answerId)
     .eq("question_id", id)
@@ -54,6 +57,51 @@ export async function POST(
     .maybeSingle();
   if (!answer)
     return NextResponse.json({ error: "Answer not found." }, { status: 404 });
+
+  if (
+    parsed.data.action === "approve" &&
+    (answer.is_one_time_exception || parsed.data.oneTimeException)
+  )
+    return NextResponse.json(
+      {
+        error:
+          "Use this exception once. It cannot become general company policy.",
+      },
+      { status: 400 },
+    );
+
+  // Human-answer delivery and proposal creation must succeed or roll back together.
+  if (parsed.data.action !== "approve") {
+    const { data, error } = await supabase.rpc("submit_human_answer", {
+      target_organization_id: membership.organization_id,
+      target_question_id: id,
+      target_answer_id: answer.id,
+      answer_action: parsed.data.action,
+      proposal_title: parsed.data.title ?? null,
+      proposal_content: parsed.data.rule ?? null,
+      one_time_exception: parsed.data.oneTimeException,
+    });
+    if (error) {
+      const status =
+        error.code === "42501"
+          ? 403
+          : error.code === "40001"
+            ? 409
+            : error.code === "23514"
+              ? 400
+              : 500;
+      return NextResponse.json(
+        {
+          error:
+            status === 500
+              ? "Unable to submit this answer. Nothing was published."
+              : "This answer cannot be submitted with that action. Refresh and review it.",
+        },
+        { status },
+      );
+    }
+    return NextResponse.json(data);
+  }
 
   const [{ data: settings }, { data: expertAuthority }] = await Promise.all([
     supabase
@@ -242,7 +290,7 @@ export async function POST(
     return NextResponse.json({
       ok: true,
       learned: parsed.data.action === "approve",
-      awaitingApproval: parsed.data.action === "request_approval",
+      awaitingApproval: false,
       knowledgeChunkId,
     });
   } catch (error) {

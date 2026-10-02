@@ -1,0 +1,171 @@
+.opryn-action-wrap {
+  display: inline-flex;
+  flex-direction: column;
+  vertical-align: middle;
+  max-width: 100%;
+}
+.opryn-feedback-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 11px 18px;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+  transition:
+    background-color 200ms,
+    border-color 200ms,
+    color 200ms;
+}
+.opryn-feedback-primary {
+  background: #2855f9;
+  color: white;
+}
+.opryn-feedback-primary:not(:disabled):is(:hover, :focus-visible) {
+  background: #2045ce;
+}
+.opryn-feedback-secondary {
+  background: white;
+  color: #14213d;
+  border-color: #d7dfed;
+}
+.opryn-feedback-secondary:not(:disabled):is(:hover, :focus-visible) {
+  background: #eaf4ff;
+  border-color: #9eb6fb;
+}
+.opryn-feedback-inline,
+.opryn-feedback-icon {
+  background: transparent;
+  color: #2045ce;
+  padding: 8px 10px;
+}
+.opryn-feedback-inline:not(:disabled):is(:hover, :focus-visible),
+.opryn-feedback-icon:not(:disabled):is(:hover, :focus-visible) {
+  background: #eaf4ff;
+}
+.opryn-feedback-destructive {
+  background: #fff4f4;
+  color: #99424b;
+  border-color: #eed5d7;
+}
+.opryn-feedback-action:focus-visible {
+  outline: 2px solid #2855f9;
+  outline-offset: 4px;
+}
+.opryn-feedback-action:disabled {
+  cursor: default;
+}
+.opryn-feedback-action:disabled[data-action-state="idle"] {
+  opacity: 0.5;
+}
+.opryn-feedback-action[data-action-state="success"] {
+  background: #edf0f4 !important;
+  border-color: #d7dfed !important;
+  color: #344054 !important;
+  box-shadow: none !important;
+}
+.opryn-feedback-action[data-action-state="error"] {
+  border-color: #b44751;
+}
+.opryn-action-content {
+  display: inline-grid;
+  position: relative;
+}
+.opryn-action-reserve {
+  grid-area: 1/1;
+  visibility: hidden;
+  padding-inline: 10px;
+}
+.opryn-action-state {
+  grid-area: 1/1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.opryn-action-state > svg {
+  flex-shrink: 0;
+}
+.opryn-roll-mask {
+  position: relative;
+  overflow: hidden;
+  display: inline-grid;
+  line-height: 1.5;
+}
+.opryn-roll-mask > span {
+  grid-area: 1/1;
+  display: block;
+}
+.opryn-pending-dots {
+  display: inline-flex;
+  gap: 3px;
+}
+.opryn-pending-dots i {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: opryn-task-dot 900ms ease-in-out infinite alternate;
+}
+.opryn-pending-dots i:nth-child(2) {
+  animation-delay: 150ms;
+}
+.opryn-pending-dots i:nth-child(3) {
+  animation-delay: 300ms;
+}
+@keyframes opryn-task-dot {
+  from {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.opryn-action-error {
+  color: #99424b;
+  font-size: 13px;
+  margin-top: 8px;
+  max-width: 360px;
+}
+.opryn-system-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #566279;
+  font-size: 13px;
+}
+.opryn-logo-sprite {
+  width: 24px;
+  height: 24px;
+  background-position: center;
+  background-size: contain;
+  background-repeat: no-repeat;
+  animation: opryn-system-pulse 1.1s ease-in-out infinite alternate;
+}
+@keyframes opryn-system-pulse {
+  from {
+    opacity: 0.4;
+  }
+  to {
+    opacity: 1;
+  }
+}
+[data-motion="reduced"] .opryn-pending-dots i,
+[data-motion="reduced"] .opryn-logo-sprite {
+  animation: none;
+}
+[data-motion="reduced"] .opryn-feedback-action {
+  transition: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .opryn-pending-dots i,
+  .opryn-logo-sprite {
+    animation: none;
+  }
+  .opryn-feedback-action {
+    transition: none;
+  }
+}

@@ -21,7 +21,7 @@ export function TypingHeadline({
     if (!playing) return;
     const delay =
       frame.phase === "hold"
-        ? 2200
+        ? 3000
         : frame.phase === "gap"
           ? 550
           : frame.phase === "delete"

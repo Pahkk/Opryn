@@ -1,4 +1,6 @@
 "use client";
+import { SuccessCheck } from "@/components/motion/success-check";
+import { OprynAction } from "@/components/motion/opryn-action";
 import { MotionRegion, StaggerList } from "@/components/motion/motion-region";
 import { FlowLine } from "@/components/motion/flow-line";
 
@@ -8,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { Check, FileText, Minus, X } from "lucide-react";
 import { DialogSurface } from "@/components/app/dialog-surface";
 import { GoogleWorkspacePicker } from "@/components/connections/google-workspace-picker";
+import { ProviderContentSelector } from "@/components/connections/provider-content-selector";
 import { ProviderLogo } from "@/components/connections/provider-logo";
 import type { IntegrationCatalogItem } from "@/lib/integrations/types";
 
@@ -135,7 +138,9 @@ export function NangoConnection({
           return;
         }
         if (data.status !== "pending" || Date.now() > deadline)
-          throw new Error("Google authorization was not confirmed. Try again.");
+          throw new Error(
+            `${provider.name} authorization was not confirmed. Try again.`,
+          );
         timer = setTimeout(poll, 1600);
       } catch (pollError) {
         if (!abort.signal.aborted) {
@@ -143,7 +148,7 @@ export function NangoConnection({
           setError(
             pollError instanceof Error
               ? pollError.message
-              : "Could not confirm Google authorization.",
+              : `Could not confirm ${provider.name} authorization.`,
           );
         }
       }
@@ -153,7 +158,7 @@ export function NangoConnection({
       abort.abort();
       clearTimeout(timer);
     };
-  }, [attemptId, stage, router, onConnected]);
+  }, [attemptId, stage, router, onConnected, provider.name]);
 
   async function cancelAttempt() {
     if (!attemptId) return;
@@ -182,7 +187,9 @@ export function NangoConnection({
       });
       const data = await response.json();
       if (!response.ok)
-        throw new Error(data.error ?? "Could not start Google authorization.");
+        throw new Error(
+          data.error ?? `Could not start ${provider.name} authorization.`,
+        );
       setAttemptId(data.attemptId);
       const { default: Nango, AuthError } = await import("@nangohq/frontend");
       const nango = new Nango({ connectSessionToken: data.sessionToken });
@@ -230,7 +237,7 @@ export function NangoConnection({
               "Your browser blocked the sign-in window. Try again.",
             );
           if (authError.type === "window_closed")
-            throw new Error("Google connection cancelled.");
+            throw new Error(`${provider.name} connection cancelled.`);
           if (
             ["connection_validation_failed", "connection_test_failed"].includes(
               authError.type,
@@ -238,7 +245,9 @@ export function NangoConnection({
           )
             throw new Error("Opryn wasn’t given access.");
         }
-        throw new Error("Google couldn’t be connected right now. Try again.");
+        throw new Error(
+          `${provider.name} couldn’t be connected right now. Try again.`,
+        );
       } finally {
         nango.clear();
       }
@@ -249,7 +258,7 @@ export function NangoConnection({
         setError(
           connectError instanceof Error
             ? connectError.message
-            : "Google couldn’t be connected right now. Try again.",
+            : `${provider.name} couldn’t be connected right now. Try again.`,
         );
       }
     } finally {
@@ -297,11 +306,11 @@ export function NangoConnection({
         <header className="connection-sheet-header">
           <div className="flex items-center gap-4">
             <ProviderLogo id={provider.id} name={provider.name} />
-            <h2 id="nango-sheet-title">Google Workspace</h2>
+            <h2 id="nango-sheet-title">{provider.name}</h2>
           </div>
           <button
             type="button"
-            aria-label="Close Google Workspace connection"
+            aria-label={`Close ${provider.name} connection`}
             onClick={onClose}
             disabled={busy}
           >
@@ -313,6 +322,7 @@ export function NangoConnection({
           {stage === "authorizing" || stage === "waiting" ? (
             <ConnectionProgress
               waiting={stage === "waiting"}
+              providerName={provider.name}
               onCancel={() => {
                 cancelled.current = true;
                 authClient.current?.clear();
@@ -321,13 +331,14 @@ export function NangoConnection({
                 void cancelAttempt()
                   .then(() => {
                     setStage("intro");
-                    setError("Google connection cancelled.");
+                    setError(`${provider.name} connection cancelled.`);
                   })
                   .catch((cancelError) => setError(cancelError.message));
               }}
             />
           ) : stage === "success" ? (
             <SuccessState
+              provider={provider}
               connectionId={activeConnectionId}
               onFilesChanged={async () => {
                 await loadDetails();
@@ -341,10 +352,10 @@ export function NangoConnection({
             />
           ) : stage === "disconnect" ? (
             <div data-motion-immediate>
-              <h3>Disconnect Google Workspace?</h3>
+              <h3>Disconnect {provider.name}?</h3>
               <p>
-                Opryn will stop accessing this Google connection. Knowledge
-                already approved in Opryn will not be deleted automatically.
+                Opryn will stop accessing this connection. Knowledge already
+                approved in Opryn will not be deleted automatically.
               </p>
               <div className="flex flex-wrap gap-3">
                 <button
@@ -365,6 +376,7 @@ export function NangoConnection({
             </div>
           ) : activeConnectionId ? (
             <ManageConnection
+              provider={provider}
               details={details}
               connectionId={activeConnectionId}
               onFilesChanged={() => loadDetails()}
@@ -372,7 +384,12 @@ export function NangoConnection({
               onDisconnect={() => setStage("disconnect")}
             />
           ) : (
-            <ConnectIntro onConnect={connect} onCancel={onClose} busy={busy} />
+            <ConnectIntro
+              provider={provider}
+              onConnect={connect}
+              onCancel={onClose}
+              busy={busy}
+            />
           )}
           {error ? (
             <p role="alert" className="connection-error">
@@ -389,10 +406,12 @@ export function NangoConnection({
 }
 
 function ConnectIntro({
+  provider,
   onConnect,
   onCancel,
   busy,
 }: {
+  provider: IntegrationCatalogItem;
   onConnect: () => void;
   onCancel: () => void;
   busy: boolean;
@@ -400,30 +419,28 @@ function ConnectIntro({
   return (
     <>
       <div>
-        <h3>Connect your Google account.</h3>
-        <p className="mt-3">Choose company files Opryn can learn from.</p>
+        <h3>Connect {provider.name}.</h3>
+        <p className="mt-3">{provider.description}</p>
       </div>
       <PermissionList
         title="Opryn can"
-        items={[
-          "Access files you explicitly choose",
-          "Read supported Docs, Sheets, and Slides",
-          "Keep the original Google file attached as the source",
-        ]}
+        items={[...provider.permissions.can]}
         positive
       />
       <PermissionList
         title="Opryn will not"
-        items={[
-          "Read your entire Drive",
-          "Delete your files",
-          "Automatically approve imported information",
-        ]}
+        items={[...provider.permissions.cannot]}
       />
       <div className="flex flex-wrap gap-3">
-        <button className="opryn-action" disabled={busy} onClick={onConnect}>
-          Continue with Google
-        </button>
+        <OprynAction
+          label={`Continue with ${provider.name}`}
+          pendingLabel="Connecting…"
+          successLabel="Connected"
+          state={busy ? "pending" : "idle"}
+          onClick={onConnect}
+          rolling
+          arrow
+        />
         <button
           className="opryn-button-secondary"
           disabled={busy}
@@ -463,22 +480,24 @@ function PermissionList({
 function ConnectionProgress({
   waiting,
   onCancel,
+  providerName,
 }: {
   waiting: boolean;
   onCancel: () => void;
+  providerName: string;
 }) {
   return (
     <>
       <div>
         <h3>
           {waiting
-            ? "Confirming Google Workspace…"
-            : "Connecting Google Workspace…"}
+            ? `Confirming ${providerName}…`
+            : `Connecting ${providerName}…`}
         </h3>
         <p className="mt-3">
           {waiting
             ? "Opryn is securely confirming the connection."
-            : "Finish signing in with Google in the window that opened."}
+            : `Finish signing in with ${providerName} in the window that opened.`}
         </p>
       </div>
       <FlowLine />
@@ -490,26 +509,39 @@ function ConnectionProgress({
 }
 
 function SuccessState({
+  provider,
   connectionId,
   onFilesChanged,
   onDone,
 }: {
+  provider: IntegrationCatalogItem;
   connectionId: string | null;
   onFilesChanged: () => void | Promise<void>;
   onDone: () => void;
 }) {
   return (
     <MotionRegion variant="status" className="connection-success-state">
-      <Check className="connection-success-check" size={30} aria-hidden />
+      <SuccessCheck variant="normal" />
       <div>
-        <h3>Google Workspace connected</h3>
-        <p className="mt-3">Opryn can now access the files you choose.</p>
+        <h3>{provider.name} connected</h3>
+        <p className="mt-3">
+          {provider.category === "communication"
+            ? "Your tenant authorization is ready. Open the Opryn Teams app to ask company questions."
+            : "Opryn can now access the content you choose."}
+        </p>
       </div>
       <div className="flex flex-wrap gap-3">
-        {connectionId ? (
+        {connectionId && provider.id === "google_drive" ? (
           <GoogleWorkspacePicker
             connectionId={connectionId}
             onSelected={onFilesChanged}
+          />
+        ) : connectionId &&
+          (provider.id === "notion" || provider.id === "confluence") ? (
+          <ProviderContentSelector
+            connectionId={connectionId}
+            provider={provider.id}
+            compact
           />
         ) : null}
         <button className="opryn-button-secondary" onClick={onDone}>
@@ -521,12 +553,14 @@ function SuccessState({
 }
 
 function ManageConnection({
+  provider,
   details,
   connectionId,
   onFilesChanged,
   onReconnect,
   onDisconnect,
 }: {
+  provider: IntegrationCatalogItem;
   details: Details | null;
   connectionId: string;
   onFilesChanged: () => void | Promise<void>;
@@ -540,14 +574,18 @@ function ManageConnection({
           {details?.status === "connected" ? "Connected" : "Needs attention"}
         </h3>
         <p className="mt-3">
-          Opryn can learn only from the Google files selected below.
+          {provider.category === "communication"
+            ? "Opryn uses this tenant authorization for the connected Teams workspace. Messages use the same approved-answer permissions as Opryn Web."
+            : `Opryn can learn only from the ${provider.name} content selected below.`}
         </p>
       </div>
       {details ? (
         <dl className="connection-facts">
           <div>
             <dt>Connected account</dt>
-            <dd>{details.external_account_name ?? "Google account"}</dd>
+            <dd>
+              {details.external_account_name ?? `${provider.name} account`}
+            </dd>
           </div>
           <div>
             <dt>Connected by</dt>
@@ -565,23 +603,31 @@ function ManageConnection({
       ) : (
         <p role="status">Loading connection details…</p>
       )}
-      {details?.status === "connected" ? (
+      {details?.status === "connected" && provider.id === "google_drive" ? (
         <SelectedFiles
           connectionId={connectionId}
           files={details.selected_files ?? []}
           onChanged={onFilesChanged}
         />
+      ) : details?.status === "connected" &&
+        (provider.id === "notion" || provider.id === "confluence") ? (
+        <ProviderContentSelector
+          connectionId={connectionId}
+          provider={provider.id}
+        />
       ) : null}
       <div className="flex flex-wrap gap-3">
-        <GoogleWorkspacePicker
-          connectionId={connectionId}
-          onSelected={onFilesChanged}
-          label={
-            (details?.selected_files?.length ?? 0) > 0
-              ? "Choose more files"
-              : "Choose files"
-          }
-        />
+        {provider.id === "google_drive" ? (
+          <GoogleWorkspacePicker
+            connectionId={connectionId}
+            onSelected={onFilesChanged}
+            label={
+              (details?.selected_files?.length ?? 0) > 0
+                ? "Choose more files"
+                : "Choose files"
+            }
+          />
+        ) : null}
         <button className="opryn-button-secondary" onClick={onReconnect}>
           Reconnect
         </button>
@@ -651,6 +697,10 @@ function SelectedFiles({
         );
         const data = await response.json();
         if (!response.ok) throw new Error(data.error);
+        if (data.busy)
+          throw new Error(
+            "This source is already being processed. Try again shortly.",
+          );
         next[file.id] = data.processId;
       } catch (learnError) {
         setError(

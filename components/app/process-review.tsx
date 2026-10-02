@@ -1,10 +1,13 @@
 "use client";
 
+import { ApprovalImpact } from "@/components/training/approval-impact";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useLayoutEffect, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, Check, Plus, Trash2 } from "lucide-react";
 import { showAppToast } from "@/lib/client-toast";
+import { OprynAction } from "@/components/motion/opryn-action";
+import { SuccessCheck } from "@/components/motion/success-check";
 import { WorkspaceNotice } from "@/components/app/workspace-context";
 import { KnowledgeClassification } from "./knowledge-classification";
 import type { KnowledgeCategory } from "@/lib/knowledge-library";
@@ -62,6 +65,7 @@ export function ProcessReview({
   const [error, setError] = useState("");
   const inFlight = useRef(false);
   const [approved, setApproved] = useState(false);
+  const [savedDraft, setSavedDraft] = useState<string | null>(null);
   async function save() {
     if (inFlight.current) return false;
     inFlight.current = true;
@@ -80,6 +84,7 @@ export function ProcessReview({
         return false;
       }
       setMessage("Draft saved");
+      setSavedDraft(JSON.stringify(data));
       router.refresh();
       return true;
     } catch {
@@ -146,7 +151,14 @@ export function ProcessReview({
         role="status"
         className="rounded-2xl border border-[#d4e3f6] bg-[#f3f7ff] p-7"
       >
+        <SuccessCheck variant="normal" />
         <h2 className="text-xl font-semibold text-[#17345f]">Approved</h2>
+        <Link
+          href="/app/training?view=roles"
+          className="mt-4 block text-sm text-blue-600"
+        >
+          Use this approved knowledge to train a role or agent →
+        </Link>
         <p className="mt-2 text-sm text-[#52627a]">
           Your team and connected AI can use this process now.
         </p>
@@ -174,6 +186,7 @@ export function ProcessReview({
       aria-busy={Boolean(saving)}
       className="process-review min-w-0 space-y-5"
     >
+      <ApprovalImpact processId={data.id} />
       {initial.libraryRevision && (
         <KnowledgeClassification
           id={initial.id}
@@ -499,31 +512,35 @@ export function ProcessReview({
           Accept makes this available to people and AI connections with access.
         </div>
         {saving !== "approve" ? (
-          <button
-            type="button"
+          <OprynAction
+            label={data.status === "approved" ? "Save Changes" : "Save Draft"}
+            variant="secondary"
+            pendingLabel="Saving…"
+            successLabel="Saved"
+            repeatable
+            state={
+              saving === "save"
+                ? "pending"
+                : error
+                  ? "error"
+                  : savedDraft === JSON.stringify(data)
+                    ? "success"
+                    : "idle"
+            }
             disabled={Boolean(saving)}
             onClick={() => void save()}
-            className="min-h-12 rounded-xl border border-[#d5dce6] px-3 text-sm font-semibold disabled:opacity-60 sm:min-h-11 sm:px-5"
-          >
-            {saving === "save"
-              ? "Saving…"
-              : data.status === "approved"
-                ? "Save Changes"
-                : "Save Draft"}
-          </button>
+          />
         ) : null}
-        <button
-          type="button"
+        <OprynAction
+          label={
+            data.status === "approved" ? "Accept Changes" : "Accept Process"
+          }
+          pendingLabel="Approving…"
+          successLabel="Approved"
+          state={saving === "approve" ? "pending" : "idle"}
           disabled={Boolean(saving)}
           onClick={() => void approve()}
-          className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#3158d8] px-3 text-sm font-semibold text-white disabled:opacity-60 sm:min-h-11 sm:min-w-40 sm:px-5"
-        >
-          {saving === "approve"
-            ? "Accepting…"
-            : data.status === "approved"
-              ? "Accept Changes"
-              : "Accept Process"}
-        </button>
+        />
       </div>
     </fieldset>
   );

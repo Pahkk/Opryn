@@ -2,6 +2,10 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { freshnessReason } from "@/lib/opryn/knowledge/health-model";
+import {
+  knowledgeScopeSchema,
+  knowledgeScopesOverlap,
+} from "@/lib/opryn/knowledge/scope";
 
 export type NeedsYouKind = "answer" | "approve" | "conflict" | "update";
 export type NeedsYouPriority = "now" | "soon" | "can_wait";
@@ -15,7 +19,11 @@ export type NeedsYouItem = {
     | "conflict"
     | "freshness"
     | "feedback"
-    | "integration";
+    | "gap_recheck"
+    | "external_question"
+    | "integration"
+    | "agent_test"
+    | "training_review";
   kind: NeedsYouKind;
   priority: NeedsYouPriority;
   title: string;
@@ -39,7 +47,7 @@ export async function getNeedsYouItems(input: {
   const { service, organizationId, userId, isAdmin } = input;
   let questionsQuery = service
     .from("employee_questions")
-    .select("id,question,created_at,assigned_expert_id")
+    .select("id,question,created_at,assigned_expert_id,cluster_id,origin")
     .eq("organization_id", organizationId)
     .eq("status", "needs_owner")
     .eq("escalated", true);
@@ -54,6 +62,8 @@ export async function getNeedsYouItems(input: {
     freshness,
     feedback,
     integrations,
+    rechecks,
+    externalQuestions,
   ] = await Promise.all([
     questionsQuery.order("created_at", { ascending: false }),
     isAdmin
@@ -70,10 +80,11 @@ export async function getNeedsYouItems(input: {
       ? service
           .from("processes")
           .select(
-            "id,title,summary,source_provider,source_title,criticality,created_at",
+            "id,title,summary,source_provider,source_title,supersedes_process_id,criticality,created_at",
           )
           .eq("organization_id", organizationId)
           .eq("status", "needs_review")
+          .is("library_archived_at", null)
           .order("created_at", { ascending: false })
       : Promise.resolve({ data: [], error: null }),
     isAdmin
@@ -114,6 +125,34 @@ export async function getNeedsYouItems(input: {
           .in("status", ["needs_reauthorization", "error"])
           .order("updated_at", { ascending: false })
       : Promise.resolve({ data: [], error: null }),
+    isAdmin
+      ? service
+          .from("knowledge_gap_rechecks")
+          .select("proposal_id,status,created_at")
+          .eq("organization_id", organizationId)
+          .neq("status", "answered")
+          .order("created_at", { ascending: true })
+      : Promise.resolve({ data: [], error: null }),
+    isAdmin
+      ? service
+          .from("external_ai_escalations")
+          .select(
+            "id,connection_id,question,context,resolution,proposed_rule,is_one_time_exception,knowledge_proposal_id,created_at",
+          )
+          .eq("organization_id", organizationId)
+          .eq("status", "open")
+          .eq("escalated", true)
+          .order("created_at", { ascending: false })
+      : service
+          .from("external_ai_escalations")
+          .select(
+            "id,connection_id,question,context,resolution,proposed_rule,is_one_time_exception,knowledge_proposal_id,created_at",
+          )
+          .eq("organization_id", organizationId)
+          .eq("assigned_to", userId)
+          .eq("status", "open")
+          .eq("escalated", true)
+          .order("created_at", { ascending: false }),
   ]);
   const firstError = [
     questions.error,
@@ -123,6 +162,8 @@ export async function getNeedsYouItems(input: {
     freshness.error,
     feedback.error,
     integrations.error,
+    rechecks.error,
+    externalQuestions.error,
   ].find(Boolean);
   if (firstError) throw firstError;
   const conflictKnowledgeIds = [
@@ -139,7 +180,7 @@ export async function getNeedsYouItems(input: {
   const conflictKnowledge = conflictKnowledgeIds.length
     ? await service
         .from("knowledge_chunks")
-        .select("id,content,current_version")
+        .select("id,content,current_version,scope")
         .eq("organization_id", organizationId)
         .in("id", conflictKnowledgeIds)
     : { data: [], error: null };
@@ -147,24 +188,126 @@ export async function getNeedsYouItems(input: {
   const conflictContent = new Map(
     (conflictKnowledge.data ?? []).map((item) => [item.id, item.content]),
   );
+  const conflictVersions = new Map(
+    (conflictKnowledge.data ?? []).map((item) => [
+      item.id,
+      item.current_version,
+    ]),
+  );
+  const conflictScopes = new Map(
+    (conflictKnowledge.data ?? []).map((item) => [
+      item.id,
+      knowledgeScopeSchema.parse(item.scope),
+    ]),
+  );
+  const gapIds = [
+    ...new Set((questions.data ?? []).map((q) => q.cluster_id).filter(Boolean)),
+  ];
+  const gapFacts =
+    isAdmin && gapIds.length
+      ? await service
+          .from("company_knowledge_gaps")
+          .select(
+            "id,question_count,unique_source_count,human_interruption_count",
+          )
+          .eq("organization_id", organizationId)
+          .in("id", gapIds)
+      : { data: [], error: null };
+  if (gapFacts.error) throw gapFacts.error;
+  const gapById = new Map((gapFacts.data ?? []).map((gap) => [gap.id, gap]));
+  const stalledRechecks = new Map<
+    string,
+    { count: number; unknown: boolean; createdAt: string }
+  >();
+  for (const recheck of rechecks.data ?? []) {
+    if (
+      recheck.status === "pending" &&
+      Date.now() - Date.parse(recheck.created_at) < 300_000
+    )
+      continue;
+    const entry = stalledRechecks.get(recheck.proposal_id) ?? {
+      count: 0,
+      unknown: false,
+      createdAt: recheck.created_at,
+    };
+    entry.count += 1;
+    entry.unknown ||= recheck.status === "unknown";
+    stalledRechecks.set(recheck.proposal_id, entry);
+  }
 
   const items: NeedsYouItem[] = [
-    ...(questions.data ?? []).map((question) => ({
-      id: `question-${question.id}`,
-      type: "question" as const,
+    ...(externalQuestions.data ?? []).map((question) => ({
+      id: `external-question-${question.id}`,
+      type: "external_question" as const,
       kind: "answer" as const,
       priority: "now" as const,
-      title: "A teammate needs guidance",
+      title: "Connected AI · Needs an answer",
       summary: question.question,
-      detail:
-        "Opryn could not find an approved answer. Your response can answer them now, then you can choose whether Opryn should remember it.",
-      source: "Employee question",
+      source: "Connected AI",
       targetId: question.id,
-      targetUrl: `/app/needs-you?item=question-${question.id}`,
-      primaryAction: "answer" as const,
-      secondaryActions: ["answer_only" as const],
+      detail:
+        "Answer this connection’s question once, or propose reusable guidance. Nothing is published without approval.",
+      targetUrl: `/app/ai-connections/${question.connection_id}?tab=escalations`,
+      primaryAction: "review" as const,
       createdAt: question.created_at,
+      metadata: {
+        connectionId: question.connection_id,
+        context: question.context,
+        resolution: question.resolution,
+        proposedRule: question.proposed_rule,
+        oneTimeException: question.is_one_time_exception,
+        proposalId: question.knowledge_proposal_id,
+      },
     })),
+    ...[...stalledRechecks].map(([proposalId, facts]) => ({
+      id: `gap-recheck-${proposalId}`,
+      type: "gap_recheck" as const,
+      kind: "update" as const,
+      priority: "soon" as const,
+      title: "Knowledge gap · Check the answer",
+      summary: facts.unknown
+        ? "The approved answer doesn't yet cover every recorded question."
+        : "The approved answer is saved. Opryn couldn't finish checking the original questions.",
+      detail: `${facts.count} recorded question${facts.count === 1 ? "" : "s"} still need a sourced answer. Recheck, or teach more detail. Approval remains intact; the gap stays open until verified.`,
+      targetId: proposalId,
+      targetUrl: `/app/needs-you?item=gap-recheck-${proposalId}`,
+      primaryAction: "review" as const,
+      createdAt: facts.createdAt,
+    })),
+    ...(questions.data ?? []).map((question) => {
+      const gap = gapById.get(question.cluster_id);
+      return {
+        id: `question-${question.id}`,
+        type: "question" as const,
+        kind: "answer" as const,
+        priority: "now" as const,
+        title: "Knowledge gap · Needs an answer",
+        metadata: {
+          questionCount: gap?.question_count ?? null,
+          channelCount: gap?.unique_source_count ?? null,
+          humanInterruptions: gap?.human_interruption_count ?? null,
+        },
+        summary: question.question,
+        detail:
+          "Opryn could not find an approved answer. Answer this question once, or propose reusable guidance for human review." +
+          (gap
+            ? ` This gap has been asked ${gap.question_count} times; recorded across ${gap.unique_source_count} channels and sent to a human ${gap.human_interruption_count} times.`
+            : ""),
+        source:
+          question.origin === "teams"
+            ? "Microsoft Teams"
+            : question.origin === "slack"
+              ? "Slack"
+              : question.origin === "external_ai"
+                ? "Connected AI"
+                : "Ask Opryn",
+        targetId: question.id,
+        targetUrl: `/app/needs-you?item=question-${question.id}`,
+        primaryAction: "answer" as const,
+        secondaryActions: ["answer_only" as const],
+        createdAt: question.created_at,
+      };
+    }),
     ...(proposals.data ?? []).map((proposal) => {
       const mustReview =
         proposal.status === "needs_review" ||
@@ -203,6 +346,7 @@ export async function getNeedsYouItems(input: {
           reviewRequired: proposal.status === "needs_review",
           currentContent:
             conflictContent.get(proposal.existing_knowledge_id) ?? null,
+          existingKnowledgeId: proposal.existing_knowledge_id,
           knowledgeVersion:
             (conflictKnowledge.data ?? []).find(
               (k) => k.id === proposal.existing_knowledge_id,
@@ -214,7 +358,9 @@ export async function getNeedsYouItems(input: {
     ...(processes.data ?? []).map((process) => ({
       id: `process-${process.id}`,
       type: "process" as const,
-      kind: "approve" as const,
+      kind: process.supersedes_process_id
+        ? ("update" as const)
+        : ("approve" as const),
       priority:
         process.criticality === "critical"
           ? ("now" as const)
@@ -230,7 +376,11 @@ export async function getNeedsYouItems(input: {
       primaryAction: "review" as const,
       secondaryActions: ["edit" as const],
       createdAt: process.created_at,
-      metadata: { riskLevel: process.criticality },
+      metadata: {
+        riskLevel: process.criticality,
+        sourceUpdate: Boolean(process.supersedes_process_id),
+        previousProcessId: process.supersedes_process_id,
+      },
     })),
     ...(conflicts.data ?? []).map((conflict) => ({
       id: `conflict-${conflict.id}`,
@@ -255,6 +405,20 @@ export async function getNeedsYouItems(input: {
         conflictType: conflict.conflict_type,
         firstKnowledgeId: conflict.knowledge_chunk_a,
         secondKnowledgeId: conflict.knowledge_chunk_b,
+        firstVersion: conflictVersions.get(conflict.knowledge_chunk_a),
+        firstApplicability: Object.entries(
+          conflictScopes.get(conflict.knowledge_chunk_a) ?? {},
+        )
+          .map(
+            ([key, value]) =>
+              `${key}: ${Array.isArray(value) ? value.join(", ") : value}`,
+          )
+          .join(" · "),
+        secondVersion: conflictVersions.get(conflict.knowledge_chunk_b),
+        separateScopes: !knowledgeScopesOverlap(
+          conflictScopes.get(conflict.knowledge_chunk_a) ?? {},
+          conflictScopes.get(conflict.knowledge_chunk_b) ?? {},
+        ),
         firstContent: conflictContent.get(conflict.knowledge_chunk_a) ?? null,
         secondContent: conflictContent.get(conflict.knowledge_chunk_b) ?? null,
       },
@@ -264,7 +428,9 @@ export async function getNeedsYouItems(input: {
       type: "feedback" as const,
       kind: "update" as const,
       priority: "soon" as const,
-      title: "An answer was marked Not Right",
+      title: item.question_id
+        ? "An answer was marked Not Right"
+        : "Training guidance needs review",
       summary:
         item.note ||
         feedbackReason(item.reason) ||
@@ -325,6 +491,69 @@ export async function getNeedsYouItems(input: {
       createdAt: item.updated_at,
     })),
   ];
+  if (isAdmin) {
+    const trainingReview = await service
+      .from("training_scenarios")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", organizationId)
+      .eq("status", "update_required");
+    if (trainingReview.error) throw trainingReview.error;
+    if (trainingReview.count)
+      items.push({
+        id: "training-review",
+        type: "training_review",
+        kind: "update",
+        priority: "soon",
+        title: "Updated knowledge needs practice review",
+        summary: `${trainingReview.count} scenarios reference changed guidance. Review the affected exercises once for everyone who needs them.`,
+        targetId: organizationId,
+        targetUrl: "/app/training?view=roles",
+        primaryAction: "review",
+        createdAt: new Date().toISOString(),
+      });
+    const evaluationIssues = await service
+      .from("knowledge_test_cases")
+      .select(
+        "id,title,connection_id,last_result,last_agent_result,agent_response_required,last_run_at",
+      )
+      .eq("organization_id", organizationId)
+      .not("connection_id", "is", null)
+      .is("retired_at", null)
+      .or(
+        "last_result->>trainingStatus.in.(failed,review,knowledge_gap),last_agent_result->>trainingStatus.in.(failed,review,knowledge_gap)",
+      )
+      .limit(50);
+    if (evaluationIssues.error) throw evaluationIssues.error;
+    for (const test of evaluationIssues.data ?? []) {
+      const result = test.agent_response_required
+        ? test.last_agent_result
+        : test.last_result;
+      if (
+        !["failed", "review", "knowledge_gap"].includes(result?.trainingStatus)
+      )
+        continue;
+      items.push({
+        id: `agent-test-${test.id}`,
+        type: "agent_test",
+        kind: "update",
+        priority: "soon",
+        title:
+          result?.trainingStatus === "knowledge_gap"
+            ? "Agent evaluation revealed a knowledge gap"
+            : "Agent evaluation needs review",
+        summary: test.title,
+        detail:
+          result?.failureReason ??
+          result?.explanation ??
+          "Review the expected behavior and approved sources.",
+        source: "Training evaluation",
+        targetId: test.id,
+        targetUrl: `/app/training?view=agents#agent-${test.connection_id}`,
+        primaryAction: "review",
+        createdAt: test.last_run_at ?? new Date().toISOString(),
+      });
+    }
+  }
   return items.toSorted((left, right) => {
     const rank = { now: 0, soon: 1, can_wait: 2 };
     return (

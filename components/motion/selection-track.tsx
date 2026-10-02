@@ -1,10 +1,9 @@
 "use client";
-
-import { useLayoutEffect, useRef, type ReactNode } from "react";
-import { gsap, motionScope } from "@/lib/motion/gsap";
-import { motion } from "@/lib/motion/presets";
-
-/** Follows existing pressed-button semantics; never owns selection or focus. */
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { motion } from "motion/react";
+import { motionTokens } from "@/lib/motion/motion-tokens";
+import { useProductReducedMotion } from "@/lib/motion/use-product-motion";
+/** Existing selection semantics remain authoritative, including wrapped and scrollable filters. */
 export function SelectionTrack({
   children,
   value,
@@ -13,53 +12,42 @@ export function SelectionTrack({
   value: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const previous = useRef<{ x: number; width: number } | null>(null);
+  const reduced = useProductReducedMotion();
+  const [box, setBox] = useState({ x: 0, y: 0, width: 0 });
   useLayoutEffect(() => {
     const root = ref.current;
     if (!root) return;
-    const indicator = root.querySelector<HTMLElement>(".selection-indicator")!;
-    const scope = motionScope(root);
-    const place = (animate: boolean) => {
-      const selected = root.querySelector<HTMLElement>('[aria-pressed="true"]');
-      if (!selected) return;
-      const box = selected.getBoundingClientRect(),
-        parent = root.getBoundingClientRect();
-      const next = { x: box.left - parent.left, width: box.width };
-      indicator.style.width = `${next.width}px`;
-      indicator.style.transform = `translateX(${next.x}px)`;
-      if (animate && previous.current)
-        scope.run(() =>
-          gsap.fromTo(
-            indicator,
-            {
-              x: previous.current!.x,
-              scaleX: previous.current!.width / next.width,
-            },
-            {
-              x: next.x,
-              scaleX: 1,
-              duration: motion.duration.fast,
-              ease: motion.ease.enter,
-            },
-          ),
-        );
-      previous.current = next;
+    const selected = root.querySelector<HTMLElement>(
+      '[aria-pressed="true"], [aria-selected="true"], [aria-current="page"]',
+    );
+    if (!selected) return;
+    const measure = () => {
+      const a = selected.getBoundingClientRect(),
+        b = root.getBoundingClientRect();
+      setBox({ x: a.left - b.left, y: a.bottom - b.top - 2, width: a.width });
     };
-    place(true);
-    const resize = new ResizeObserver(() => place(false));
-    resize.observe(root);
-    const scroll = () => place(false);
-    root.addEventListener("scroll", scroll, true);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(root);
+    observer.observe(selected);
+    root.addEventListener("scroll", measure, true);
     return () => {
-      resize.disconnect();
-      root.removeEventListener("scroll", scroll, true);
-      scope.dispose();
+      observer.disconnect();
+      root.removeEventListener("scroll", measure, true);
     };
   }, [value]);
   return (
     <div ref={ref} className="selection-track">
       {children}
-      <span aria-hidden="true" className="selection-indicator" />
+      <motion.span
+        aria-hidden="true"
+        className="selection-indicator"
+        data-motion-owner="motion"
+        initial={false}
+        animate={{ x: box.x, y: box.y, width: box.width }}
+        style={{ top: 0, bottom: "auto" }}
+        transition={reduced ? { duration: 0 } : motionTokens.spring}
+      />
     </div>
   );
 }

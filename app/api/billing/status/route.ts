@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getRequestContext } from "@/lib/api";
 import { getOrganizationPlan } from "@/lib/billing/subscription";
+import { hasFeature } from "@/lib/billing/plans";
 export async function GET() {
   const context = await getRequestContext({
     admin: true,
@@ -18,6 +19,10 @@ export async function GET() {
     return NextResponse.json(
       {
         verified,
+        conversationLearningEnabled: hasFeature(
+          state.plan,
+          "ai_conversation_learning",
+        ),
         status: state.status,
         plan: state.subscribedPlan,
         trialEnd: state.trialEnd,

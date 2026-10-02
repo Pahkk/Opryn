@@ -2,6 +2,7 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { trustedAnswerContext } from "@/lib/opryn/knowledge/trust";
+import { memberScopeContext } from "@/lib/opryn/knowledge/scope-context";
 import { findCompanyExpert as findBestExpert } from "@/lib/opryn/knowledge/experts";
 import {
   answerCompanyQuestion,
@@ -59,6 +60,7 @@ export async function answerCommunicationQuestion(input: {
     service,
     input.organizationId,
     (data ?? []) as RetrievedKnowledge[],
+    await memberScopeContext(service, input.organizationId, input.userId, input.provider),
   );
   const { data: criticalRows } = knowledge.length
     ? await service
@@ -87,12 +89,23 @@ export async function answerCommunicationQuestion(input: {
     answer.confidence < threshold ||
     !answer.answer.trim()
   )
-    return createUnknown({ ...input, embedding, knowledge });
+    return createUnknown({
+      ...input,
+      embedding,
+      knowledge,
+      allowEscalations: settings?.allow_escalations ?? true,
+    });
 
   const cited = knowledge.filter((item) =>
     answer.cited_source_ids.includes(item.id),
   );
-  if (!cited.length) return createUnknown({ ...input, embedding, knowledge });
+  if (!cited.length)
+    return createUnknown({
+      ...input,
+      embedding,
+      knowledge,
+      allowEscalations: settings?.allow_escalations ?? true,
+    });
   const { data: question, error: questionError } = await service
     .from("employee_questions")
     .insert({
@@ -186,6 +199,7 @@ async function createUnknown(input: {
   history: Array<{ role: "user" | "opryn"; text: string }>;
   embedding: number[];
   knowledge: RetrievedKnowledge[];
+  allowEscalations: boolean;
 }): Promise<ChannelAnswerResult> {
   const { data: clusterId, error: clusterError } = await input.service.rpc(
     "record_question_cluster",
@@ -211,7 +225,7 @@ async function createUnknown(input: {
       question: input.question,
       status: "needs_owner",
       answered_by_opryn: false,
-      escalated: false,
+      escalated: input.allowEscalations,
       relevance_score: input.knowledge[0]?.similarity ?? null,
       cluster_id: clusterId,
       assigned_expert_id: expert?.id ?? null,
@@ -256,6 +270,7 @@ async function createUnknown(input: {
     : null;
   return {
     status: "unknown",
+    routed: input.allowEscalations,
     questionId: question.id,
     expert: expert ? { id: expert.id, name: expert.name } : null,
     related: input.knowledge[0]
@@ -279,7 +294,10 @@ async function buildChannelSources(
   ];
   const [processes, steps, rules] = await Promise.all([
     processIds.length
-      ? service.from("processes").select("id,title").in("id", processIds)
+      ? service
+          .from("processes")
+          .select("id,title,source_title,source_provider,learning_source")
+          .in("id", processIds)
       : Promise.resolve({ data: [] }),
     sourceIds.length
       ? service.from("process_steps").select("id,title").in("id", sourceIds)
@@ -292,7 +310,7 @@ async function buildChannelSources(
       : Promise.resolve({ data: [] }),
   ]);
   const processNames = new Map(
-    (processes.data ?? []).map((row) => [row.id, row.title]),
+    (processes.data ?? []).map((row) => [row.id, row]),
   );
   const stepNames = new Map(
     (steps.data ?? []).map((row) => [row.id, row.title]),
@@ -301,9 +319,10 @@ async function buildChannelSources(
     (rules.data ?? []).map((row) => [row.id, row.title]),
   );
   return items.map((item) => {
-    const processTitle = item.process_id
-      ? processNames.get(item.process_id) || "Company process"
-      : "Company knowledge";
+    const process = item.process_id ? processNames.get(item.process_id) : null;
+    const processTitle = process?.source_title
+      ? `${providerLabel(process.source_provider, process.learning_source)} · ${process.source_title}`
+      : process?.title || "Company knowledge";
     const section =
       ruleNames.get(item.rule_id ?? item.source_id) ||
       stepNames.get(item.source_id) ||
@@ -338,6 +357,19 @@ function sourceTypeLabel(type: string) {
       call_finding: "Approved call knowledge",
     }[type] || "Approved company knowledge"
   );
+}
+
+function providerLabel(
+  provider: string | null,
+  learningSource?: string | null,
+) {
+  return provider === "notion"
+    ? "Notion"
+    : provider === "confluence"
+      ? "Confluence"
+      : provider === "google_drive" || learningSource === "google_drive"
+        ? "Google Workspace"
+        : "Opryn";
 }
 
 export class ChannelPermissionError extends Error {}

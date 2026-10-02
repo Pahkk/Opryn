@@ -1,6 +1,17 @@
 import type { SVGProps } from "react";
+import { OprynIcon } from "./opryn-icon";
 
 export type OprynIconProps = SVGProps<SVGSVGElement> & { size?: number };
+
+export function SupportIcon(props: OprynIconProps) {
+  return (
+    <OprynIcon
+      name="support"
+      size={props.size ?? 20}
+      className={props.className}
+    />
+  );
+}
 
 function IconFrame({ size = 20, children, ...props }: OprynIconProps) {
   return (
@@ -23,38 +34,37 @@ function IconFrame({ size = 20, children, ...props }: OprynIconProps) {
 
 export function HomeIcon(props: OprynIconProps) {
   return (
-    <IconFrame {...props}>
-      <path d="M4 10.3 12 4l8 6.3v8.2a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5z" />
-      <path d="M9 20v-6h6v6" />
-    </IconFrame>
+    <OprynIcon
+      name="home"
+      size={props.size ?? 20}
+      className={props.className}
+    />
   );
 }
 
 export function TeachIcon(props: OprynIconProps) {
   return (
-    <IconFrame {...props}>
-      <path d="M5.2 8.3a8 8 0 1 1 .1 7.5" />
-      <path d="M5.2 8.3V4.6M5.2 8.3h3.7" />
-      <path d="M12 8v8M8 12h8" />
-    </IconFrame>
+    <OprynIcon
+      name="teach"
+      size={props.size ?? 20}
+      className={props.className}
+    />
   );
 }
 
 export function AskIcon(props: OprynIconProps) {
   return (
-    <IconFrame {...props}>
-      <path d="M5 5.5h14v10H9l-4 3z" />
-      <path d="M9 9h6M9 12h4" />
-    </IconFrame>
+    <OprynIcon name="ask" size={props.size ?? 20} className={props.className} />
   );
 }
 
 export function KnowledgeIcon(props: OprynIconProps) {
   return (
-    <IconFrame {...props}>
-      <path d="M4.5 5.5c2.7-.8 5.2-.2 7.5 1.7 2.3-1.9 4.8-2.5 7.5-1.7v13c-2.7-.8-5.2-.2-7.5 1.7-2.3-1.9-4.8-2.5-7.5-1.7z" />
-      <path d="M12 7.2v13" />
-    </IconFrame>
+    <OprynIcon
+      name="knowledge"
+      size={props.size ?? 20}
+      className={props.className}
+    />
   );
 }
 
@@ -69,21 +79,21 @@ export function TrainingIcon(props: OprynIconProps) {
 
 export function TeamIcon(props: OprynIconProps) {
   return (
-    <IconFrame {...props}>
-      <circle cx="9" cy="8" r="3" />
-      <path d="M3.8 19c.4-3.3 2.1-5 5.2-5s4.8 1.7 5.2 5" />
-      <path d="M15.5 6.2a2.7 2.7 0 0 1 0 5.3M16.4 14c2.2.5 3.4 2.1 3.8 4.5" />
-    </IconFrame>
+    <OprynIcon
+      name="team"
+      size={props.size ?? 20}
+      className={props.className}
+    />
   );
 }
 
 export function NeedsYouIcon(props: OprynIconProps) {
   return (
-    <IconFrame {...props}>
-      <path d="M12 4a8 8 0 1 1-6.3 3.1" />
-      <path d="M5.7 7.1V3.8M5.7 7.1H9" />
-      <path d="M12 8.2v4.6M12 16h.01" />
-    </IconFrame>
+    <OprynIcon
+      name="needs-you"
+      size={props.size ?? 20}
+      className={props.className}
+    />
   );
 }
 
@@ -97,12 +107,11 @@ export function CallsIcon(props: OprynIconProps) {
 
 export function ConnectionIcon(props: OprynIconProps) {
   return (
-    <IconFrame {...props}>
-      <circle cx="6" cy="12" r="2.5" />
-      <circle cx="18" cy="7" r="2.5" />
-      <circle cx="18" cy="17" r="2.5" />
-      <path d="m8.3 11 7.3-3M8.3 13l7.3 3" />
-    </IconFrame>
+    <OprynIcon
+      name="connections"
+      size={props.size ?? 20}
+      className={props.className}
+    />
   );
 }
 
@@ -117,19 +126,21 @@ export function IntegrationsIcon(props: OprynIconProps) {
 
 export function SettingsIcon(props: OprynIconProps) {
   return (
-    <IconFrame {...props}>
-      <circle cx="12" cy="12" r="3" />
-      <path d="M12 3.8v2M12 18.2v2M3.8 12h2M18.2 12h2M6.2 6.2l1.4 1.4M16.4 16.4l1.4 1.4M17.8 6.2l-1.4 1.4M7.6 16.4l-1.4 1.4" />
-    </IconFrame>
+    <OprynIcon
+      name="settings"
+      size={props.size ?? 20}
+      className={props.className}
+    />
   );
 }
 
 export function ApprovedIcon(props: OprynIconProps) {
   return (
-    <IconFrame {...props}>
-      <path d="M7.2 4.8A8.5 8.5 0 1 1 4 9" />
-      <path d="m8.2 12.2 2.5 2.5 5.3-5.5" />
-    </IconFrame>
+    <OprynIcon
+      name="approved"
+      size={props.size ?? 20}
+      className={props.className}
+    />
   );
 }
 
@@ -248,6 +259,63 @@ export function TimeReturnedIcon(props: OprynIconProps) {
     <IconFrame {...props}>
       <path d="M7 4.8A8.5 8.5 0 1 1 4 9" />
       <path d="M4 5.5V9h3.5M12 7.5V12l3 2" />
+    </IconFrame>
+  );
+}
+
+export function PolicyIcon(props: OprynIconProps) {
+  return <RuleIcon {...props} />;
+}
+export function DecisionIcon(props: OprynIconProps) {
+  return (
+    <IconFrame {...props}>
+      <path d="M12 4v6M5 20v-6h14v6M12 10v4" />
+      <circle cx="12" cy="4" r="2" />
+      <path d="m3 19 2 2 3-4M17 18l4 4m0-4-4 4" />
+    </IconFrame>
+  );
+}
+export function ExceptionIcon(props: OprynIconProps) {
+  return (
+    <IconFrame {...props}>
+      <path d="M6 4h12v16H6zM10 8h4M12 11v3M12 17h.01" />
+    </IconFrame>
+  );
+}
+export function ApproverIcon(props: OprynIconProps) {
+  return (
+    <IconFrame {...props}>
+      <circle cx="9" cy="7" r="3" />
+      <path d="M3 19c0-4 2-6 6-6M14 15l2 2 5-6" />
+    </IconFrame>
+  );
+}
+export function AIConnectionIcon(props: OprynIconProps) {
+  return (
+    <IconFrame {...props}>
+      <path d="M4 5h10v9H4zM7 9h4M14 10h3a3 3 0 0 1 0 6h-3M10 14v5h7" />
+    </IconFrame>
+  );
+}
+export function TestAnswerIcon(props: OprynIconProps) {
+  return (
+    <IconFrame {...props}>
+      <path d="M6 4h12v16H6zM9 8h6M9 12h3m-3 4 2 2 4-5" />
+    </IconFrame>
+  );
+}
+export function ImpactIcon(props: OprynIconProps) {
+  return (
+    <IconFrame {...props}>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 3v4M12 17v4M3 12h4M17 12h4m-1-1 1 1-1 1" />
+    </IconFrame>
+  );
+}
+export function ArchiveIcon(props: OprynIconProps) {
+  return (
+    <IconFrame {...props}>
+      <path d="M4 4h16v4H4zM6 8v12h12V8M10 12h4" />
     </IconFrame>
   );
 }

@@ -15,7 +15,7 @@ export const activationGoals = [
   ["organize_knowledge", "Organize company knowledge"],
   ["ai_tools", "Give AI company context"],
   ["consistent_answers", "Keep company answers consistent"],
-  ["everything", "Set up everything"],
+  ["everything", "Set everything up"],
 ] as const;
 export const knowledgeAreas = [
   "Policies",

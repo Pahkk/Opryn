@@ -24,7 +24,7 @@ export default async function CallsPage() {
     return (
       <>
         <PageHeading
-          eyebrow="Premium learning"
+          eyebrow="Pro learning"
           title="Calls"
           description="Turn real conversations into reusable business knowledge."
         />
@@ -76,7 +76,7 @@ export default async function CallsPage() {
   return (
     <>
       <PageHeading
-        eyebrow="Premium learning"
+        eyebrow="Pro learning"
         title="Calls"
         description="Turn real conversations into reusable business knowledge."
       />

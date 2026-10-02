@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   IntegrationsCatalog,
   type IntegrationConnectionView,
@@ -219,6 +220,18 @@ export default async function IntegrationsPage({
 
   return (
     <>
+      <div className="mb-6 flex flex-wrap gap-6 border-b border-slate-200 pb-5 text-sm">
+        <p>
+          <strong>Sources teach Opryn.</strong> Import business information for
+          review.
+        </p>
+        <p>
+          <strong>Agents consume Opryn.</strong>{" "}
+          <Link href="/app/training?view=agents" className="text-blue-600">
+            Govern and test approved knowledge access →
+          </Link>
+        </p>
+      </div>
       <IntegrationsCatalog
         organizationId={organizationId}
         organizationName={context.organization.name}
@@ -233,7 +246,11 @@ export default async function IntegrationsPage({
         returnTo={returnTo}
       />
       {hasManagedAiConnections ? (
-        <section id="ai-access" className="mt-12 scroll-mt-24">
+        <section
+          id="ai-access"
+          data-guide="connections.aiAccess"
+          className="mt-12 scroll-mt-24"
+        >
           <div className="mb-5 border-b border-[var(--opryn-line)] pb-5">
             <p className="opryn-section-label text-[var(--opryn-blue)]">
               AI ACCESS

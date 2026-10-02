@@ -30,6 +30,12 @@ globalThis.__guideDb = {
       select() {
         return chain;
       },
+      order() {
+        return chain;
+      },
+      limit() {
+        return chain;
+      },
       eq(field, value) {
         filters.push([field, value]);
         return chain;
@@ -53,7 +59,10 @@ globalThis.__guideDb = {
       maybeSingle() {
         assert.equal(table, "organization_subscriptions");
         return Promise.resolve({
-          data: { onboarding_billing_required: false, status: "not_subscribed" },
+          data: {
+            onboarding_billing_required: false,
+            status: "not_subscribed",
+          },
           error: null,
         });
       },

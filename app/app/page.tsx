@@ -1,22 +1,23 @@
+import { trainingTeachNext } from "@/lib/training/teach-next";
+import { HomeTraining } from "@/components/training/home-training";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { billingBoundary } from "@/lib/billing/access";
 import { estimateReturnedTime } from "@/lib/answered-work";
 import { KnowledgeHealthPreview } from "@/components/app/knowledge-health-preview";
 import { getTeachNextGaps } from "@/lib/opryn/knowledge/health";
-import { ArrowRight, BookOpenText, Check, Clock3 } from "lucide-react";
-import { EmptyState } from "@/components/app/page-heading";
-import { LocalGreeting } from "@/components/app/local-greeting";
-import { OprynStatus } from "@/components/opryn/opryn-status";
+import { ArrowRight, BookOpenText } from "lucide-react";
+import { OwnerHome } from "@/components/app/owner-home";
+import { OprynThinkingOrb } from "@/components/motion/opryn-thinking-orb";
 import {
-  AskIcon,
   TeamIcon,
   type OprynIconProps,
 } from "@/components/opryn-icons/opryn-icons";
 import { requireAppContext } from "@/lib/app-context";
 import { createClient } from "@/lib/supabase/server";
-import { OwnerAnswer } from "@/components/app/owner-answer";
-import { getNeedsYouItems, summarizeNeedsYou } from "@/lib/opryn/needs-you";
+import { getNeedsYouItems } from "@/lib/opryn/needs-you";
+import { getOwnerIntelligence } from "@/lib/opryn/owner-intelligence";
+import { OwnerIntelligencePanel } from "@/components/app/owner-intelligence";
 
 export default async function DashboardPage({
   searchParams,
@@ -27,7 +28,15 @@ export default async function DashboardPage({
   const supabase = await createClient();
   if (await billingBoundary(supabase, context.organization.id)) {
     if (context.isAdmin) redirect("/onboarding?billing=required");
-    return <section><h1>Your workspace needs an active plan.</h1><p>Ask a workspace owner to manage billing. Your company knowledge is preserved.</p></section>;
+    return (
+      <section>
+        <h1>Your workspace needs an active plan.</h1>
+        <p>
+          Ask a workspace owner to manage billing. Your company knowledge is
+          preserved.
+        </p>
+      </section>
+    );
   }
   const firstName = context.user.fullName.split(" ")[0];
   const query = await searchParams;
@@ -54,8 +63,9 @@ export default async function DashboardPage({
     approvedKnowledge,
     successfulAnswer,
     externalLearning,
-    learningSession,
     needsYouItems,
+    intelligence,
+    handledQuestions,
   ] = await Promise.all([
     supabase
       .from("employee_questions")
@@ -91,10 +101,12 @@ export default async function DashboardPage({
       .eq("status", "approved"),
     supabase
       .from("employee_questions")
-      .select("id,question,status,created_at,answered_by_opryn,resolved_at")
+      .select(
+        "id,question,status,created_at,answered_by_opryn,resolved_at,origin",
+      )
       .eq("organization_id", organizationId)
       .order("created_at", { ascending: false })
-      .limit(3),
+      .limit(20),
     supabase
       .from("processes")
       .select("id,title,status,created_at")
@@ -149,18 +161,21 @@ export default async function DashboardPage({
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
-    supabase
-      .from("onboarding_learning_sessions")
-      .select("intent")
-      .eq("organization_id", organizationId)
-      .eq("user_id", context.user.id)
-      .maybeSingle(),
     getNeedsYouItems({
       service: supabase,
       organizationId,
       userId: context.user.id,
       isAdmin: true,
     }),
+    getOwnerIntelligence(supabase, organizationId),
+    supabase
+      .from("employee_questions")
+      .select("id,question,created_at,origin")
+      .eq("organization_id", organizationId)
+      .eq("status", "answered")
+      .eq("answered_by_opryn", true)
+      .order("created_at", { ascending: false })
+      .limit(5),
   ]);
 
   // Shared records include web, ChatGPT, Claude, and other supported surfaces.
@@ -168,7 +183,10 @@ export default async function DashboardPage({
   const hasApprovedKnowledge = Boolean(approvedKnowledge.data?.length);
   const hasSuccessfulAnswer = Boolean(successfulAnswer.data?.length);
 
-  const unfinishedSetup = onboardingStatus.data && !onboardingStatus.data.onboarding_complete && !(hasApprovedKnowledge && hasSuccessfulAnswer);
+  const unfinishedSetup =
+    onboardingStatus.data &&
+    !onboardingStatus.data.onboarding_complete &&
+    !(hasApprovedKnowledge && hasSuccessfulAnswer);
 
   const [
     repeatedClusters,
@@ -176,6 +194,7 @@ export default async function DashboardPage({
     estimateQuestions,
     teamMembers,
     negativeFeedback,
+    trainingSignal,
   ] = await Promise.all([
     getTeachNextGaps(supabase, organizationId),
     supabase
@@ -202,6 +221,7 @@ export default async function DashboardPage({
       .select("question_id")
       .eq("organization_id", organizationId)
       .eq("feedback_type", "not_right"),
+    trainingTeachNext(supabase, organizationId),
   ]);
   if (
     answered.error ||
@@ -209,7 +229,8 @@ export default async function DashboardPage({
     recentQuestions.error ||
     estimateQuestions.error ||
     teamMembers.error ||
-    negativeFeedback.error
+    negativeFeedback.error ||
+    handledQuestions.error
   )
     throw new Error("Your activity could not be loaded. Please try again.");
   const estimate = estimateReturnedTime(
@@ -221,41 +242,56 @@ export default async function DashboardPage({
   const answeredCount = answered.count ?? 0;
   const askedCount = asked.count ?? 0;
   const waitingQuestions = questions.data?.length ?? 0;
-  const needsYou = needsYouItems.length;
-  const needsYouSummary = summarizeNeedsYou(needsYouItems);
   const handledRate = askedCount
     ? Math.round((answeredCount / askedCount) * 100)
     : 0;
   const repeated = repeatedClusters[0];
-  const teachNext = repeated
+  const teachNext = trainingSignal
     ? {
         id: null,
-        title: repeated.topic,
-        reason: `${repeated.questions} related questions in the last 30 days. ${repeated.unresolved} still need an answer; ${repeated.escalations} reached a human.${repeated.estimatedMinutes ? ` Estimated interruption time: ${formatMinutes(repeated.estimatedMinutes)}.` : ""}`,
-        prompt: repeated.representative_question,
+        title: trainingSignal.title,
+        reason: trainingSignal.reason,
+        prompt: trainingSignal.question,
       }
-    : recommendation.data
-      ? { ...recommendation.data, prompt: null }
-      : {
+    : intelligence.recommendation
+      ? {
           id: null,
-          title:
-            waitingQuestions > 0
-              ? questions.data?.[0]?.question ||
-                "A question your team keeps asking"
-              : approvedProcesses.count
-                ? "The next task only you know how to do"
-                : "Your first repeatable process",
-          reason:
-            waitingQuestions > 0
-              ? "Your team asked about this and Opryn could not find an approved answer."
-              : "Start with one task you want someone else to handle without asking you.",
-          prompt: null,
-        };
-  const teachHref = teachNext.id
-    ? `/app/processes/new?recommendation=${teachNext.id}`
-    : teachNext.prompt
-      ? `/app/processes/new?prompt=${encodeURIComponent(teachNext.prompt)}`
-      : "/app/processes/new";
+          title: intelligence.recommendation.title,
+          reason: intelligence.recommendation.reason,
+          prompt: intelligence.recommendation.question ?? null,
+        }
+      : repeated
+        ? {
+            id: null,
+            title: repeated.topic,
+            reason: `${repeated.questions} related questions in the last 30 days. ${repeated.unresolved} still need an answer; ${repeated.escalations} reached a human.${repeated.estimatedMinutes ? ` Estimated interruption time: ${formatMinutes(repeated.estimatedMinutes)}.` : ""}`,
+            prompt: repeated.representative_question,
+          }
+        : recommendation.data
+          ? { ...recommendation.data, prompt: null }
+          : {
+              id: null,
+              title:
+                waitingQuestions > 0
+                  ? questions.data?.[0]?.question ||
+                    "A question your team keeps asking"
+                  : approvedProcesses.count
+                    ? "The next task only you know how to do"
+                    : "Your first repeatable process",
+              reason:
+                waitingQuestions > 0
+                  ? "Your team asked about this and Opryn could not find an approved answer."
+                  : "Start with one task you want someone else to handle without asking you.",
+              prompt: null,
+            };
+  const teachHref =
+    trainingSignal?.href ??
+    intelligence.recommendation?.href ??
+    (teachNext.id
+      ? `/app/processes/new?recommendation=${teachNext.id}`
+      : teachNext.prompt
+        ? `/app/processes/new?prompt=${encodeURIComponent(teachNext.prompt)}`
+        : "/app/processes/new");
   const estimatedMinutes = estimate.minutes;
   const channelCounts = (channelQuestions.data ?? []).reduce(
     (counts, item) => {
@@ -292,315 +328,73 @@ export default async function DashboardPage({
   ]
     .sort((a, b) => +new Date(b.date) - +new Date(a.date))
     .slice(0, 4);
-  const handledActivity = (recentQuestions.data ?? []).filter(
-    (item) => item.status === "answered" && item.answered_by_opryn,
-  );
-  const primaryNeed =
-    questions.data?.find((item) => item.id === query.question) ??
-    questions.data?.[0];
+  const handledActivity = handledQuestions.data ?? [];
+  const reviewCount = needsYouItems.filter(
+    (item) => item.kind === "approve",
+  ).length;
 
   return (
-    <div className="home-dashboard space-y-7 sm:space-y-9">
-      {externalLearning.data ? (
-        <ExternalLearningBanner learning={externalLearning.data} />
-      ) : null}
-      <header className="home-reveal flex flex-col gap-6 pt-2 lg:flex-row lg:items-end lg:justify-between">
-        <div className="max-w-3xl lg:flex-1">
-          <p className="opryn-page-kicker">{context.organization.name}</p>
-          <LocalGreeting name={firstName} />
-          <p className="mt-3 max-w-2xl text-[15px] leading-7 text-[var(--opryn-muted)]">
-            {unfinishedSetup ? learningSession.data?.intent ? "Your learning request is saved. Continue when you're ready." : "Start with one source. Review what matters, then ask your first question." : "See what Opryn handled, what needs a decision, and what to teach next."}
+    <OwnerHome
+      name={firstName}
+      organizationName={context.organization.name}
+      handledCount={answeredCount}
+      hasApprovedKnowledge={hasApprovedKnowledge}
+      gapCount={intelligence.openGaps}
+      items={needsYouItems}
+      initialQuestionId={query.question}
+      teach={{
+        title: teachNext.title,
+        reason: teachNext.reason,
+        href: teachHref,
+        action: intelligence.recommendation?.action ?? "Teach Opryn",
+      }}
+      handled={handledActivity}
+      recentKnowledge={recentProcesses.data ?? []}
+      health={
+        <KnowledgeHealthPreview
+          organizationId={organizationId}
+          compact
+          reviewCount={reviewCount}
+          freshnessCount={
+            needsYouItems.filter((item) => item.type === "freshness").length
+          }
+        />
+      }
+      intelligence={
+        <>
+          <HomeTraining organizationId={organizationId} />
+          <OwnerIntelligencePanel data={intelligence} />
+          <p className="text-xs text-[var(--opryn-muted)]">
+            This week: {askedCount} questions · {handledRate}% answered by Opryn
+            ·{" "}
+            {estimate.count
+              ? `${formatMinutes(estimatedMinutes)} estimated time returned`
+              : "No eligible time estimate yet"}
+            . Web {channelCounts.web} · Slack {channelCounts.slack} · Teams{" "}
+            {channelCounts.teams} · AI {channelCounts.external_ai}.
           </p>
-        </div>
-        <div className="flex items-center gap-3 text-sm text-[var(--opryn-muted)]">
-          <span className="font-semibold text-[var(--opryn-navy)]">
-            {handledRate}% handled
-          </span>
-          <span
-            aria-hidden="true"
-            className="h-4 w-px bg-[var(--opryn-line)]"
-          />
-          <span>{needsYou} need your input</span>
-        </div>
-      </header>
-
-      <section className="home-reveal home-time-module overflow-hidden rounded-[26px] border border-[#d7e5fa] bg-[#eef5ff] p-6 sm:p-8 lg:p-10">
-        <div className="grid gap-8 lg:grid-cols-[1.15fr_.85fr] lg:items-end">
-          <div>
-            <p className="home-metric-label text-sm font-semibold text-[var(--opryn-blue)]">
-              {estimate.count
-                ? "Estimated time returned"
-                : "Ready for your team's questions"}
+          <details className="mt-4 text-xs">
+            <summary>Recent workspace changes</summary>
+            <p className="py-2">
+              {approvedProcesses.count ?? 0} approved processes ·{" "}
+              {processReviews.count ?? 0} processes and {callReviews.count ?? 0}{" "}
+              call findings waiting for review.
             </p>
-            <p className="home-metric-value mt-4 text-[clamp(3.5rem,9vw,6.8rem)] font-semibold leading-none tracking-[-.075em] text-[var(--opryn-navy)]">
-              {estimate.count
-                ? formatMinutes(estimatedMinutes)
-                : "Your next step"}
-            </p>
-            <p className="mt-5 max-w-lg text-sm leading-6 text-[#596b84]">
-              {estimate.count
-                ? `Based on ${estimate.count} eligible team questions this week.`
-                : "Invite someone to ask about your approved knowledge. Time estimates appear after eligible team use."}
-            </p>
-            <details className="mt-3 max-w-lg text-sm leading-6 text-[#596b84]">
-              <summary className="cursor-pointer font-semibold">
-                How this estimate works
-              </summary>
-              <p className="mt-2">
-                Eligible answered team questions × {estimate.minutesPerQuestion}{" "}
-                minutes (your workspace setting). Excludes owner/admin
-                questions, AI-agent calls, escalations, negative feedback, and
-                the same person&apos;s repeated text on one day. Based on the
-                latest 1,000 questions this week. An estimate of potential time
-                returned, not confirmed interruptions avoided.
-              </p>
-              <Link
-                href="/app/settings"
-                className="underline underline-offset-4"
-              >
-                Change the estimate
-              </Link>
-            </details>
-          </div>
-          <div className="lg:pb-2">
-            <div className="flex items-end justify-between gap-4">
-              <span className="text-xs font-medium text-[#61738c]">
-                Questions answered by Opryn
-              </span>
-              <strong className="text-2xl tracking-[-.04em] text-[var(--opryn-navy)]">
-                {handledRate}%
-              </strong>
-            </div>
-            <div
-              className="mt-3 h-2 overflow-hidden rounded-full bg-white/85"
-              aria-label={`${handledRate}% of questions handled`}
-            >
-              <span
-                className="home-progress-fill block h-full rounded-full bg-[var(--opryn-blue)]"
-                style={
-                  {
-                    "--home-progress": `${handledRate}%`,
-                  } as React.CSSProperties
-                }
-              />
-            </div>
-            <p className="mt-4 text-xs leading-5 text-[#718096]">
-              {askedCount
-                ? `${answeredCount} of ${askedCount} questions were handled from approved company knowledge.`
-                : "Once your team starts asking, Opryn will show the time it gives back."}
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <section className="home-reveal">
-        <p className="opryn-section-label">QUICK START</p>
-        <h2 className="mt-1 text-xl font-semibold tracking-[-.03em] text-[var(--opryn-navy)]">
-          What would you like to do?
-        </h2>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <QuickAction
-            href="/app/processes/new"
-            icon={BookOpenText}
-            label="Teach Opryn"
-          />
-          <QuickAction href="/app/ask" icon={AskIcon} label="Ask Opryn" />
-          <QuickAction
-            href="/app/team"
-            icon={TeamIcon}
-            label="Invite teammate"
-          />
-          <QuickAction
-            href="/app/processes"
-            icon={BookOpenText}
-            label="Open knowledge"
-          />
-        </div>
-      </section>
-
-      <div className="home-reveal grid gap-6 xl:grid-cols-[1.35fr_.85fr]">
-        <section className="overflow-hidden rounded-[24px] border border-[var(--opryn-line)] bg-white shadow-[var(--opryn-shadow-sm)]">
-          <div className="flex items-end justify-between gap-4 px-6 pb-5 pt-6 sm:px-8 sm:pt-8">
-            <div>
-              <p className="opryn-section-label">HANDLED FOR YOU</p>
-              <h2 className="mt-2 text-3xl font-semibold tracking-[-.045em] text-[var(--opryn-navy)]">
-                {answeredCount} questions handled
-              </h2>
-              <p className="mt-2 text-sm text-[var(--opryn-muted)]">
-                Answered from approved knowledge. Answered does not mean
-                confirmed resolved.
-              </p>
-            </div>
-            <OprynStatus kind="approved" label="Handled" />
-          </div>
-          {handledActivity.length ? (
-            <div className="border-t border-[var(--opryn-line)] px-6 sm:px-8">
-              {handledActivity.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center gap-4 border-b border-[var(--opryn-line)] py-4 last:border-0"
-                >
-                  <span className="grid size-8 shrink-0 place-items-center rounded-[10px] bg-[#edf4ff] text-[var(--opryn-blue)]">
-                    <Check size={16} strokeWidth={2.5} />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-[var(--opryn-navy)]">
-                      {item.question}
-                    </p>
-                    <p className="mt-1 text-xs text-[var(--opryn-muted)]">
-                      Answered by Opryn
-                    </p>
-                  </div>
-                  <time className="hidden text-xs text-[var(--opryn-faint)] sm:block">
-                    {new Date(item.created_at).toLocaleDateString()}
-                  </time>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <EmptyState
-              icon={<Clock3 />}
-              title="Nothing handled yet."
-              description="When your team asks Opryn, the questions it handles will appear here."
-            />
-          )}
-          <div className="border-t border-[var(--opryn-line)] px-6 py-4 sm:px-8">
-            <Link
-              href="/app/ask"
-              className="group inline-flex items-center gap-2 text-sm font-semibold text-[var(--opryn-blue)]"
-            >
-              Open Ask Opryn
-              <ArrowRight className="size-4 group-hover:translate-x-0.5" />
-            </Link>
-          </div>
-        </section>
-
-        <section
-          id="needs-you"
-          className={`overflow-hidden rounded-[24px] border bg-white shadow-[var(--opryn-shadow-sm)] ${needsYou ? "border-[#efd6d8]" : "border-[var(--opryn-line)]"}`}
-        >
-          <div className="p-6 sm:p-8">
-            <p className="opryn-section-label text-[var(--opryn-coral)]">
-              NEEDS YOU
-            </p>
-            <div className="mt-3 flex items-end justify-between gap-4">
-              <p className="text-5xl font-semibold tracking-[-.065em] text-[var(--opryn-navy)]">
-                {needsYou}
-              </p>
-              <span className="text-xs font-medium text-[var(--opryn-muted)]">
-                items
-              </span>
-            </div>
-            {primaryNeed ? (
-              <div className="mt-6 border-l-2 border-[#e5a7ac] pl-4">
-                <p className="text-xs font-semibold text-[var(--opryn-coral)]">
-                  Answer needed
-                </p>
-                <p className="mt-2 line-clamp-2 text-sm font-medium leading-6 text-[var(--opryn-navy)]">
-                  {primaryNeed.question}
-                </p>
-                <OwnerAnswer questionId={primaryNeed.id} />
-              </div>
-            ) : (
-              <p className="mt-5 text-sm leading-6 text-[var(--opryn-muted)]">
-                {needsYou
-                  ? "A few reviews will make Opryn more useful everywhere."
-                  : "Opryn doesn’t need anything from you right now."}
-              </p>
-            )}
-            {needsYou ? (
-              <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-xs text-[var(--opryn-muted)]">
-                {needsYouSummary.answer ? (
-                  <span>{needsYouSummary.answer} need an answer</span>
-                ) : null}
-                {needsYouSummary.approve ? (
-                  <span>{needsYouSummary.approve} approvals</span>
-                ) : null}
-                {needsYouSummary.conflict ? (
-                  <span>{needsYouSummary.conflict} conflicts</span>
-                ) : null}
-                {needsYouSummary.update ? (
-                  <span>{needsYouSummary.update} updates</span>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
-          {needsYou ? (
-            <Link
-              href="/app/needs-you"
-              className="group flex min-h-14 items-center justify-between border-t border-[var(--opryn-line)] px-6 text-sm font-semibold text-[var(--opryn-blue)] hover:bg-[#f7faff] sm:px-8"
-            >
-              Review what needs you
-              <ArrowRight className="size-4 group-hover:translate-x-0.5" />
-            </Link>
-          ) : null}
-        </section>
-      </div>
-
-      <section className="home-reveal grid overflow-hidden rounded-[26px] border border-[#d8e5f6] bg-white shadow-[var(--opryn-shadow-sm)] lg:grid-cols-[1.15fr_.85fr]">
-        <div className="p-6 sm:p-8 lg:p-10">
-          <p className="opryn-section-label text-[var(--opryn-blue)]">
-            TEACH NEXT
-          </p>
-          <h2 className="mt-4 max-w-xl text-3xl font-semibold tracking-[-.045em] text-[var(--opryn-navy)]">
-            {teachNext.title}
-          </h2>
-          <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--opryn-muted)]">
-            {teachNext.reason}
-          </p>
-          <Link href={teachHref} className="opryn-action mt-6">
-            Teach Opryn <ArrowRight className="size-4" />
-          </Link>
-        </div>
-        <div
-          className="border-t border-[var(--opryn-line)] bg-[#f6f9fd] p-6 sm:p-8 lg:border-l lg:border-t-0 lg:p-10"
-          id="insights"
-        >
-          <p className="opryn-section-label">LEARNING PROGRESS</p>
-          <div className="mt-6 space-y-5">
-            <HomeInsight
-              label="Handled without you"
-              value={`${handledRate}%`}
-            />
-            <HomeInsight
-              label="Approved processes"
-              value={approvedProcesses.count ?? 0}
-            />
-            <HomeInsight
-              label="Needs review"
-              value={(processReviews.count ?? 0) + (callReviews.count ?? 0)}
-            />
-          </div>
-          <p className="mt-6 border-t border-[var(--opryn-line)] pt-4 text-xs leading-5 text-[var(--opryn-muted)]">
-            This week · Web {channelCounts.web} · Slack {channelCounts.slack} ·
-            AI connections {channelCounts.external_ai}
-          </p>
-        </div>
-      </section>
-
-      <KnowledgeHealthPreview organizationId={organizationId} />
-      {activity.length ? (
-        <section className="home-reveal border-t border-[var(--opryn-line)] pt-7">
-          <p className="opryn-section-label">RECENT ACTIVITY</p>
-          <h2 className="mt-2 text-xl font-semibold tracking-[-.03em] text-[var(--opryn-navy)]">
-            What changed lately
-          </h2>
-          <div className="mt-4 divide-y divide-[var(--opryn-line)] border-y border-[var(--opryn-line)]">
             {activity.map((item) => (
-              <div key={item.id} className="flex items-center gap-4 py-4">
-                <span className="h-2 w-2 shrink-0 rounded-full bg-[#8db6f7]" />
-                <p className="min-w-0 flex-1 text-sm text-[#46566d]">
-                  {item.label}
-                </p>
-                <time className="hidden text-xs text-[var(--opryn-faint)] sm:block">
-                  {new Date(item.date).toLocaleDateString()}
-                </time>
-              </div>
+              <p className="py-2" key={item.id}>
+                {item.label}
+              </p>
             ))}
-          </div>
-        </section>
-      ) : null}
-    </div>
+          </details>
+        </>
+      }
+      learning={
+        externalLearning.data ? (
+          <ExternalLearningBanner learning={externalLearning.data} />
+        ) : null
+      }
+      setupHref={unfinishedSetup ? "/onboarding" : undefined}
+    />
   );
 }
 
@@ -647,7 +441,11 @@ function EmployeeHome({
           icon={BookOpenText}
           label="Browse company knowledge"
         />
-        <QuickAction href="/app/team" icon={TeamIcon} label="View the team" />
+        <QuickAction
+          href="/app/training?view=mine"
+          icon={TeamIcon}
+          label="What you need to know"
+        />
       </div>
     </>
   );
@@ -667,7 +465,7 @@ function QuickAction({
   return (
     <Link
       href={href}
-      className="group flex min-h-[82px] items-center gap-3 rounded-[18px] border border-[var(--opryn-line)] bg-white px-5 text-sm font-semibold text-[#354156] shadow-[0_8px_24px_rgba(7,27,61,.035)] hover:-translate-y-0.5 hover:border-[#c9d9f0] hover:shadow-[0_12px_30px_rgba(7,27,61,.07)]"
+      className="home-quick-action group flex min-h-[82px] items-center gap-3 rounded-[18px] border border-[var(--opryn-line)] bg-white px-5 text-sm font-semibold text-[#354156] shadow-[0_8px_24px_rgba(7,27,61,.035)] hover:-translate-y-0.5 hover:border-[#c9d9f0] hover:shadow-[0_12px_30px_rgba(7,27,61,.07)]"
     >
       <Icon size={19} className="shrink-0 text-[var(--opryn-blue)]" />
       {label}
@@ -679,23 +477,6 @@ function QuickAction({
         <ArrowRight className="ml-auto size-4 text-[#9aa4b2] group-hover:translate-x-0.5" />
       )}
     </Link>
-  );
-}
-
-function HomeInsight({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | number;
-}) {
-  return (
-    <div className="flex items-end justify-between gap-5 border-b border-[var(--opryn-line)] pb-5 last:border-0 last:pb-0">
-      <span className="text-sm text-[var(--opryn-muted)]">{label}</span>
-      <strong className="text-2xl font-semibold tracking-[-.04em] text-[var(--opryn-navy)]">
-        {value}
-      </strong>
-    </div>
   );
 }
 
@@ -730,15 +511,25 @@ function ExternalLearningBanner({
   // Keep this guard even though the dashboard query already excludes them.
   if (["complete", "failed"].includes(learning.status)) return null;
   return (
-    <section className="home-reveal overflow-hidden rounded-[22px] border border-[#cfe0f7] bg-[#f1f7ff] sm:flex sm:items-center sm:justify-between">
-      <div className="p-5 sm:p-6">
+    <section className="owner-working-strip">
+      {["processing", "extracting", "organizing"].includes(learning.status) ? (
+        <OprynThinkingOrb
+          state="composing"
+          size={20}
+          label="Preparing findings"
+          decorative
+        />
+      ) : null}
+      <div>
         <p className="text-xs font-extrabold uppercase tracking-[.1em] text-[var(--opryn-blue)]">
           {ready ? "New knowledge ready" : `Learning from ${provider}`}
         </p>
-        <h2 className="mt-2 text-xl font-semibold tracking-[-.025em] text-[var(--opryn-navy)]">
+        <h2 className="mt-1 text-sm font-semibold text-[var(--opryn-navy)]">
           {ready
             ? `${provider} taught Opryn about ${learning.name}.`
-            : `Opryn is organizing ${learning.name}.`}
+            : learning.status === "received"
+              ? `${learning.name} received. Waiting to process.`
+              : `Opryn is organizing ${learning.name}.`}
         </h2>
         <p className="mt-2 text-sm leading-6 text-[var(--opryn-muted)]">
           {ready
@@ -762,11 +553,7 @@ function ExternalLearningBanner({
         >
           Review <ArrowRight className="size-4 group-hover:translate-x-0.5" />
         </Link>
-      ) : (
-        <div className="mx-5 mb-5 h-1.5 overflow-hidden rounded-full bg-[#d7e6f8] sm:mx-6 sm:mb-0 sm:w-28">
-          <span className="opryn-learning-progress block h-full w-2/3 rounded-full bg-[var(--opryn-blue)]" />
-        </div>
-      )}
+      ) : null}
     </section>
   );
 }

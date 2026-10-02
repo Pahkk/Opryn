@@ -8,7 +8,7 @@ const mock = {
   "@/lib/api": `export async function getRequestContext(){return globalThis.fixture.context()}`,
   "@/lib/supabase/service": `export function createServiceClient(){return globalThis.fixture.db}`,
   "@/lib/billing/subscription": `export async function getOrganizationPlan(){return globalThis.fixture.subscription}`,
-  "@/lib/billing/stripe": `export const getStripe=()=>globalThis.fixture.stripe;export const getAppUrl=()=>"https://opryn.test";export const getStripePriceId=(p,i)=>"price_"+p+"_"+i;export const planFromStripePrice=(id)=>id==="price_premium_month"?{plan:"premium",interval:"month"}:null;`,
+  "@/lib/billing/stripe": `export const getStripe=()=>globalThis.fixture.stripe;export const getAppUrl=()=>"https://opryn.test";export const getStripePriceId=(p,i)=>"price_"+p+"_"+i;export const planFromStripePrice=(id)=>id==="price_premium_month"?{plan:"premium",interval:"month"}:null;export const isCurrentMonthlyPrice=(price,plan)=>price.active&&price.currency==="usd"&&price.unit_amount===(plan==="core"?4900:12900);`,
 };
 const bundle = await build({
   stdin: {
@@ -123,6 +123,16 @@ function reset() {
           membership: { organization_id: org },
         };
   f.stripe = {
+    prices: {
+      async retrieve(id) {
+        f.calls.push(["price", id]);
+        return {
+          active: true,
+          currency: "usd",
+          unit_amount: f.wrongPrice ? 9900 : id.includes("core") ? 4900 : 12900,
+        };
+      },
+    },
     customers: {
       async create(p, o) {
         f.calls.push(["customer", p, o]);
@@ -171,6 +181,7 @@ const post = (
 reset();
 assert.equal((await post()).status, 200);
 let call = f.calls.find((c) => c[0] === "checkout")[1];
+assert.equal(call.line_items[0].price, "price_premium_month");
 assert.equal(call.subscription_data.trial_period_days, 5);
 assert.equal(call.payment_method_collection, "always");
 assert.equal(call.metadata.organization_id, org);
@@ -195,6 +206,15 @@ assert.equal(
     .trial_period_days,
   undefined,
 );
+assert.equal(f.calls.find((c) => c[0] === "checkout")[1].line_items[0].price, "price_core_month");
+reset();
+f.reservation.fingerprint = JSON.stringify(["price_premium_month", "purchase", "onboarding"]);
+assert.equal((await post({ plan: "premium", intent: "purchase", source: "onboarding" })).status, 200);
+assert.equal(f.calls.find((c) => c[0] === "checkout")[1].line_items[0].price, "price_premium_month");
+reset();
+f.wrongPrice = true;
+assert.equal((await post()).status, 503);
+assert.ok(!f.calls.some((c) => c[0] === "checkout"));
 reset();
 process.env.TRIAL_REQUIRES_PAYMENT_METHOD = "false";
 await post();
@@ -236,6 +256,7 @@ assert.equal((await post()).status, 403);
 reset();
 assert.equal((await post(undefined, "https://hostile.test")).status, 403);
 assert.equal((await post({ plan: "invented" })).status, 400);
+assert.equal((await post({ plan: "core", priceId: "price_arbitrary" })).status, 400);
 reset();
 f.failure = true;
 assert.equal((await post()).status, 503);
@@ -286,5 +307,5 @@ assert.equal(await api.billingBoundary(f.db, org), true);
 delete globalThis.fixture;
 delete process.env.TRIAL_REQUIRES_PAYMENT_METHOD;
 console.log(
-  "PASS mocked checkout route: 5-day trial, immediate purchase, card/no-card, customer reuse, duplicate/lease/recovery, trial abuse, membership and origin denial; curated industry search",
+  "PASS mocked checkout route: Starter/Pro prices, five-day trial, historical-price rejection, arbitrary ID denial, card/no-card, customer reuse, duplicate/lease/recovery, trial abuse, membership and origin denial; curated industry search",
 );

@@ -4,14 +4,10 @@ import {
   UnknownIcon,
 } from "@/components/opryn-icons/opryn-icons";
 import { CircleAlert } from "lucide-react";
+import { PresenceSwap } from "@/components/motion/presence-swap";
 
 export type OprynStatusKind =
-  | "approved"
-  | "observed"
-  | "unknown"
-  | "needs-you"
-  | "connected"
-  | "draft";
+  "approved" | "observed" | "unknown" | "needs-you" | "connected" | "draft";
 
 const labels: Record<OprynStatusKind, string> = {
   approved: "Approved",
@@ -40,7 +36,7 @@ export function OprynStatus({
   return (
     <span className={`opryn-status opryn-status--${kind}`}>
       <Icon size={14} />
-      {label}
+      <PresenceSwap value={`${kind}:${label}`}>{label}</PresenceSwap>
     </span>
   );
 }

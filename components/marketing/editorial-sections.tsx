@@ -1,4 +1,10 @@
-import Link from "next/link";
+"use client";
+import { useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
+import { PublicAction } from "./public-motion";
+import { MotionTabs, ActiveIndicator } from "@/components/motion/motion-tabs";
+import { useProductReducedMotion } from "@/lib/motion/use-product-motion";
+import { uiTransition } from "@/lib/motion/motion-tokens";
 import {
   PointerSurface,
   SignatureStory,
@@ -12,12 +18,9 @@ export function DirectionalLink({
   children: React.ReactNode;
 }) {
   return (
-    <Link href={href} className="directional-link">
-      <span>{children}</span>
-      <span className="directional-arrow" aria-hidden="true">
-        →
-      </span>
-    </Link>
+    <PublicAction href={href} variant="text">
+      {children}
+    </PublicAction>
   );
 }
 
@@ -42,6 +45,21 @@ export function EditorialFeaturePanel({
       >
         <h2>{title}</h2>
         <p>{description}</p>
+        <div className="feature-example">
+          {tint ? (
+            <>
+              YOUR AGENT → AUTHORIZED LOOKUP
+              <br />
+              Answer · Source · Version
+            </>
+          ) : (
+            <>
+              “How do we handle this?”
+              <br />
+              An approved answer. A clear source.
+            </>
+          )}
+        </div>
         <DirectionalLink href={href}>{action}</DirectionalLink>
       </article>
     </PointerSurface>
@@ -161,6 +179,25 @@ export function CentralUpdate() {
 }
 
 export function EditorialTrust() {
+  const [active, setActive] = useState(0);
+  const reduced = useProductReducedMotion();
+  const states = [
+    [
+      "Approved",
+      "Refund approval limits",
+      "Reviewed guidance available to authorized people and connections.",
+    ],
+    [
+      "Needs review",
+      "A proposed change",
+      "Captured information is not policy. A person decides what becomes official.",
+    ],
+    [
+      "Unknown",
+      "No approved answer",
+      "The question returns to the right person. An answer can become reviewable knowledge.",
+    ],
+  ];
   return (
     <section className="editorial-trust" id="security">
       <div className="story-shell">
@@ -172,23 +209,38 @@ export function EditorialTrust() {
             what becomes official.
           </h2>
         </header>
-        <div className="editorial-trust-rows" data-story-reveal>
-          {[
-            [
-              "Approved",
-              "Reviewed and available to authorized users and connections.",
-            ],
-            ["Needs review", "Captured information waiting for a decision."],
-            [
-              "Unknown",
-              "No approved answer found. Route the question to the right person.",
-            ],
-          ].map(([title, text]) => (
-            <div key={title}>
-              <h3>{title}</h3>
-              <p>{text}</p>
-            </div>
-          ))}
+        <MotionTabs>
+          <div
+            className="trust-selector"
+            role="group"
+            aria-label="Explore knowledge states"
+          >
+            {states.map(([name], i) => (
+              <button
+                key={name}
+                type="button"
+                aria-pressed={i === active}
+                onClick={() => setActive(i)}
+              >
+                {name}
+                {active === i && <ActiveIndicator />}
+              </button>
+            ))}
+          </div>
+        </MotionTabs>
+        <div className="trust-example" aria-live="polite">
+          <AnimatePresence initial={false}>
+            <motion.div
+              key={active}
+              initial={{ opacity: 0, y: reduced ? 0 : 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={uiTransition(reduced)}
+            >
+              <h3>{states[active][1]}</h3>
+              <p>{states[active][2]}</p>
+            </motion.div>
+          </AnimatePresence>
         </div>
         <div className="editorial-trust-bottom">
           <p>Sources stay attached. Access stays controlled.</p>

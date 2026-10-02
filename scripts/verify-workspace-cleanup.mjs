@@ -12,6 +12,8 @@ function reset(overrides = {}) {
     files: true,
     storageFail: false,
     customer: "cus_1",
+    connectionStatus: "connected",
+    attempts: [],
     ...overrides,
   };
   globalThis.__cleanup = state;
@@ -36,6 +38,14 @@ globalThis.__db = {
         q.filters.push([k, v]);
         return chain;
       },
+      in(k, v) {
+        q.filters.push([k, v]);
+        return chain;
+      },
+      not(k, op, v) {
+        q.filters.push([k, op, v]);
+        return chain;
+      },
       maybeSingle() {
         return chain;
       },
@@ -53,7 +63,7 @@ globalThis.__db = {
               provider_config_key: "google",
               external_connection_id: "remote-1",
               configuration: { environment: "PROD" },
-              status: "connected",
+              status: state.connectionStatus,
               error_code: null,
             },
           ];
@@ -62,6 +72,8 @@ globalThis.__db = {
             stripe_subscription_id: "sub_1",
             stripe_customer_id: "cus_1",
           };
+        if (q.operation === "read" && table === "integration_connect_attempts")
+          data = state.attempts;
         return Promise.resolve({ data, error: null }).then(resolve);
       },
     };
@@ -145,6 +157,48 @@ assert(
 );
 reset({ remoteStatus: 404 });
 await cleanup();
+reset({ connectionStatus: "disconnected" });
+await cleanup();
+assert(
+  state.events.some((e) => e.remote === "google/remote-1"),
+  "Disconnected local rows still receive remote cleanup",
+);
+reset({
+  attempts: [
+    {
+      integration_key: "google",
+      connection_id: "remote-1",
+      environment: "PROD",
+    },
+    {
+      integration_key: "google",
+      connection_id: "old-remote",
+      environment: "PROD",
+    },
+  ],
+});
+await cleanup();
+assert.equal(
+  state.events.filter((e) => e.remote === "google/remote-1").length,
+  1,
+  "Current and historical references deduplicated",
+);
+assert(
+  state.events.some((e) => e.remote === "google/old-remote"),
+  "Replaced connections deleted too",
+);
+reset({
+  attempts: [
+    {
+      integration_key: "google",
+      connection_id: "different-env",
+      environment: "DEV",
+    },
+  ],
+});
+await assert.rejects(cleanup());
+assert(!state.events.some((e) => e.remote === "google/different-env"));
+assert(!state.events.some((e) => e.cancel || e.storage));
 reset({ remoteStatus: 503 });
 await assert.rejects(cleanup());
 assert(!state.events.some((e) => e.cancel || e.storage));

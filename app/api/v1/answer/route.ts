@@ -1,4 +1,8 @@
+import { hasFeature } from "@/lib/billing/plans";
 import { z } from "zod";
+import { trustedAnswerContext } from "@/lib/opryn/knowledge/trust";
+import { getOrganizationPlan } from "@/lib/billing/subscription";
+import { scopeContextSchema } from "@/lib/opryn/knowledge/scope";
 import {
   authenticateExternalAI,
   externalAIError,
@@ -14,6 +18,7 @@ import {
 const schema = z.object({
   question: z.string().trim().min(3).max(4000),
   context: z.string().trim().max(4000).optional(),
+  scope_context: scopeContextSchema.optional(),
 });
 
 export async function POST(request: Request) {
@@ -23,14 +28,16 @@ export async function POST(request: Request) {
     const parsed = schema.safeParse(await request.json().catch(() => null));
     if (!parsed.success)
       return externalJSON({ error: "invalid_request" }, { status: 400 });
-    const { knowledge, embedding } = await searchExternalKnowledgeWithEmbedding(
-      auth.service,
-      auth.connection.id,
-      auth.connection.organization_id,
-      `${parsed.data.question}\n${parsed.data.context ?? ""}`,
-      15,
-      auth.scopes,
-    );
+    const { knowledge, embedding, versions } =
+      await searchExternalKnowledgeWithEmbedding(
+        auth.service,
+        auth.connection.id,
+        auth.connection.organization_id,
+        `${parsed.data.question}\n${parsed.data.context ?? ""}`,
+        15,
+        auth.scopes,
+        parsed.data.scope_context,
+      );
     const answer = knowledge.length
       ? await answerExternalQuestion(
           parsed.data.question,
@@ -53,17 +60,25 @@ export async function POST(request: Request) {
     if (
       !answer?.can_answer ||
       answer.confidence < answerThreshold ||
-      !answer.answer
+      !answer.answer ||
+      !knowledge.some((item) => answer.cited_source_ids.includes(item.id))
     ) {
-      const { data: clusterId } = await auth.service.rpc(
-        "record_question_cluster",
+      const { data: gap, error: gapError } = await auth.service.rpc(
+        "record_external_gap",
         {
           target_organization_id: auth.connection.organization_id,
+          target_connection_id: auth.connection.id,
+          target_key_id: auth.keyId,
           question_text: parsed.data.question,
+          question_context: parsed.data.context ?? "",
           question_embedding: embedding,
-          question_origin: "external_ai",
+          route_question: auth.scopes.has("escalations:create"),
+          register_occurrence: true,
+          applicability_context: parsed.data.scope_context ?? {},
         },
       );
+      if (gapError) throw gapError;
+      const clusterId = gap.clusterId;
       await logExternalActivity(auth.service, {
         organizationId: auth.connection.organization_id,
         connectionId: auth.connection.id,
@@ -91,7 +106,11 @@ export async function POST(request: Request) {
         status: "unknown",
         answer: null,
         confidence: answer?.confidence ?? 0,
-        can_escalate: auth.scopes.has("escalations:create"),
+        can_escalate:
+          auth.scopes.has("escalations:create") &&
+          auth.connection.unknown_behavior !== "record_only",
+        routed: gap.routed,
+        escalation_id: gap.publicId,
         critical: Boolean(criticalRows?.length),
         ...(knowledge[0] && auth.scopes.has("sources:read")
           ? {
@@ -118,6 +137,62 @@ export async function POST(request: Request) {
       .filter(Boolean)
       .join("\n\n");
     const requiresApproval = answer.requires_approval;
+    // Never release a generated answer after access, key or guidance changed.
+    const fresh = await auth.service.rpc("match_external_ai_knowledge", {
+      target_connection_id: auth.connection.id,
+      target_organization_id: auth.connection.organization_id,
+      query_embedding: embedding,
+      target_source_types: knowledge.map((k) => k.source_type),
+      match_threshold: 0.3,
+      match_count: 20,
+    });
+    const current = await auth.service
+      .from("knowledge_chunks")
+      .select("id,current_version")
+      .eq("organization_id", auth.connection.organization_id)
+      .in(
+        "id",
+        cited.map((k) => k.id),
+      );
+    const key = await auth.service
+      .from("external_ai_api_keys")
+      .select("id")
+      .eq("organization_id", auth.connection.organization_id)
+      .eq("connection_id", auth.connection.id)
+      .eq("id", auth.keyId)
+      .is("revoked_at", null)
+      .maybeSingle();
+    const plan = await getOrganizationPlan(
+      auth.service,
+      auth.connection.organization_id,
+    );
+    const trusted = await trustedAnswerContext(
+      auth.service,
+      auth.connection.organization_id,
+      cited,
+      { ...parsed.data.scope_context, channels: ["external_ai"] },
+    );
+    if (
+      fresh.error ||
+      current.error ||
+      key.error ||
+      !key.data ||
+      !hasFeature(plan.plan, "aiConnections") ||
+      trusted.length !== cited.length ||
+      cited.some(
+        (k) =>
+          !fresh.data?.some(
+            (v: { id: string; content: string }) =>
+              v.id === k.id && v.content === k.content,
+          ) ||
+          current.data?.find((v) => v.id === k.id)?.current_version !==
+            versions.find((v) => v.id === k.id)?.version,
+      )
+    )
+      return externalJSON(
+        { error: "access_or_knowledge_changed", answer: null },
+        { status: 409 },
+      );
     await logExternalActivity(auth.service, {
       organizationId: auth.connection.organization_id,
       connectionId: auth.connection.id,
@@ -125,6 +200,9 @@ export async function POST(request: Request) {
       resultStatus: "answered",
       startedAt,
       sourceCount: cited.length,
+      knowledgeVersions: versions.filter((v) =>
+        cited.some((k) => k.id === v.id),
+      ),
     });
     await auth.service.rpc("record_knowledge_usage", {
       target_organization_id: auth.connection.organization_id,

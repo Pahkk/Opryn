@@ -1,123 +1,101 @@
 import { gsap, motionScope } from "@/lib/motion/gsap";
 
-/** Unpinned, event-triggered sequences; all content remains readable when motion is unavailable. */
+/** No pin, no hidden reading states: small entry gestures around the full story. */
 export function mountKnowledgeStory(root: HTMLElement) {
   const scope = motionScope(root);
   root.dataset.mobileStory = "true";
-  scope.run(() => {
-    gsap.set(root.querySelector(".kc-confirmed"), { yPercent: 115 });
-    gsap.set(root.querySelector(".kc-confirmation"), { opacity: 0 });
-  });
   const observer = new IntersectionObserver(
-    (entries) =>
+    (entries) => {
       entries.forEach((entry) => {
         if (!entry.isIntersecting) return;
         scope.run(() => {
           const node = entry.target;
           if (node.classList.contains("kc-sources")) {
-            gsap.fromTo(
-              node.children,
-              { x: (i: number) => (i % 2 ? 18 : -18), scale: 0.97 },
-              {
-                x: 0,
-                scale: 1,
-                stagger: 0.07,
-                duration: 0.5,
-                ease: "power2.out",
-                clearProps: "transform",
-              },
-            );
+            gsap.from(node.children, {
+              x: (i: number) => (i % 2 ? 14 : -14),
+              scale: 0.97,
+              duration: 0.5,
+              stagger: 0.06,
+              ease: "power2.out",
+              clearProps: "transform",
+            });
           } else if (node.classList.contains("kc-knowledge")) {
-            gsap
-              .timeline()
-              .fromTo(
-                node,
-                { scale: 0.96 },
-                {
-                  scale: 1,
-                  duration: 0.5,
-                  ease: "power2.out",
-                  clearProps: "transform",
-                },
-              )
-              .to(
-                node.querySelector(".kc-pending"),
-                { yPercent: -115, duration: 0.35 },
-                0.35,
-              )
-              .to(
-                node.querySelector(".kc-confirmed"),
-                { yPercent: 0, duration: 0.35 },
-                0.35,
-              )
-              .to(
-                node.querySelector(".kc-status"),
-                {
-                  backgroundColor: "var(--editorial-success-surface)",
-                  duration: 0.35,
-                },
-                0.35,
-              )
-              .to(
-                node.querySelector(".kc-authority"),
-                { height: 0, opacity: 0, marginTop: 0, duration: 0.35 },
-                0.35,
-              )
-              .to(
-                node.querySelector(".kc-confirmation"),
-                { opacity: 1, duration: 0.3 },
-                0.55,
-              );
+            gsap.from(node, {
+              scale: 0.97,
+              y: 12,
+              duration: 0.45,
+              ease: "power2.out",
+              clearProps: "transform",
+            });
           } else {
-            gsap.fromTo(
-              node,
-              { clipPath: "inset(0 100% 0 0)" },
-              {
-                clipPath: "inset(0 0% 0 0)",
-                duration: 0.5,
-                ease: "power2.out",
-                clearProps: "clipPath",
-              },
-            );
+            gsap.from(node, {
+              y: 10,
+              duration: 0.35,
+              ease: "power2.out",
+              clearProps: "transform",
+            });
           }
         });
         observer.unobserve(entry.target);
-      }),
+      });
+    },
     { threshold: 0.15 },
   );
   root
     .querySelectorAll(
-      ".kc-sources,.kc-knowledge,.kc-destination,.kc-gap-question,.kc-gap-answer",
+      ".kc-sources,.kc-knowledge,.kc-destination,.kc-gap-answer,.kc-new-proposal,.kc-loop",
     )
     .forEach((node) => observer.observe(node));
   const fill = root.querySelector<HTMLElement>(".kc-progress-track i");
   const stage = root.querySelector<HTMLElement>(".kc-stage")!;
+  const checkpoints = [
+    ".kc-sources",
+    ".kc-proposal",
+    ".kc-authority",
+    ".kc-confirmation",
+    ".kc-destinations",
+    ".kc-feedback",
+  ].map((selector) => root.querySelector<HTMLElement>(selector)!);
+  const items = Array.from(
+    root.querySelectorAll<HTMLElement>(".kc-progress li"),
+  );
   let frame = 0;
-  const updateProgress = () => {
+  const update = () => {
     frame = 0;
     const rect = stage.getBoundingClientRect();
     const progress = Math.min(
       1,
       Math.max(
         0,
-        (76 - rect.top) / Math.max(1, rect.height - innerHeight + 76),
+        (90 - rect.top) / Math.max(1, rect.height - innerHeight + 90),
       ),
     );
-    if (fill) fill.style.transform = `scaleX(${progress})`;
+    if (fill) fill.style.transform = "scaleX(" + progress + ")";
+    const active = Math.max(
+      0,
+      checkpoints.findLastIndex(
+        (node) => node.getBoundingClientRect().top < innerHeight * 0.5,
+      ),
+    );
+    items.forEach((node, i) => {
+      node.dataset.state =
+        i < active ? "complete" : i === active ? "active" : "upcoming";
+    });
   };
-  const requestProgress = () => {
-    if (!frame) frame = requestAnimationFrame(updateProgress);
+  const request = () => {
+    if (!frame) frame = requestAnimationFrame(update);
   };
-  window.addEventListener("scroll", requestProgress, { passive: true });
-  window.addEventListener("resize", requestProgress);
-  updateProgress();
+  window.addEventListener("scroll", request, { passive: true });
+  window.addEventListener("resize", request);
+  update();
   return () => {
-    window.removeEventListener("scroll", requestProgress);
-    window.removeEventListener("resize", requestProgress);
+    window.removeEventListener("scroll", request);
+    window.removeEventListener("resize", request);
     cancelAnimationFrame(frame);
-    fill?.style.removeProperty("transform");
     observer.disconnect();
     scope.dispose();
+    fill?.style.removeProperty("transform");
+    items.forEach((node) => delete node.dataset.state);
     delete root.dataset.mobileStory;
   };
 }

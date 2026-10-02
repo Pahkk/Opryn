@@ -114,6 +114,12 @@ export function showSpotlight(options: {
         requestAnimationFrame(check);
       });
       if (abort.signal.aborted) return;
+      if (
+        !target.isConnected ||
+        !target.getBoundingClientRect().width ||
+        !target.getBoundingClientRect().height
+      )
+        throw new Error("target_unavailable");
       const pointer = document.createElement("div");
       pointer.className = "opryn-guide-pointer";
       pointer.setAttribute("aria-hidden", "true");
@@ -138,7 +144,11 @@ export function showSpotlight(options: {
       options.lastPoint.current = end;
       const ctx = gsap.context(() => {
         gsap.set(pointer, { x: end.x, y: end.y });
-        if (!options.pointer) {
+        if (
+          !options.pointer ||
+          reduced ||
+          !matchMedia("(pointer:fine) and (min-width:768px)").matches
+        ) {
           pointer.style.display = "none";
           return;
         }
@@ -172,6 +182,7 @@ export function showSpotlight(options: {
       });
       const stop = observeMotionPreference(target, () => {
         ctx.revert();
+        pointer.style.display = "none";
         pointer.style.transform = `translate(${end.x}px,${end.y}px)`;
       });
       cleanupMotion = () => {
@@ -180,6 +191,7 @@ export function showSpotlight(options: {
         pointer.remove();
       };
       const interact = () => options.onInteract();
+      target.classList.add("opryn-guide-spotlit");
       // A real user gesture transfers control to the underlying workflow (including OAuth).
       target.addEventListener("click", interact, { capture: true, once: true });
       const targetObserver = new MutationObserver(() => {
@@ -214,6 +226,7 @@ export function showSpotlight(options: {
       window.addEventListener("scroll", reposition, true);
       window.addEventListener("keydown", escape);
       cleanupEvents = () => {
+        target.classList.remove("opryn-guide-spotlit");
         targetObserver.disconnect();
         resizeObserver.disconnect();
         target.removeEventListener("click", interact, true);

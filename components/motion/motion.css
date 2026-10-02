@@ -1,4 +1,4 @@
-/* Shared motion owns these entries; don't layer old CSS effects over GSAP. */
+/* Shared Motion owns product entries; GSAP owns marked storytelling scenes. */
 .opryn-app .needs-you-count strong .motion-number-value {
   font: inherit;
   color: inherit;
@@ -29,7 +29,7 @@
 }
 [data-motion-region],
 [data-motion-list] > [data-motion-row] {
-  /* GSAP alone owns transforms here; CSS must not lag behind its updates. */
+  /* The owning animation library controls transforms without CSS interpolation. */
   transition-property: color, background-color, border-color;
 }
 .opryn-flow-line {
@@ -62,12 +62,35 @@
   position: relative;
   overflow: clip;
 }
+.motion-active-indicator {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 0;
+  height: 2px;
+  background: #536b82;
+  pointer-events: none;
+}
+[data-motion-owner="motion"] {
+  transition-property: color, background-color, border-color;
+}
+.guide-submit > span > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.activation-motion-progress {
+  height: 2px;
+  color: #536b82;
+  background: #d2d8de;
+  margin-top: 12px;
+}
 .selection-indicator {
   position: absolute;
   bottom: 0;
   left: 0;
   height: 2px;
-  background: var(--opryn-blue, #245fc9);
+  background: var(--opryn-blue, #536b82);
   transform-origin: left center;
   pointer-events: none;
 }
@@ -78,7 +101,8 @@
   min-width: 0;
   display: grid;
 }
-.pointer-plane, .pointer-plane > article {
+.pointer-plane,
+.pointer-plane > article {
   height: 100%;
 }
 .signature-story {

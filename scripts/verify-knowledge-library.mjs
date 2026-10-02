@@ -231,7 +231,12 @@ function route(path) {
           };
         if (name === "@/lib/knowledge-library") return testModule.exports;
         if (name === "@/lib/integrations/nango-providers")
-          return { getNangoProvider: () => ({ id: "drive" }) };
+          return {
+            getNangoProvider: () => ({
+              id: "drive",
+              capabilities: ["knowledge_import"],
+            }),
+          };
         throw new Error(`Unexpected dependency ${name}`);
       },
     },

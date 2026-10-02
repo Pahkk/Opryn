@@ -4,6 +4,7 @@ import { z } from "zod";
 import { requireAdminContext } from "@/lib/app-context";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeading } from "@/components/app/page-heading";
+import { knowledgeScopeSchema } from "@/lib/opryn/knowledge/scope";
 
 export default async function KnowledgeHistoryPage({
   params,
@@ -18,7 +19,7 @@ export default async function KnowledgeHistoryPage({
     service
       .from("knowledge_chunks")
       .select(
-        "id,content,process_id,source_type,approved,current_version,last_confirmed_at,updated_at,health_status",
+        "id,content,scope,process_id,source_type,approved,current_version,last_confirmed_at,updated_at,health_status",
       )
       .eq("organization_id", context.organization.id)
       .eq("id", id)
@@ -26,7 +27,7 @@ export default async function KnowledgeHistoryPage({
     service
       .from("knowledge_versions")
       .select(
-        "id,version_number,title,content,change_reason,created_at,profiles!knowledge_versions_changed_by_fkey(full_name)",
+        "id,version_number,title,content,scope,change_reason,created_at,profiles!knowledge_versions_changed_by_fkey(full_name)",
       )
       .eq("organization_id", context.organization.id)
       .eq("knowledge_chunk_id", id)
@@ -96,6 +97,12 @@ export default async function KnowledgeHistoryPage({
             ? new Date(item.last_confirmed_at).toLocaleDateString("en-US")
             : "Not recorded"}
         </p>
+        <Link
+          className="opryn-button-secondary mt-4 inline-flex min-h-11 items-center px-3"
+          href={`/app/knowledge/${id}/impact`}
+        >
+          View change impact
+        </Link>
         {item.health_status !== "healthy" ? (
           <p className="mt-2 text-sm">
             This item needs review before it can be relied on.
@@ -135,6 +142,44 @@ export default async function KnowledgeHistoryPage({
             </p>
             <p className="mt-4 whitespace-pre-wrap break-words text-sm leading-7">
               {version.content}
+            </p>
+            {version.version_number !== item.current_version ? (
+              <details className="mt-4 rounded-xl bg-[#eaf4ff] p-4">
+                <summary className="cursor-pointer text-sm font-semibold">
+                  Compare with current v{item.current_version}
+                </summary>
+                <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <h3 className="text-xs font-semibold">
+                      Recorded v{version.version_number}
+                    </h3>
+                    <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-7">
+                      {version.content}
+                    </p>
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-semibold">
+                      Current v{item.current_version}
+                    </h3>
+                    <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-7">
+                      {item.content}
+                    </p>
+                    <p className="mt-3 text-xs">
+                      Current applicability:{" "}
+                      {JSON.stringify(knowledgeScopeSchema.parse(item.scope))}
+                    </p>
+                  </div>
+                </div>
+              </details>
+            ) : null}
+            <p className="mt-3 text-xs text-[#566279]">
+              Applies to:{" "}
+              {Object.entries(knowledgeScopeSchema.parse(version.scope))
+                .map(
+                  ([key, value]) =>
+                    `${key}: ${Array.isArray(value) ? value.join(", ") : value}`,
+                )
+                .join(" · ") || "Global workspace scope"}
             </p>
           </details>
         ))

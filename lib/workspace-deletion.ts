@@ -22,8 +22,35 @@ export async function cleanupWorkspace(organizationId: string, userId: string) {
     .from("integration_connect_attempts")
     .update({ status: "cancelled" })
     .eq("organization_id", organizationId)
-    .eq("status", "pending");
+    .in("status", ["pending", "confirmed"]);
   if (cancelled.error) throw new Error("cleanup_retry");
+  // Reconnects may replace the integration row while leaving an older remote
+  // authorization behind. These IDs are assigned only by verified confirmation.
+  const attempts = await db
+    .from("integration_connect_attempts")
+    .select("integration_key,connection_id,environment")
+    .eq("organization_id", organizationId)
+    .not("connection_id", "is", null);
+  if (attempts.error) throw new Error("cleanup_retry");
+  const removedConnections = new Set<string>();
+  async function removeNangoConnection(
+    integrationKey: string,
+    connectionId: string,
+    environment: unknown,
+  ) {
+    check();
+    if (!integrationKey || !connectionId || environment !== nangoEnvironment())
+      throw new Error("cleanup_retry");
+    const path = connectionPath(integrationKey, connectionId);
+    if (removedConnections.has(path)) return;
+    try {
+      await nangoRequest(path, { method: "DELETE" });
+    } catch (error) {
+      if (!(error instanceof ConnectionError && error.status === 404))
+        throw error;
+    }
+    removedConnections.add(path);
+  }
   const connections = await db
     .from("integrations")
     .select(
@@ -34,8 +61,6 @@ export async function cleanupWorkspace(organizationId: string, userId: string) {
   for (const connection of connections.data ?? []) {
     check();
     if (connection.auth_platform === "nango") {
-      if (connection.status === "disconnected" && !connection.error_code)
-        continue;
       if (connection.configuration?.environment !== nangoEnvironment())
         throw new Error("cleanup_retry");
       const stopped = await db.rpc("stop_nango_connection", {
@@ -45,18 +70,11 @@ export async function cleanupWorkspace(organizationId: string, userId: string) {
       });
       if (stopped.error || stopped.data !== true)
         throw new Error("cleanup_retry");
-      try {
-        await nangoRequest(
-          connectionPath(
-            connection.provider_config_key,
-            connection.external_connection_id,
-          ),
-          { method: "DELETE" },
-        );
-      } catch (error) {
-        if (!(error instanceof ConnectionError && error.status === 404))
-          throw error;
-      }
+      await removeNangoConnection(
+        connection.provider_config_key,
+        connection.external_connection_id,
+        connection.configuration?.environment,
+      );
       const saved = await db
         .from("integrations")
         .update({ error_code: null })
@@ -79,6 +97,13 @@ export async function cleanupWorkspace(organizationId: string, userId: string) {
         .eq("id", connection.id);
       if (stopped.error) throw new Error("cleanup_retry");
     }
+  }
+  for (const attempt of attempts.data ?? []) {
+    await removeNangoConnection(
+      attempt.integration_key,
+      attempt.connection_id,
+      attempt.environment,
+    );
   }
   // Match existing disconnect semantics; never delete the customer's provider account.
   for (const operation of [

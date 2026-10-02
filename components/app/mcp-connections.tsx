@@ -47,7 +47,7 @@ export function McpConnections({
             href="/pricing"
             className="mt-4 inline-flex min-h-11 items-center justify-center bg-[var(--opryn-blue)] px-4 text-sm font-semibold text-white sm:mt-0"
           >
-            Explore Premium
+            Explore Pro
           </Link>
         ) : null}
       </div>
@@ -104,7 +104,7 @@ function ClientRow({
             <span
               className={`text-xs font-semibold ${active ? "text-[#176f56]" : "text-[var(--opryn-faint)]"}`}
             >
-              {active ? "Connected" : enabled ? "Not connected" : "Premium"}
+              {active ? "Connected" : enabled ? "Not connected" : "Pro"}
             </span>
           </div>
           <p className="mt-1 text-sm text-[var(--opryn-muted)]">

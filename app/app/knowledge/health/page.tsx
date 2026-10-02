@@ -4,6 +4,9 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeading } from "@/components/app/page-heading";
 import { InboxAction } from "@/components/app/learning-inbox-actions";
 import { getKnowledgeHealth } from "@/lib/opryn/knowledge/health";
+import { createServiceClient } from "@/lib/supabase/service";
+import { getSourceFreshness } from "@/lib/opryn/knowledge/source-freshness";
+import { SourceFreshnessList } from "@/components/app/source-freshness";
 
 const linkStyle =
   "inline-flex min-h-11 shrink-0 items-center rounded-xl px-3 text-sm font-semibold text-[#3158d8] hover:bg-[#edf3ff] focus-visible:outline-2 focus-visible:outline-[#3158d8]";
@@ -21,6 +24,9 @@ function Section({
   return (
     <section
       id={id}
+      data-guide={
+        id === "source-updates" ? "knowledge.sourceUpdates" : undefined
+      }
       className="memory-section scroll-mt-24 border-t border-[#e0e5ec] py-7 sm:py-9"
     >
       <h2 className="text-2xl font-semibold tracking-tight">{title}</h2>
@@ -43,6 +49,10 @@ export default async function KnowledgeHealthPage() {
   const context = await requireAdminContext();
   const service = await createClient();
   const health = await getKnowledgeHealth(service, context.organization.id);
+  const sources = await getSourceFreshness(
+    createServiceClient(),
+    context.organization.id,
+  );
   return (
     <div className="memory-page min-w-0">
       <PageHeading
@@ -50,9 +60,17 @@ export default async function KnowledgeHealthPage() {
         title="Knowledge Health"
         description="Know what your team can rely on—and what needs a little care."
         actions={
-          <Link href="/app/processes" className={linkStyle}>
-            Back to Knowledge
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/app/knowledge/analysis" className={linkStyle}>
+              Analyze company knowledge
+            </Link>
+            <Link href="/app/knowledge/test" className={linkStyle}>
+              Test Opryn
+            </Link>
+            <Link href="/app/processes" className={linkStyle}>
+              Back to Knowledge
+            </Link>
+          </div>
         }
       />
       <div className="memory-section rounded-3xl border border-[#dfe6f0] bg-[#f5f8fe] p-5 sm:p-8">
@@ -105,6 +123,7 @@ export default async function KnowledgeHealthPage() {
           "Gaps",
           "Conflicts",
           "Freshness",
+          "Source Updates",
           "Key Person Risk",
           "Most Used",
         ].map((name) => (
@@ -117,6 +136,16 @@ export default async function KnowledgeHealthPage() {
           </a>
         ))}
       </nav>
+      <Section
+        id="source-updates"
+        title="Source updates"
+        description="Recorded availability, successful checks, provider versions and reviewable revisions. Age is a reminder, not proof that guidance is wrong."
+      >
+        <SourceFreshnessList
+          sources={sources.sources}
+          limited={sources.limited}
+        />
+      </Section>
       <Section
         id="coverage"
         title="Coverage"

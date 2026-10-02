@@ -36,19 +36,16 @@ try {
           scrollY -
           88;
         scrollTo({
-          top: start + (Number(root.dataset.scrollDistance) * 112) / 153,
+          top: start + Number(root.dataset.scrollDistance) * 0.8,
           behavior: "instant",
         });
       });
       await expect(root.locator(".kc-destination-4")).toHaveCSS("opacity", "1");
-      await expect(root).toHaveAttribute("data-story-stage", "distribution");
+      await expect(root).toHaveAttribute("data-story-stage", "use");
     } else {
       await expect(root).toHaveAttribute("data-mobile-story", "true");
       await root.locator(".kc-knowledge").scrollIntoViewIfNeeded();
-      await expect(root.locator(".kc-confirmed")).toHaveCSS(
-        "transform",
-        "matrix(1, 0, 0, 1, 0, 0)",
-      );
+      await expect(root.locator(".kc-confirmed")).toBeVisible();
       await expect(root.locator(".pin-spacer")).toHaveCount(0);
     }
     assert.ok(

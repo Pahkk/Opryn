@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { MotionPanel } from "@/components/motion/motion-panel";
 
 const questions = [
   [
@@ -36,7 +37,9 @@ export function MarketingFAQ() {
       <div className="container-shell grid gap-14 lg:grid-cols-[.7fr_1.3fr] lg:gap-24">
         <div>
           <p className="editorial-index">FAQ</p>
-          <h2 className="editorial-title mt-5">Questions owners usually ask.</h2>
+          <h2 className="editorial-title mt-5">
+            Questions owners usually ask.
+          </h2>
           <p className="mt-6 max-w-[420px] text-base leading-7 text-[#667184]">
             Still wondering whether Opryn fits your business? Start here.
           </p>
@@ -53,15 +56,20 @@ export function MarketingFAQ() {
                   className="flex min-h-16 w-full items-center justify-between gap-6 py-4 text-left text-sm font-semibold text-[#263247]"
                 >
                   {question}
-                  <span aria-hidden="true" className="font-mono text-base font-normal text-[#788393]">
+                  <span
+                    aria-hidden="true"
+                    className="font-mono text-base font-normal text-[#788393]"
+                  >
                     {active ? "−" : "+"}
                   </span>
                 </button>
-                <div className={`grid transition-[grid-template-rows] duration-300 ${active ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
+                <MotionPanel open={active}>
                   <div className="overflow-hidden">
-                    <p className="max-w-[650px] pb-6 text-sm leading-7 text-[#687487]">{answer}</p>
+                    <p className="max-w-[650px] pb-6 text-sm leading-7 text-[#687487]">
+                      {answer}
+                    </p>
                   </div>
-                </div>
+                </MotionPanel>
               </div>
             );
           })}

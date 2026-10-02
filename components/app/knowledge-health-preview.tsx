@@ -3,8 +3,14 @@ import { createClient } from "@/lib/supabase/server";
 
 export async function KnowledgeHealthPreview({
   organizationId,
+  compact = false,
+  reviewCount = 0,
+  freshnessCount = 0,
 }: {
   organizationId: string;
+  compact?: boolean;
+  reviewCount?: number;
+  freshnessCount?: number;
 }) {
   const service = await createClient();
   const [approved, conflicts] = await Promise.all([
@@ -28,6 +34,52 @@ export async function KnowledgeHealthPreview({
       >
         View Knowledge Health →
       </Link>
+    );
+  if (compact)
+    return (
+      <section
+        aria-labelledby="home-health-title"
+        className="home-health-summary"
+      >
+        <p className="owner-eyebrow">The guidance behind the answers</p>
+        <h2 id="home-health-title">Knowledge health</h2>
+        <dl className="home-health-counts">
+          <div>
+            <dt>
+              <span aria-hidden="true" style={{ background: "#496c59" }} />
+              Approved entries
+            </dt>
+            <dd>{approved.count ?? 0}</dd>
+          </div>
+          <div>
+            <dt>
+              <span aria-hidden="true" style={{ background: "#2855f9" }} />
+              Approval decisions
+            </dt>
+            <dd>{reviewCount}</dd>
+          </div>
+          <div>
+            <dt>
+              <span aria-hidden="true" style={{ background: "#bc3a45" }} />
+              Open conflicts
+            </dt>
+            <dd>{conflicts.count ?? 0}</dd>
+          </div>
+          <div>
+            <dt>
+              <span aria-hidden="true" style={{ background: "#a66810" }} />
+              Potentially outdated
+            </dt>
+            <dd>{freshnessCount}</dd>
+          </div>
+        </dl>
+        <p className="home-health-note">
+          Review coverage, source freshness, and key-person dependencies.
+        </p>
+        <Link className="home-health-link" href="/app/knowledge/health">
+          View knowledge health →
+        </Link>
+      </section>
     );
   return (
     <section className="memory-section my-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[#dfe5ed] bg-[#f7f9fc] p-5 sm:p-6">

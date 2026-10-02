@@ -91,7 +91,9 @@ try {
   page.on("pageerror", (error) => errors.push(error.message));
   // This suite installs an explicit Picker double. Its preload must not load
   // Google's real SDK later and replace the double halfway through a test.
-  await page.route("https://apis.google.com/js/api.js", (route) => route.abort());
+  await page.route("https://apis.google.com/js/api.js", (route) =>
+    route.abort(),
+  );
   await page.route("**/api/**", (route) =>
     route.fulfill({
       status: 503,
@@ -411,7 +413,7 @@ try {
   await page.evaluate(() => window.nangoTestReject(new Error("closed")));
   await page
     .getByRole("alert")
-    .filter({ hasText: "Google couldn’t be connected" })
+    .filter({ hasText: "Google Workspace couldn’t be connected" })
     .waitFor();
   assert.equal(
     await page.getByText("Google Workspace connected", { exact: true }).count(),
@@ -549,7 +551,7 @@ try {
   for (const width of [375, 390, 430, 1440]) {
     await load("teach-google", width);
     await page
-      .getByRole("button", { name: "Google Workspace", exact: true })
+      .getByRole("button", { name: "Choose Google files", exact: true })
       .click();
     await page.waitForFunction(() => window.fixturePickerVisible === true);
     assert.ok(page.url().includes("screen=teach-google"));
@@ -586,13 +588,18 @@ try {
     assertions += 4;
   }
   capabilityConnected = false;
+  // Each scenario starts without a stale authorization resume from prior fixture pages.
+  await page.evaluate(() => sessionStorage.clear());
   await load("teach-google", 390);
   await page
-    .getByRole("button", { name: "Google Workspace", exact: true })
+    .getByRole("button", { name: "Choose Google files", exact: true })
     .click();
   await page
     .getByRole("dialog")
-    .getByRole("button", { name: "Continue with Google", exact: true })
+    .getByRole("button", {
+      name: "Continue with Google Workspace",
+      exact: true,
+    })
     .click();
   await page.waitForFunction(() => window.nangoTestResolve);
   await page.evaluate(() =>
@@ -686,6 +693,7 @@ try {
     );
     await row.first().click();
     const detail = page.getByRole("dialog", { name: "Refund approval limits" });
+    await detail.getByText("Organize this knowledge", { exact: true }).click();
     await detail
       .getByLabel("Tags", { exact: true })
       .fill("Refunds, Finance, Support");
@@ -785,7 +793,13 @@ try {
   await page
     .getByRole("textbox", { name: "Your company question" })
     .fill("How do revisions work?");
-  await page.getByRole("button", { name: "Ask Opryn", exact: true }).click();
+  await page
+    .locator("form")
+    .filter({
+      has: page.getByRole("textbox", { name: "Your company question" }),
+    })
+    .getByRole("button", { name: "Ask Opryn", exact: true })
+    .click();
   await page
     .getByRole("alert")
     .filter({ hasText: "Fixture network failure. Please retry." })

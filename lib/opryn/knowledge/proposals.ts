@@ -1,9 +1,17 @@
 import "server-only";
+import { after } from "next/server";
+import { createServiceClient } from "@/lib/supabase/service";
+import { recheckAllKnowledgeGapAnswers } from "./recheck-runner";
 
 import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { embedKnowledge } from "@/lib/ai/services";
 import { classifyKnowledge } from "@/lib/knowledge-library";
+import {
+  knowledgeScopeSchema,
+  knowledgeScopesOverlap,
+  type KnowledgeScope,
+} from "./scope";
 
 const HIGH_RISK_PATTERN =
   /\b(pric(?:e|ing)|refund|legal|contract|discount|safety|compliance|payment|deposit|guarantee|financial approval)\b/i;
@@ -129,6 +137,7 @@ export async function createKnowledgeProposal(input: {
   riskLevel?: "normal" | "critical";
   status?: "pending_approval" | "needs_review";
   reviewReason?: string | null;
+  scope?: KnowledgeScope;
 }) {
   const titleNeedle = input.title
     .trim()
@@ -140,20 +149,39 @@ export async function createKnowledgeProposal(input: {
     titleNeedle.length >= 4
       ? await input.service
           .from("knowledge_chunks")
-          .select("id,content")
+          .select("id,content,scope")
           .eq("organization_id", input.organizationId)
           .eq("approved", true)
+          .is("library_archived_at", null)
           .ilike("content", `%${titleNeedle}%`)
           .limit(5)
       : { data: [], error: null };
   if (relatedKnowledge.error) throw relatedKnowledge.error;
-  const conflictingKnowledge = (relatedKnowledge.data ?? []).find((item) =>
-    numericConflict(item.content, input.content),
+  const conflictingKnowledge = (relatedKnowledge.data ?? []).find(
+    (item) =>
+      numericConflict(item.content, input.content) &&
+      knowledgeScopesOverlap(
+        knowledgeScopeSchema.parse(item.scope ?? {}),
+        knowledgeScopeSchema.parse(input.scope ?? {}),
+      ),
   );
   const status = conflictingKnowledge ? "needs_review" : input.status;
   const reviewReason = conflictingKnowledge
     ? "This proposal appears to use a different limit than existing approved knowledge. Resolve the conflict before approval."
     : input.reviewReason;
+  const replaces = input.existingKnowledgeId ?? conflictingKnowledge?.id;
+  const inherited = replaces
+    ? await input.service
+        .from("knowledge_chunks")
+        .select("scope")
+        .eq("organization_id", input.organizationId)
+        .eq("id", replaces)
+        .single()
+    : { data: null, error: null };
+  if (inherited.error) throw inherited.error;
+  const scope = knowledgeScopeSchema.parse(
+    input.scope ?? inherited.data?.scope ?? {},
+  );
   const contentHash = createHash("sha256")
     .update(
       [
@@ -161,6 +189,7 @@ export async function createKnowledgeProposal(input: {
         input.proposalType ?? "policy",
         normalize(input.title),
         normalize(input.content),
+        JSON.stringify(scope),
       ].join("\u001f"),
     )
     .digest("hex");
@@ -188,6 +217,7 @@ export async function createKnowledgeProposal(input: {
           : input.proposalType
         : classifyKnowledge(input.title),
       proposed_content: input.content,
+      scope,
       source_type: input.sourceType,
       source_label: input.sourceLabel,
       source_id: input.sourceId ?? null,
@@ -372,6 +402,31 @@ async function decideProposal(
             : "This proposal changed or requires review. Refresh to see the latest revision.",
       );
     throw error;
+  }
+  if (decision === "approved") {
+    // Approval is already committed. Rechecks never delay or revoke that success.
+    const runRecheck = async () => {
+      try {
+        await recheckAllKnowledgeGapAnswers(
+          createServiceClient(),
+          input.organizationId,
+          input.proposalId,
+        );
+      } catch {
+        // The SQL trigger saved pending jobs atomically; an admin can retry them.
+        console.warn("Opryn gap recheck deferred", {
+          proposalId: input.proposalId,
+        });
+      }
+    };
+    try {
+      after(runRecheck);
+    } catch {
+      // Non-request callers cannot schedule after(). Never misreport a committed approval.
+      console.warn("Opryn gap recheck awaits retry", {
+        proposalId: input.proposalId,
+      });
+    }
   }
   return data as ProposalActionResult;
 }

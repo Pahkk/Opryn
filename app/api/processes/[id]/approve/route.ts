@@ -21,6 +21,20 @@ export async function POST(
     });
     return NextResponse.json({ ok: true, ...result });
   } catch (error) {
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      ["40001", "23514"].includes(String(error.code))
+    )
+      return NextResponse.json(
+        {
+          error:
+            "This revision changed, has a conflict, or includes scoped source guidance. Reopen the review; scoped source updates need per-item review.",
+          reviewUrl: "/app/needs-you",
+        },
+        { status: 409 },
+      );
     if (error instanceof KnowledgeConflictError)
       return NextResponse.json(
         { error: error.message, reviewUrl: "/app/needs-you?filter=conflict" },

@@ -69,8 +69,27 @@ try {
         default: p.is_default,
         cancellation: p.features.subscription_cancel.enabled,
         paymentUpdate: p.features.payment_method_update.enabled,
+        subscriptionUpdate: p.features.subscription_update.enabled,
+        switchablePrices: p.features.subscription_update.products?.flatMap(
+          (product) => product.prices,
+        ) ?? [],
+        proration: p.features.subscription_update.proration_behavior,
       })),
   );
 } catch {
   console.log("Portal configuration could not be read");
+}
+try {
+  const subscriptions = { active: 0, trialing: 0 };
+  for (const status of ["active", "trialing"]) {
+    for await (const subscription of stripe.subscriptions.list({
+      status,
+      limit: 100,
+    })) {
+      if (subscription) subscriptions[status] += 1;
+    }
+  }
+  console.log("Subscriptions by status:", subscriptions);
+} catch {
+  console.log("Subscription count could not be read");
 }

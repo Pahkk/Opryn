@@ -514,15 +514,15 @@ export function PricingEditorial() {
             <h2 className="editorial-title mt-5">Choose how Opryn learns.</h2>
           </div>
           <p className="max-w-[610px] text-lg leading-8 text-[#606c7e] lg:justify-self-end">
-            Core gives your team approved company answers. Premium adds learning
+            Starter gives your team approved company answers. Pro adds learning
             from video, screen recordings, and calls.
           </p>
         </div>
         <div className="mt-14 overflow-hidden border-y border-[#cbd3dd]">
           <div className="grid lg:grid-cols-2">
             <Plan
-              name="Core"
-              price="$99"
+              name="Starter"
+              price="$49"
               copy="For owners starting to get knowledge out of their head."
               features={[
                 "Ask Opryn and employee Q&A",
@@ -532,11 +532,11 @@ export function PricingEditorial() {
               ]}
             />
             <Plan
-              name="Premium"
-              price="$249"
+              name="Pro"
+              price="$129"
               copy="For owners who want Opryn learning from work as it happens."
               features={[
-                "Everything in Core",
+                "Everything in Starter",
                 "Up to 20 employees",
                 "Video and screen-recording learning",
                 "Call learning and advanced insights",

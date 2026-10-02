@@ -26,7 +26,11 @@ export async function POST(request: Request) {
       );
     const session = await getStripe().billingPortal.sessions.create({
       customer: subscription.stripeCustomerId,
-      return_url: `${getAppUrl()}/app/settings/billing`,
+      return_url:
+        new URL(request.url).searchParams.get("source") ===
+        "onboarding_ai_learning"
+          ? `${getAppUrl()}/api/billing/return?billing=confirming&workspace=${context.membership.organization_id}`
+          : `${getAppUrl()}/app/settings/billing`,
     });
     return NextResponse.json({ url: session.url });
   } catch (error) {

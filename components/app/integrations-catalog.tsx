@@ -1,5 +1,6 @@
 "use client";
-import { MotionRegion } from "@/components/motion/motion-region";
+import { MotionRegion, StaggerList } from "@/components/motion/motion-region";
+import { MotionTabs, ActiveIndicator } from "@/components/motion/motion-tabs";
 import "@/components/connections/connections.css";
 import { NangoConnection } from "@/components/connections/nango-connection";
 import { DialogSurface } from "@/components/app/dialog-surface";
@@ -315,36 +316,40 @@ export function IntegrationsCatalog({
               All integrations
             </h2>
           </div>
-          <div
-            className="flex max-w-full gap-1 overflow-x-auto pb-1"
-            aria-label="Filter integrations"
-          >
-            {filters
-              .filter(
-                (item) =>
-                  item.id === "all" ||
-                  item.id === "teach" ||
-                  item.id === "use" ||
-                  item.id === "connected" ||
-                  visibleProviders.some(
-                    (provider) => provider.category === item.id,
-                  ),
-              )
-              .map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => {
-                    setFilter(item.id);
-                    setActiveIndex(0);
-                  }}
-                  className={`min-h-10 whitespace-nowrap rounded-[10px] px-3 text-xs font-semibold transition-colors ${filter === item.id ? "bg-[#e8f2ff] text-[var(--opryn-blue)]" : "text-[var(--opryn-muted)] hover:bg-white hover:text-[var(--opryn-navy)]"}`}
-                  aria-pressed={filter === item.id}
-                >
-                  {item.label}
-                </button>
-              ))}
-          </div>
+          <MotionTabs>
+            <div
+              className="flex max-w-full gap-1 overflow-x-auto pb-1"
+              aria-label="Filter integrations"
+            >
+              {filters
+                .filter(
+                  (item) =>
+                    item.id === "all" ||
+                    item.id === "teach" ||
+                    item.id === "use" ||
+                    item.id === "connected" ||
+                    visibleProviders.some(
+                      (provider) => provider.category === item.id,
+                    ),
+                )
+                .map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => {
+                      setFilter(item.id);
+                      setActiveIndex(0);
+                    }}
+                    className={`min-h-10 whitespace-nowrap rounded-[10px] px-3 text-xs font-semibold transition-colors ${filter === item.id ? "bg-[#e8f2ff] text-[var(--opryn-blue)]" : "text-[var(--opryn-muted)] hover:bg-white hover:text-[var(--opryn-navy)]"}`}
+                    aria-pressed={filter === item.id}
+                    style={{ position: "relative" }}
+                  >
+                    {item.label}
+                    {filter === item.id && <ActiveIndicator />}
+                  </button>
+                ))}
+            </div>
+          </MotionTabs>
         </div>
         {results.length ? (
           [
@@ -373,16 +378,21 @@ export function IntegrationsCatalog({
                 <p className="mt-2 mb-4 text-sm text-[var(--opryn-muted)]">
                   {group.description}
                 </p>
-                <div className="divide-y divide-[var(--opryn-line)]">
+                <StaggerList
+                  changeKey={groupProviders.map((p) => p.id).join(",")}
+                  className="divide-y divide-[var(--opryn-line)]"
+                >
                   {groupProviders.map((provider) => (
-                    <ProviderRow
-                      key={provider.id}
-                      provider={provider}
-                      connection={statusByProvider.get(provider.id)}
-                      onOpen={() => setSelectedId(provider.id)}
-                    />
+                    <div key={provider.id}>
+                      <ProviderRow
+                        key={provider.id}
+                        provider={provider}
+                        connection={statusByProvider.get(provider.id)}
+                        onOpen={() => setSelectedId(provider.id)}
+                      />
+                    </div>
                   ))}
-                </div>
+                </StaggerList>
               </section>
             ) : null;
           })
@@ -654,7 +664,7 @@ function IntegrationDrawer({
         {connection?.connected
           ? "Manage"
           : locked
-            ? "Explore Premium"
+            ? "Explore Pro"
             : provider.id === "google_drive" || provider.id === "google_docs"
               ? "Import a document"
               : provider.authMode === "mcp"
@@ -736,7 +746,7 @@ function IntegrationDrawer({
             {primaryAction()}
             {locked ? (
               <p className="mt-3 text-xs text-[var(--opryn-muted)]">
-                Available with Opryn Premium.
+                Available with Opryn Pro.
               </p>
             ) : null}
           </div>
@@ -781,7 +791,7 @@ function IntegrationDrawer({
             {primaryAction()}
             {locked ? (
               <p className="mt-3 text-xs text-[var(--opryn-muted)]">
-                Available with Opryn Premium.
+                Available with Opryn Pro.
               </p>
             ) : null}
           </div>

@@ -1,7 +1,7 @@
 import "server-only";
 import { getStripePriceId, planFromStripePrice } from "./stripe";
 export const TRIAL_DAYS = 5;
-/** Preserve the existing Premium-only trial and card collection policy. */
+/** Preserve the existing Pro-only trial and card collection policy. */
 export function trialConfiguration() {
   const priceId =
     process.env.STRIPE_TRIAL_PRICE_ID?.trim() ||

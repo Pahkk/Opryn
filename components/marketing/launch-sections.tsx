@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PLAN_DETAILS, PLAN_FEATURES } from "@/lib/billing/plans";
+import { PublicAction } from "./public-motion";
 
 export function LaunchTrust() {
   return (
@@ -35,7 +36,7 @@ export function LaunchPricing() {
         <h2>One company memory. Two ways to build it.</h2>
         <div className="launch-two">
           <article>
-            <h3>Core</h3>
+            <h3>Starter</h3>
             <p>Build and use your company knowledge.</p>
             <strong className="launch-price">
               <span>${PLAN_DETAILS.core.monthlyPrice}</span>
@@ -46,23 +47,27 @@ export function LaunchPricing() {
               and the Agent API.
             </p>
             <p>One owner + up to {PLAN_FEATURES.core.teamLimit} employees.</p>
-            <Link href="/pricing">Explore Core →</Link>
+            <PublicAction href="/pricing" variant="secondary" rolling>
+              Explore Starter
+            </PublicAction>
           </article>
           <article>
-            <h3>Premium</h3>
+            <h3>Pro</h3>
             <p>Learn from more sources. Connect deeper into AI.</p>
             <strong className="launch-price">
               <span>${PLAN_DETAILS.premium.monthlyPrice}</span>
               <small>/month</small>
             </strong>
             <p>
-              Everything in Core, plus call/video learning, screen recordings,
+              Everything in Starter, plus call/video learning, screen recordings,
               ChatGPT, Claude, and remote MCP.
             </p>
             <p>
               One owner + up to {PLAN_FEATURES.premium.teamLimit} employees.
             </p>
-            <Link href="/pricing">Explore Premium →</Link>
+            <PublicAction href="/pricing" rolling>
+              Explore Pro
+            </PublicAction>
           </article>
         </div>
         <p className="launch-fine">

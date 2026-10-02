@@ -1,4 +1,5 @@
 "use client";
+import { OprynAction } from "@/components/motion/opryn-action";
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -11,32 +12,57 @@ type Expert = {
   name: string;
   category: string;
   canApprove: boolean;
+  assignmentType?: string;
 };
 
 export function KnowledgeExperts({
   people,
   experts,
+  processes = [],
 }: {
   people: Person[];
   experts: Expert[];
+  processes?: Array<{ id: string; title: string }>;
 }) {
   const router = useRouter();
   const [userId, setUserId] = useState(people[0]?.id ?? "");
   const [category, setCategory] = useState("");
   const [canApprove, setCanApprove] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [assignmentType, setAssignmentType] = useState("category");
+  const [processId, setProcessId] = useState("");
+  const [error, setError] = useState("");
 
   async function add(event: FormEvent) {
     event.preventDefault();
-    if (!userId || !category.trim()) return;
+    if (
+      busy ||
+      !userId ||
+      (assignmentType === "process" ? !processId : !category.trim())
+    )
+      return;
     setBusy(true);
+    setError("");
     const response = await fetch("/api/team/experts", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ userId, category, canApprove }),
-    });
+      body: JSON.stringify({
+        userId,
+        category:
+          assignmentType === "process"
+            ? (processes.find((item) => item.id === processId)?.title ?? "")
+            : category,
+        canApprove,
+        assignmentType,
+        ...(assignmentType === "process" ? { processId } : {}),
+      }),
+    }).catch(() => null);
     setBusy(false);
-    if (!response.ok) return;
+    if (!response?.ok) {
+      const data = await response?.json().catch(() => null);
+      setError(data?.error || "The expert could not be saved. Try again.");
+      return;
+    }
     setCategory("");
     setCanApprove(false);
     showAppToast(
@@ -47,12 +73,22 @@ export function KnowledgeExperts({
   }
 
   async function remove(id: string) {
+    if (busy) return;
+    setBusy(true);
+    setError("");
     const response = await fetch("/api/team/experts", {
       method: "DELETE",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ id }),
-    });
-    if (response.ok) router.refresh();
+    }).catch(() => null);
+    setBusy(false);
+    if (response?.ok) router.refresh();
+    else {
+      const data = await response?.json().catch(() => null);
+      setError(
+        data?.error || "The expert assignment could not be removed. Try again.",
+      );
+    }
   }
 
   return (
@@ -79,7 +115,12 @@ export function KnowledgeExperts({
               key={expert.id}
               className="flex flex-wrap items-center gap-3 py-3.5 text-sm"
             >
-              <strong className="min-w-40">{expert.category}</strong>
+              <strong className="min-w-40">
+                {expert.category}{" "}
+                <span className="block text-xs font-normal text-[#657286]">
+                  {(expert.assignmentType ?? "category").replace("_", " ")}
+                </span>
+              </strong>
               <span className="text-[#657286]">{expert.name}</span>
               {expert.canApprove ? (
                 <span className="text-xs font-medium text-[#177257]">
@@ -88,6 +129,7 @@ export function KnowledgeExperts({
               ) : null}
               <button
                 type="button"
+                disabled={busy}
                 onClick={() => void remove(expert.id)}
                 className="ml-auto min-h-9 px-2 text-xs font-semibold text-[#8a4650]"
               >
@@ -122,12 +164,40 @@ export function KnowledgeExperts({
           </label>
           <label className="text-xs font-semibold text-[#657286]">
             Knowledge area
-            <input
-              value={category}
-              onChange={(event) => setCategory(event.target.value)}
-              placeholder="Example: Refunds"
-              className="mt-2 h-11 w-full rounded-xl border border-[#d8e0e9] px-3 text-sm"
-            />
+            <select
+              aria-label="Expertise type"
+              value={assignmentType}
+              onChange={(event) => setAssignmentType(event.target.value)}
+              className="mt-2 h-11 w-full rounded-xl border border-[#d8e0e9] bg-white px-3 text-sm"
+            >
+              <option value="category">Category</option>
+              <option value="subject">Subject</option>
+              <option value="tag">Tag</option>
+              <option value="process">Process</option>
+              <option value="business_area">Business area</option>
+            </select>
+            {assignmentType === "process" ? (
+              <select
+                aria-label="Owned process"
+                value={processId}
+                onChange={(event) => setProcessId(event.target.value)}
+                className="mt-2 h-11 w-full rounded-xl border border-[#d8e0e9] bg-white px-3 text-sm"
+              >
+                <option value="">Choose an approved process</option>
+                {processes.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.title}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                value={category}
+                onChange={(event) => setCategory(event.target.value)}
+                placeholder="Example: Refunds"
+                className="mt-2 h-11 w-full rounded-xl border border-[#d8e0e9] px-3 text-sm"
+              />
+            )}
           </label>
           <div className="flex flex-wrap items-center gap-3">
             <label className="flex min-h-11 items-center gap-2 text-xs font-medium text-[#657286]">
@@ -138,14 +208,24 @@ export function KnowledgeExperts({
               />
               May approve reusable answers
             </label>
-            <button
-              disabled={busy || !category.trim()}
-              className="min-h-11 rounded-xl bg-[#3158d8] px-4 text-sm font-semibold text-white disabled:opacity-50"
-            >
-              {busy ? "Saving…" : "Assign Expert"}
-            </button>
+            <OprynAction
+              type="submit"
+              label="Assign Expert"
+              pendingLabel="Saving…"
+              successLabel="Assigned"
+              state={busy ? "pending" : error ? "error" : "idle"}
+              disabled={
+                busy ||
+                (assignmentType === "process" ? !processId : !category.trim())
+              }
+            />
           </div>
         </form>
+      ) : null}
+      {error ? (
+        <p role="alert" className="mt-3 text-sm text-red-700">
+          {error}
+        </p>
       ) : null}
     </section>
   );
