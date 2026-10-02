@@ -300,7 +300,7 @@
     "semantic_hash": ""
   },
   "components/app/app-shell.tsx": {
-    "mtime": 1790732398.9708734,
+    "mtime": 1790959967.5484843,
     "ast_hash": "cfac0249f4e66a183eaee376ab5bafea",
     "semantic_hash": ""
   },
@@ -955,12 +955,12 @@
     "semantic_hash": ""
   },
   "app/app/integrations/page.tsx": {
-    "mtime": 1790732860.2829037,
-    "ast_hash": "6e5660310958064fa3f18d867ceebdc3",
+    "mtime": 1790959909.3765447,
+    "ast_hash": "1ef9eac2eb6aa9a6bdd6862d66e29607",
     "semantic_hash": ""
   },
   "components/opryn-icons/opryn-icons.tsx": {
-    "mtime": 1789759435.560443,
+    "mtime": 1790959967.5631962,
     "ast_hash": "8ce68b0ff2059ef0f13fc93e7605d5d6",
     "semantic_hash": ""
   },
@@ -1370,7 +1370,7 @@
     "semantic_hash": ""
   },
   "lib/integrations/catalog.ts": {
-    "mtime": 1789848563.941353,
+    "mtime": 1790959967.5770588,
     "ast_hash": "fe983474da020675b3a831bb5d17aec9",
     "semantic_hash": ""
   },
@@ -1380,7 +1380,7 @@
     "semantic_hash": ""
   },
   "lib/integrations/types.ts": {
-    "mtime": 1789511175.4869442,
+    "mtime": 1790959967.5899475,
     "ast_hash": "616c356536dfe389d16ac47367dbaca0",
     "semantic_hash": ""
   },
@@ -2055,7 +2055,7 @@
     "semantic_hash": ""
   },
   "lib/marketing/integrations.ts": {
-    "mtime": 1789848547.95901,
+    "mtime": 1790959999.609952,
     "ast_hash": "37cb123d4eed91f1a9a9012160bf5bcd",
     "semantic_hash": ""
   },
@@ -2390,12 +2390,12 @@
     "semantic_hash": ""
   },
   "app/api/integrations/nango/[id]/files/route.ts": {
-    "mtime": 1789163489.6966972,
+    "mtime": 1790959967.5418885,
     "ast_hash": "8507581f854c80b47f4094c0c8a26330",
     "semantic_hash": ""
   },
   "app/api/integrations/nango/[id]/import/route.ts": {
-    "mtime": 1789600097.9172919,
+    "mtime": 1790959967.5351353,
     "ast_hash": "dd304d6335cac91f3864679740b36201",
     "semantic_hash": ""
   },
@@ -2425,13 +2425,13 @@
     "semantic_hash": ""
   },
   "components/connections/nango-connection.tsx": {
-    "mtime": 1789711893.5356033,
+    "mtime": 1790959967.555549,
     "ast_hash": "ae6923bad845fe3c0badef18b9f20228",
     "semantic_hash": ""
   },
   "lib/integrations/nango-capabilities.ts": {
-    "mtime": 1789511626.2877173,
-    "ast_hash": "7a55bdeab7c601c7d438d84159f47e2a",
+    "mtime": 1790959967.5900962,
+    "ast_hash": "a9a14a5d99fb07c3d202cf981cc4d3ad",
     "semantic_hash": ""
   },
   "lib/integrations/nango-providers.ts": {
@@ -2465,7 +2465,7 @@
     "semantic_hash": ""
   },
   "docs/nango-integrations.md": {
-    "mtime": 1789511754.0385497,
+    "mtime": 1790959967.5703022,
     "ast_hash": "c21b14d2e6bc96a0b8c4052f2f932313",
     "semantic_hash": ""
   },
@@ -10280,12 +10280,12 @@
     "semantic_hash": ""
   },
   "artifacts/training-layer/agent-results.txt": {
-    "mtime": 1790796797.0593953,
+    "mtime": 1790796911.4366496,
     "ast_hash": "6367d93e90401e7da796e6e7bc4a5bf9",
     "semantic_hash": ""
   },
   "artifacts/training-layer/api-results.txt": {
-    "mtime": 1790795550.1100242,
+    "mtime": 1790796911.4220545,
     "ast_hash": "219ada68a4cd0df8cf01de3e712da051",
     "semantic_hash": ""
   },
@@ -10300,8 +10300,8 @@
     "semantic_hash": ""
   },
   "artifacts/training-layer/build.txt": {
-    "mtime": 1790796833.8764813,
-    "ast_hash": "62e3bff7a4b38212036757df3e83dceb",
+    "mtime": 1790796843.3507385,
+    "ast_hash": "e3f08c2ec810de933d07df2cd929dc6e",
     "semantic_hash": ""
   },
   "artifacts/training-layer/format.txt": {
@@ -10310,8 +10310,8 @@
     "semantic_hash": ""
   },
   "artifacts/training-layer/graphify.txt": {
-    "mtime": 1790796830.2183375,
-    "ast_hash": "4e8936c8e447a1eccf18d7248409f0a0",
+    "mtime": 1790796835.462795,
+    "ast_hash": "e444af687b2d651a86ba9b53e40c5f2c",
     "semantic_hash": ""
   },
   "artifacts/training-layer/lint.txt": {
@@ -10325,7 +10325,7 @@
     "semantic_hash": ""
   },
   "artifacts/training-layer/model-results.txt": {
-    "mtime": 1790796106.1979585,
+    "mtime": 1790796911.401578,
     "ast_hash": "b4570c004103dec56a018f8ae801e5ce",
     "semantic_hash": ""
   },
@@ -10340,12 +10340,12 @@
     "semantic_hash": ""
   },
   "artifacts/training-layer/sql-results.txt": {
-    "mtime": 1790795971.2780204,
+    "mtime": 1790796912.0997758,
     "ast_hash": "57bffc3b2c17cddb6ea2cf09e3d381ab",
     "semantic_hash": ""
   },
   "artifacts/training-layer/submission-api-results.txt": {
-    "mtime": 1790796797.1261208,
+    "mtime": 1790796911.429743,
     "ast_hash": "763f5e7735b9465888c7ab96e2eb714c",
     "semantic_hash": ""
   },
@@ -10455,22 +10455,22 @@
     "semantic_hash": ""
   },
   "artifacts/training-layer/diff-check.txt": {
-    "mtime": 1790796721.1683898,
+    "mtime": 1790796874.7137163,
     "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
     "semantic_hash": ""
   },
   "artifacts/training-layer/operations-runbook.txt": {
-    "mtime": 1790796702.2956765,
-    "ast_hash": "d8df7780c124e1381151f2dd235da608",
+    "mtime": 1790798022.809418,
+    "ast_hash": "22923704bd0f884e9f8e506d5038dc5f",
     "semantic_hash": ""
   },
   "artifacts/training-layer/release-report.txt": {
-    "mtime": 1790796702.2943265,
-    "ast_hash": "7c4deb949b94b45a09c0c1c6d4475a0c",
+    "mtime": 1790798022.8092089,
+    "ast_hash": "e8d0a30ea40967a02aa74fcc9f119dc3",
     "semantic_hash": ""
   },
   "artifacts/training-layer/teach-next-results.txt": {
-    "mtime": 1790796320.9325197,
+    "mtime": 1790796911.3758721,
     "ast_hash": "9d677246a1508f281a3b60e589c1dd52",
     "semantic_hash": ""
   },
@@ -10482,6 +10482,51 @@
   "artifacts/training-layer/training-walkthrough.webm": {
     "mtime": 1790796108.1609638,
     "ast_hash": "0bcb3809162a4464dcc135254ad85ac6",
+    "semantic_hash": ""
+  },
+  "artifacts/training-layer/deployment-auth.json": {
+    "mtime": 1790797629.2735453,
+    "ast_hash": "82488e6377a825f7989019c325c45ca7",
+    "semantic_hash": ""
+  },
+  "artifacts/training-layer/live-results.json": {
+    "mtime": 1790797928.0450225,
+    "ast_hash": "61e5cbdc175096837b8563a4fe7c7322",
+    "semantic_hash": ""
+  },
+  "artifacts/training-layer/migration-preflight.sql": {
+    "mtime": 1790797373.4114587,
+    "ast_hash": "6cec8079a194bc1752dde2600d7d4a7e",
+    "semantic_hash": ""
+  },
+  "artifacts/training-layer/verify-live-release.mjs": {
+    "mtime": 1790797917.5435977,
+    "ast_hash": "a082a313fa95bd9c3183b46287fd0f73",
+    "semantic_hash": ""
+  },
+  "components/connections/notion-page-picker.tsx": {
+    "mtime": 1790959909.377065,
+    "ast_hash": "67d2acb1f8e7571e19f868dc8a6b3718",
+    "semantic_hash": ""
+  },
+  "lib/integrations/notion.ts": {
+    "mtime": 1790959909.377897,
+    "ast_hash": "18b5f7bee0a3863c6b2278fe329bcfea",
+    "semantic_hash": ""
+  },
+  "artifacts/training-layer/deployment-home.html": {
+    "mtime": 1790797593.1397479,
+    "ast_hash": "a9b5226ddfb2ad0227a93bff2c5bf646",
+    "semantic_hash": ""
+  },
+  "artifacts/training-layer/deployment-result.txt": {
+    "mtime": 1790798022.8089385,
+    "ast_hash": "e6c2127c71326d14ea744c6c2cbed418",
+    "semantic_hash": ""
+  },
+  "artifacts/training-layer/rollback-target.txt": {
+    "mtime": 1790797373.4115372,
+    "ast_hash": "02e254d4370323c7edf89507afced30a",
     "semantic_hash": ""
   }
 }

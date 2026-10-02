@@ -7,6 +7,7 @@ import {
   nangoRequest,
   readNangoConnection,
 } from "@/lib/integrations/nango";
+import { NOTION_VERSION } from "@/lib/integrations/notion";
 import type { IntegrationCapability } from "@/lib/integrations/types";
 
 export async function requireNangoCapability(
@@ -86,5 +87,17 @@ export async function providerProxyRequest(
       "Provider-Config-Key": connection.provider_config_key,
       "Connection-Id": connection.external_connection_id,
     },
+  });
+}
+
+/** Compatibility adapter for fixed Notion API paths. */
+export async function notionRequest(
+  connection: Awaited<ReturnType<typeof requireNangoCapability>>,
+  path: string,
+  init: RequestInit = {},
+) {
+  return providerProxyRequest(connection, `/v1/${path}`, {
+    ...init,
+    headers: { ...init.headers, "Notion-Version": NOTION_VERSION },
   });
 }

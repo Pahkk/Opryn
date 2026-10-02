@@ -1,16 +1,16 @@
-# Graph Report - handoff  (2026-09-30)
+# Graph Report - handoff  (2026-10-02)
 
 ## Corpus Check
-- 784 files · ~8,232,926 words
+- 790 files · ~8,241,250 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 3352 nodes · 7269 edges · 280 communities (212 shown, 68 thin omitted)
+- 3366 nodes · 7283 edges · 274 communities (205 shown, 69 thin omitted)
 - Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 228 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `c30317c7`
+- Built from commit: `d27ac2a3`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -262,14 +262,8 @@
 - [[_COMMUNITY_Community 264|Community 264]]
 - [[_COMMUNITY_Community 265|Community 265]]
 - [[_COMMUNITY_Community 266|Community 266]]
-- [[_COMMUNITY_Community 267|Community 267]]
 - [[_COMMUNITY_Community 268|Community 268]]
-- [[_COMMUNITY_Community 269|Community 269]]
-- [[_COMMUNITY_Community 270|Community 270]]
 - [[_COMMUNITY_Community 271|Community 271]]
-- [[_COMMUNITY_Community 272|Community 272]]
-- [[_COMMUNITY_Community 273|Community 273]]
-- [[_COMMUNITY_Community 274|Community 274]]
 - [[_COMMUNITY_Community 275|Community 275]]
 - [[_COMMUNITY_Community 277|Community 277]]
 - [[_COMMUNITY_Community 279|Community 279]]
@@ -288,21 +282,21 @@
 10. `PageHeading()` - 35 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `GET()` --calls--> `getRequestContext()`  [INFERRED]
-  app/api/team/members/[id]/route.ts → lib/api.ts
 - `run()` --calls--> `recheckExternalGapAnswers()`  [INFERRED]
   scripts/verify-external-gap-service.mjs → lib/opryn/knowledge/external-gap-rechecks.ts
-- `run()` --calls--> `recheckKnowledgeGapAnswers()`  [INFERRED]
-  scripts/verify-gap-recheck-service.mjs → lib/opryn/knowledge/gap-rechecks.ts
-- `run()` --calls--> `testCompanyAnswer()`  [INFERRED]
-  scripts/verify-phase-two-service.mjs → lib/opryn/knowledge/testbench.ts
 - `POST()` --calls--> `embedKnowledge()`  [INFERRED]
   app/api/ai-connections/[id]/escalations/[escalationId]/answer/route.ts → lib/ai/services.ts
+- `POST()` --calls--> `suggestRuleFromOwnerAnswer()`  [INFERRED]
+  app/api/ai-connections/[id]/escalations/[escalationId]/answer/route.ts → lib/ai/services.ts
+- `POST()` --calls--> `apiError()`  [INFERRED]
+  app/api/ai-connections/[id]/escalations/[escalationId]/answer/route.ts → lib/api.ts
+- `POST()` --calls--> `apiError()`  [INFERRED]
+  app/api/ai-connections/[id]/revoke/route.ts → lib/api.ts
 
 ## Import Cycles
 - 1-file cycle: `components/onboarding/conversation-learning.tsx -> components/onboarding/conversation-learning.tsx`
 
-## Communities (280 total, 68 thin omitted)
+## Communities (274 total, 69 thin omitted)
 
 ### Community 0 - "Community 0"
 Cohesion: 0.13
@@ -317,24 +311,24 @@ Cohesion: 0.08
 Nodes (24): dependencies, chat, @chat-adapter/slack, @chat-adapter/teams, driver.js, ffmpeg-static, gsap, @gsap/react (+16 more)
 
 ### Community 3 - "Community 3"
-Cohesion: 0.13
-Nodes (11): BusinessDiscoveryForm(), CreateRole(), Invite, Member, Role, TeamManager(), AppToastMessage, readAppToast() (+3 more)
+Cohesion: 0.15
+Nodes (30): asRecord(), confluenceContext(), confluenceUrl(), Connection, containsForbiddenIdentity(), finalize(), FORBIDDEN_IDENTITY_KEYS, getConfluenceSource() (+22 more)
 
 ### Community 4 - "Community 4"
-Cohesion: 0.14
-Nodes (14): AppShell(), AskOpryn(), IntegrationsCatalog(), PendingApprovals(), PendingItem, PendingProposal, TeachWorkspace(), common (+6 more)
+Cohesion: 0.20
+Nodes (23): extractLearningFile(), LearningFileError, POST(), GET(), POST(), POST(), GET(), normalizedSourceText() (+15 more)
 
 ### Community 5 - "Community 5"
-Cohesion: 0.07
-Nodes (43): BillingInterval, getTeamLimit(), isPlanId(), PLAN_DETAILS, PLAN_FEATURES, PlanId, PUBLIC_PLAN_KEYS, annualBillingConfigured() (+35 more)
+Cohesion: 0.17
+Nodes (24): getTeamLimit(), isPlanId(), PlanId, annualBillingConfigured(), billingConfigured(), currentMonthlyBillingReady(), getAppUrl(), getStripe() (+16 more)
 
 ### Community 7 - "Community 7"
 Cohesion: 0.40
 Nodes (3): geist, mono, metadata
 
 ### Community 14 - "Community 14"
-Cohesion: 0.08
-Nodes (28): accessSchema, createSchema, GET(), POST(), Connection, ConnectionDetail(), EscalationCard(), KnowledgeOption (+20 more)
+Cohesion: 0.17
+Nodes (18): accessSchema, createSchema, GET(), POST(), POST(), schema, POST(), DELETE() (+10 more)
 
 ### Community 15 - "Community 15"
 Cohesion: 0.12
@@ -345,36 +339,40 @@ Cohesion: 0.40
 Nodes (4): Opryn deployment configuration, September 19, 2026 price cutover status, Stripe billing, Team invitation emails
 
 ### Community 17 - "Community 17"
-Cohesion: 0.13
-Nodes (22): AskVoice(), activationGoals, activationStage(), activationStages, CompanyProfile, companyProfileSchema, emptyCompany, knowledgeAreas (+14 more)
+Cohesion: 0.11
+Nodes (10): Connection, ConnectionDetail(), EscalationCard(), KnowledgeOption, NewAIConnection(), EXTERNAL_AI_SCOPES, EXTERNAL_AI_SOURCE_TYPES, ExternalAIScope (+2 more)
 
 ### Community 19 - "Community 19"
 Cohesion: 0.09
-Nodes (28): findBestExpert(), findCompanyExpert(), searchCompanyKnowledge(), OprynSource, resolveKnowledgeSources(), unique(), mcpQuestionOrigin(), OPRYN_MCP_ORIGIN (+20 more)
+Nodes (26): findBestExpert(), findCompanyExpert(), searchCompanyKnowledge(), OprynSource, resolveKnowledgeSources(), unique(), mcpQuestionOrigin(), askOprynFromMcp() (+18 more)
 
 ### Community 20 - "Community 20"
 Cohesion: 0.08
-Nodes (42): OwnerIntelligencePanel(), GuideCompanion(), Active, contextualPrompts(), coreMilestones, OprynGuide(), State, canGuideTarget() (+34 more)
+Nodes (42): OwnerIntelligencePanel(), Active, contextualPrompts(), coreMilestones, OprynGuide(), State, canGuideTarget(), GuideDestination (+34 more)
+
+### Community 21 - "Community 21"
+Cohesion: 0.17
+Nodes (13): metadata, AccountControls(), AuthContext, AuthContextValue, AuthProvider(), useAuth(), Footer(), Navbar() (+5 more)
 
 ### Community 22 - "Community 22"
-Cohesion: 0.12
-Nodes (31): asRecord(), CommunicationBot, enqueueIncomingMessage(), escalateChannelQuestion(), getCommunicationBot(), globalBot, normalizeMessage(), normalizeQuestionText() (+23 more)
+Cohesion: 0.08
+Nodes (47): GET(), GET(), MicrosoftToken, SlackOAuthResponse, answerCommunicationQuestion(), buildChannelSources(), ChannelPermissionError, createUnknown() (+39 more)
 
 ### Community 23 - "Community 23"
 Cohesion: 0.05
-Nodes (62): POST(), compareApprovedKnowledge(), GET(), POST(), schema, DELETE(), GET(), PATCH() (+54 more)
+Nodes (39): POST(), DELETE(), POST(), schema, DELETE(), GET(), PATCH(), schema (+31 more)
 
 ### Community 24 - "Community 24"
 Cohesion: 0.07
 Nodes (15): aiTools, connectedCount(), employeeRange(), goalPlans, goals, GuidedOnboarding(), InitialState, isStep() (+7 more)
 
 ### Community 25 - "Community 25"
-Cohesion: 0.12
-Nodes (24): AIConnectionsPage(), GET(), GET(), CallPrivacy(), CallRow(), CallsLocked(), CallUploader(), DashboardPage() (+16 more)
+Cohesion: 0.11
+Nodes (29): AIConnectionsPage(), GET(), GET(), CallPrivacy(), CallRow(), CallsLocked(), CallUploader(), KnowledgeImpactView() (+21 more)
 
 ### Community 26 - "Community 26"
-Cohesion: 0.14
-Nodes (11): KnowledgeLibraryPage(), Props, SettingsForm(), AskPage(), Page(), TrainingPage(), requireAppContext(), countByRole() (+3 more)
+Cohesion: 0.20
+Nodes (5): BillingSettings(), Props, Props, SettingsForm(), Page()
 
 ### Community 28 - "Community 28"
 Cohesion: 0.25
@@ -385,8 +383,8 @@ Cohesion: 0.10
 Nodes (20): accentColor, bots, description, full, short, developer, name, privacyUrl (+12 more)
 
 ### Community 30 - "Community 30"
-Cohesion: 0.18
-Nodes (15): categoryLabels, directionLabel(), FilterId, filters, IntegrationConnectionView, IntegrationDrawer(), isSubsequence(), normalize() (+7 more)
+Cohesion: 0.07
+Nodes (35): DialogSurface(), categoryLabels, directionLabel(), FilterId, filters, IntegrationConnectionView, IntegrationDrawer(), isSubsequence() (+27 more)
 
 ### Community 32 - "Community 32"
 Cohesion: 0.16
@@ -401,8 +399,8 @@ Cohesion: 0.23
 Nodes (15): recommendProcesses(), goalSummary(), startingKnowledgeAreas(), fallbackRecommendations(), prepareRecommendations(), createSchema, employeeCounts, ensureStartingRecommendations() (+7 more)
 
 ### Community 35 - "Community 35"
-Cohesion: 0.07
-Nodes (33): metadata, Audience(), audiences, before, Comparison(), FAQ(), faqs, FinalCTA() (+25 more)
+Cohesion: 0.14
+Nodes (16): metadata, AnswerOnceEditorial(), FinalEditorial(), GrowthEditorial(), interruptions, KnowledgeFlowEditorial(), ManifestoBreak(), OwnerViewEditorial() (+8 more)
 
 ### Community 36 - "Community 36"
 Cohesion: 0.12
@@ -421,44 +419,44 @@ Cohesion: 0.50
 Nodes (3): vercel, crons, $schema
 
 ### Community 43 - "Community 43"
-Cohesion: 0.08
-Nodes (19): MobileBottomNavigation(), NavigationGroup, navigationGroups, navigationIconNames, NavigationItem, NavigationLink(), OprynGuide, Props (+11 more)
+Cohesion: 0.10
+Nodes (15): MobileBottomNavigation(), NavigationGroup, navigationGroups, navigationIconNames, NavigationItem, NavigationLink(), OprynGuide, Props (+7 more)
 
 ### Community 44 - "Community 44"
-Cohesion: 0.29
-Nodes (8): POST(), POST(), POST(), schema, approveProcessKnowledge(), assessProcessApprovalRisk(), ProcessApprovalRisk, rejectProcessKnowledge()
+Cohesion: 0.21
+Nodes (11): POST(), POST(), POST(), POST(), schema, approveKnowledgeProposal(), assertNoBlockingKnowledgeConflict(), approveProcessKnowledge() (+3 more)
 
 ### Community 45 - "Community 45"
 Cohesion: 0.06
-Nodes (18): FilteredKnowledge, KnowledgeFlow(), KnowledgeSource, LifecycleItem, SourceId, PresenceSwap(), ApprovedIcon(), AskIcon() (+10 more)
+Nodes (20): FilteredKnowledge, KnowledgeFlow(), KnowledgeSource, LifecycleItem, SourceId, WelcomeStory(), ApprovedIcon(), AskIcon() (+12 more)
 
 ### Community 46 - "Community 46"
-Cohesion: 0.18
-Nodes (17): POST(), sameOrigin(), inferMcpClientKind(), normalizeScopes(), hashOAuthValue(), randomOAuthValue(), secret(), verifyPkce() (+9 more)
+Cohesion: 0.09
+Nodes (27): POST(), POST(), sameOrigin(), inferMcpClientKind(), normalizeScopes(), OPRYN_MCP_ISSUER, OPRYN_MCP_ORIGIN, OPRYN_MCP_SCOPES (+19 more)
 
 ### Community 47 - "Community 47"
 Cohesion: 0.29
 Nodes (6): Account linking, Microsoft Teams, Opryn Everywhere provider setup, Processing and retry behavior, Required Vercel environment variables, Slack
 
 ### Community 48 - "Community 48"
-Cohesion: 0.14
-Nodes (9): KnowledgeClassification(), ReviewData, Clarification, ProcessData, ProcessReview(), Rule, Step, KnowledgeCategory (+1 more)
+Cohesion: 0.19
+Nodes (17): DELETE(), failure(), GET(), POST(), providers, selectionSchema, DELETE(), failure() (+9 more)
 
 ### Community 49 - "Community 49"
 Cohesion: 0.40
 Nodes (4): checks, combined, failed, requiredFiles
 
 ### Community 50 - "Community 50"
-Cohesion: 0.14
-Nodes (15): AIAccessPolicy(), date(), KnowledgeDetail(), KnowledgeLibrary(), LibraryProcessReview, statusLabel(), category, ExternalKnowledgePolicy (+7 more)
+Cohesion: 0.04
+Nodes (50): AIAccessPolicy(), AskOpryn(), BusinessDiscoveryForm(), CreateRole(), IntegrationsCatalog(), Expert, KnowledgeExperts(), Person (+42 more)
 
 ### Community 51 - "Community 51"
-Cohesion: 0.12
-Nodes (25): RevealText(), providerColors, providerIcons, ProviderLogo(), CentralUpdate(), DirectionalLink(), EditorialFeaturePanel(), EditorialTrust() (+17 more)
+Cohesion: 0.08
+Nodes (35): EditorialImage(), EditorialImageProps, RevealText(), TypingHeadline(), useVisiblePlayback(), providerColors, providerIcons, ProviderLogo() (+27 more)
 
 ### Community 52 - "Community 52"
-Cohesion: 0.20
-Nodes (11): analyzeEmployeeQuestionImage(), EmployeeQuestionImage, allowedImageTypes, buildSourceCards(), decodeImage(), imageSchema, POST(), recordEvents() (+3 more)
+Cohesion: 0.21
+Nodes (10): EmployeeQuestionImage, allowedImageTypes, buildSourceCards(), decodeImage(), imageSchema, POST(), recordEvents(), saveQuestionImage() (+2 more)
 
 ### Community 53 - "Community 53"
 Cohesion: 0.50
@@ -473,36 +471,36 @@ Cohesion: 0.50
 Nodes (3): baseUrl, created, service
 
 ### Community 56 - "Community 56"
-Cohesion: 0.17
-Nodes (16): CallLearning, callLearningSchema, companyAnswerSchema, employeeImageCaseSchema, ExtractedProcess, extractedProcessSchema, knowledgeRelationshipSchema, ProcessRecommendations (+8 more)
+Cohesion: 0.13
+Nodes (22): OPENAI_MODELS, OPENAI_TEXT_REASONING, findingSchema, schema, businessToolSuggestionsSchema, businessTypeSuggestionsSchema, getOpenAI(), CallLearning (+14 more)
 
 ### Community 57 - "Community 57"
-Cohesion: 0.05
-Nodes (91): extractLearningFile(), findingSchema, learningFileContent(), LearningFileError, POST(), DELETE(), GET(), POST() (+83 more)
+Cohesion: 0.20
+Nodes (22): DELETE(), POST(), GET(), POST(), notionRequest(), providerProxyRequest(), ConnectionError, connectionPath() (+14 more)
 
 ### Community 58 - "Community 58"
-Cohesion: 0.19
-Nodes (10): guided(), guidedBusinessProviders(), guidedKnowledgeProviders(), INTEGRATION_CATALOG, IntegrationAuthMode, IntegrationCapability, IntegrationCatalogItem, IntegrationCategory (+2 more)
+Cohesion: 0.23
+Nodes (12): POST(), getPublicSiteUrl(), getTwilioRecordingWebhookUrl(), callLearningSettingsSchema, connectTwilio(), defaultCallLearningSettings, getActiveTwilioIntegration(), getTwilioClient() (+4 more)
 
 ### Community 59 - "Community 59"
-Cohesion: 0.11
-Nodes (25): DialogSurface(), ClarificationReplies(), Context, GapQuestionActions(), actionLabel(), decisionTitle(), Filter, filters (+17 more)
+Cohesion: 0.09
+Nodes (28): DashboardPulse(), DashboardPulseProps, formatUpdatedTime(), ClarificationReplies(), Context, GapQuestionActions(), actionLabel(), decisionTitle() (+20 more)
 
 ### Community 60 - "Community 60"
-Cohesion: 0.16
-Nodes (15): GET(), inputSchema, POST(), DELETE(), GET(), PATCH(), schema, rejectCrossOrigin() (+7 more)
+Cohesion: 0.09
+Nodes (29): GET(), inputSchema, POST(), POST(), GET(), POST(), schema, DELETE() (+21 more)
 
 ### Community 61 - "Community 61"
 Cohesion: 0.33
 Nodes (5): Authenticated UI refinement — September 9, 2026, Before / after, Direction, Shared coverage, Verification scope
 
 ### Community 62 - "Community 62"
-Cohesion: 0.26
-Nodes (14): GET(), GET(), GET(), GET(), MicrosoftToken, SlackOAuthResponse, OPRYN_SITE_URL, slackConfig() (+6 more)
+Cohesion: 0.11
+Nodes (22): ALLOWED_MEDIA_MIME_TYPES, VIDEO_MIME_TYPES, GET(), GET(), PlanFeature, FeatureUnavailableError, requireFeature(), POST() (+14 more)
 
 ### Community 63 - "Community 63"
-Cohesion: 0.23
-Nodes (12): DELETE(), POST(), customProvider(), disconnectIntegration(), getIntegrationCapability(), getIntegrationConnection(), getIntegrationCredentialsServerSide(), recordIntegrationEvent() (+4 more)
+Cohesion: 0.11
+Nodes (23): POST(), CredentialField, CredentialGuide, getCredentialGuide(), guides, providerPortal(), tokenField(), customProvider() (+15 more)
 
 ### Community 64 - "Community 64"
 Cohesion: 0.20
@@ -533,20 +531,20 @@ Cohesion: 0.09
 Nodes (22): aliases, components, hooks, lib, ui, utils, Authorization, iconLibrary (+14 more)
 
 ### Community 77 - "Community 77"
-Cohesion: 0.14
-Nodes (11): Entry, KnowledgeEntries(), KnowledgeHealthPreview(), groupChunks(), KnowledgeChunk, KnowledgeGap, KnowledgeProcess, KnowledgeTree() (+3 more)
+Cohesion: 0.29
+Nodes (11): DELETE(), getOrganizationName(), inviteActionSchema, inviteLink(), PATCH(), POST(), schema, deliverWorkspaceInvite() (+3 more)
 
 ### Community 78 - "Community 78"
 Cohesion: 0.16
 Nodes (18): Agent, AgentRow(), AgentTraining(), Run, Test, suggestedPractice(), agentReadiness(), KnowledgeAssignment (+10 more)
 
 ### Community 79 - "Community 79"
-Cohesion: 0.10
-Nodes (17): DashboardDecision(), GreetingReveal(), localGreeting(), OwnerAnswer(), OwnerHome(), Props, formatMinutes(), SetupChecklist() (+9 more)
+Cohesion: 0.12
+Nodes (18): DashboardDecision(), OwnerAnswer(), DashboardPage(), formatMinutes(), SetupChecklist(), billingBoundary(), getTeachNextGaps(), AnsweredWorkQuestion (+10 more)
 
 ### Community 80 - "Community 80"
-Cohesion: 0.15
-Nodes (20): GET(), createKnowledgeProposalsForProcess(), processPendingGapRechecks(), buildExtractionContext(), createProcessFromContext(), emptySummary(), ExternalLearningInput, ExternalLearningPermissionError (+12 more)
+Cohesion: 0.16
+Nodes (19): GET(), processPendingGapRechecks(), buildExtractionContext(), createProcessFromContext(), emptySummary(), ExternalLearningInput, ExternalLearningPermissionError, ExternalLearningSummary (+11 more)
 
 ### Community 81 - "Community 81"
 Cohesion: 0.50
@@ -557,32 +555,32 @@ Cohesion: 0.22
 Nodes (3): db, migration, [org, otherOrg, owner, employee, otherOwner, processId, role, rule]
 
 ### Community 84 - "Community 84"
-Cohesion: 0.19
-Nodes (8): Assignment, Person, Process, TeamIcon(), ArcState, OprynArc(), OprynEmptyState(), OprynMetric()
+Cohesion: 0.16
+Nodes (13): MyLearning(), RoleLearningAssignment(), Assignment, Person, Process, TrainingManager(), TrainingPage(), ArcState (+5 more)
 
 ### Community 85 - "Community 85"
 Cohesion: 0.29
 Nodes (5): css, cssDirectory, fixture, require, sample
 
 ### Community 86 - "Community 86"
-Cohesion: 0.17
-Nodes (25): answerCompanyQuestion(), embedKnowledge(), formatConversationContext(), POST(), schema, GET(), GET(), POST() (+17 more)
+Cohesion: 0.20
+Nodes (21): POST(), schema, GET(), GET(), POST(), POST(), schema, schema (+13 more)
 
 ### Community 87 - "Community 87"
 Cohesion: 0.20
 Nodes (6): mocks, mod, require, root, sdk, sub
 
 ### Community 88 - "Community 88"
-Cohesion: 0.07
-Nodes (27): POST(), DELETE(), GET(), POST(), DELETE(), PATCH(), updateSchema, SupabaseChatState (+19 more)
+Cohesion: 0.12
+Nodes (8): DELETE(), GET(), DELETE(), PATCH(), updateSchema, SupabaseChatState, GET(), createServiceClient()
 
 ### Community 89 - "Community 89"
 Cohesion: 0.20
 Nodes (6): dependencies, exports, jobWrite, reviewSource, source, writes
 
 ### Community 90 - "Community 90"
-Cohesion: 0.08
-Nodes (26): CaptureMode, CaptureProcess(), formatDuration(), InitialCapture, Role, textStages, FileRow, TeachGoogle() (+18 more)
+Cohesion: 0.06
+Nodes (30): learningFileContent(), CaptureMode, CaptureProcess(), formatDuration(), InitialCapture, Role, textStages, TeachGoogle() (+22 more)
 
 ### Community 92 - "Community 92"
 Cohesion: 0.17
@@ -597,8 +595,8 @@ Cohesion: 0.11
 Nodes (5): css, cssDirectory, output, root, server
 
 ### Community 95 - "Community 95"
-Cohesion: 0.16
-Nodes (20): POST(), schema, reviewLearningPractice(), RetrievedKnowledge, answerCommunicationQuestion(), buildChannelSources(), ChannelPermissionError, createUnknown() (+12 more)
+Cohesion: 0.12
+Nodes (27): POST(), schema, reviewLearningPractice(), RetrievedKnowledge, KnowledgeScopePanel(), labels, consumers, KnowledgeTestbench() (+19 more)
 
 ### Community 96 - "Community 96"
 Cohesion: 0.25
@@ -657,12 +655,12 @@ Cohesion: 0.18
 Nodes (11): devDependencies, eslint, eslint-config-next, @playwright/test, prettier, tailwindcss, @tailwindcss/postcss, @types/node (+3 more)
 
 ### Community 117 - "Community 117"
-Cohesion: 0.08
-Nodes (32): AnswerEverywhere(), audiences, KnowledgeRail(), PointerDepth(), SceneHeading(), SceneReveal(), EditorialHome(), EditorialAction() (+24 more)
+Cohesion: 0.04
+Nodes (65): PLAN_DETAILS, PLAN_FEATURES, MarketingFAQ(), questions, features, PricingPage(), Props, audiences (+57 more)
 
 ### Community 118 - "Community 118"
 Cohesion: 0.18
-Nodes (11): EditorialImage(), EditorialImageProps, TypingHeadline(), useVisiblePlayback(), heroVariants, consumers, KnowledgeHeroHeading(), SharedKnowledgeDemo() (+3 more)
+Nodes (10): Audience(), audiences, before, Comparison(), FAQ(), faqs, FinalCTA(), plans (+2 more)
 
 ### Community 119 - "Community 119"
 Cohesion: 0.83
@@ -713,20 +711,20 @@ Cohesion: 0.20
 Nodes (7): f, m, mocks, require, root, suggestion, supplied
 
 ### Community 135 - "Community 135"
-Cohesion: 0.27
-Nodes (5): CompanyAnalysisPage(), SourceFreshnessList(), KnowledgeHealthPage(), getSourceFreshness(), SourceFreshness
+Cohesion: 0.24
+Nodes (6): CompanyAnalysisPage(), InboxAction(), SourceFreshnessList(), KnowledgeHealthPage(), getSourceFreshness(), SourceFreshness
 
 ### Community 136 - "Community 136"
 Cohesion: 0.20
 Nodes (9): Changes, Live audit and confirmed failure, Mobile, reduced motion and accessibility, Performance, Public homepage motion refresh — September 16, 2026, Remaining boundaries / rough edges, Story architecture and ownership, Verification (+1 more)
 
 ### Community 138 - "Community 138"
-Cohesion: 0.06
-Nodes (54): OPENAI_MODELS, OPENAI_TEXT_REASONING, schema, extractVideoFrames(), inputExtensions, PreparedAudio, prepareTranscriptionAudio(), runFfmpeg() (+46 more)
+Cohesion: 0.13
+Nodes (29): extractVideoFrames(), inputExtensions, PreparedAudio, prepareTranscriptionAudio(), runFfmpeg(), safeFileName(), AUDIO_MIME_TYPES, UnsupportedRecordingError (+21 more)
 
 ### Community 142 - "Community 142"
 Cohesion: 0.33
-Nodes (7): KnowledgeImpactView(), externalPolicyAllows(), KnowledgeImpactPage(), Access, connectionPermitsKnowledge(), getKnowledgeImpact(), KnowledgeImpact
+Nodes (4): LegalDocument(), LegalSection(), metadata, metadata
 
 ### Community 143 - "Community 143"
 Cohesion: 0.40
@@ -807,8 +805,8 @@ Cohesion: 0.17
 Nodes (11): Accessibility, Audit and implementation plan, Database / release checklist, Deliberate limits / follow-up, Guides, Implementation, OAuth and persistence, Opryn Guide (+3 more)
 
 ### Community 170 - "Community 170"
-Cohesion: 0.08
-Nodes (15): ConnectionAction(), GooglePickerNamespace, GoogleWorkspacePicker(), PickerBuilder, PickerDocument, PickerInstance, Window, Details (+7 more)
+Cohesion: 0.05
+Nodes (34): FileRow, TeachProvider(), ConnectionAction(), GooglePickerNamespace, GoogleWorkspacePicker(), PickerBuilder, PickerDocument, PickerInstance (+26 more)
 
 ### Community 174 - "Community 174"
 Cohesion: 0.22
@@ -819,8 +817,8 @@ Cohesion: 0.25
 Nodes (7): Entitlement and provider eligibility, Onboarding and billing, Premium conversation learning, Privacy and migration, Provider refresh after release, Tool and jobs, Verification and remaining release gate
 
 ### Community 178 - "Community 178"
-Cohesion: 0.22
-Nodes (7): MarketingFAQ(), questions, MotionHover(), MotionPanel(), MaskedHeadline(), PointerSurface(), SignatureStory()
+Cohesion: 0.25
+Nodes (6): HowItWorks(), interruptions, knowledgeLocations, LearningLoop(), PainSection(), process
 
 ### Community 181 - "Community 181"
 Cohesion: 0.29
@@ -831,8 +829,8 @@ Cohesion: 0.33
 Nodes (4): css, dir, root, server
 
 ### Community 183 - "Community 183"
-Cohesion: 0.12
-Nodes (15): AnswerText(), AnswerCard(), AttachedImage, canvasBlob(), Message, prepareQuestionImage(), Prompt, readDataUrl() (+7 more)
+Cohesion: 0.13
+Nodes (14): AnswerText(), AnswerCard(), AttachedImage, canvasBlob(), Message, prepareQuestionImage(), Prompt, readDataUrl() (+6 more)
 
 ### Community 184 - "Community 184"
 Cohesion: 0.40
@@ -848,47 +846,47 @@ Nodes (3): css, root, server
 
 ### Community 187 - "Community 187"
 Cohesion: 0.22
-Nodes (13): Conflict, Expert, getKnowledgeHealth(), getTeachNextGaps(), FRESHNESS_DAYS, freshnessReason(), GapCluster, GapQuestion (+5 more)
+Nodes (12): Conflict, Expert, getKnowledgeHealth(), FRESHNESS_DAYS, freshnessReason(), GapCluster, GapQuestion, HealthKnowledge (+4 more)
 
 ### Community 190 - "Community 190"
 Cohesion: 0.22
 Nodes (5): errors, knowledge, proposal, question, server
 
 ### Community 192 - "Community 192"
-Cohesion: 0.19
-Nodes (12): PATCH(), metadata, ProductLayout(), accountChangesSchema, AccountSettings, DEFAULT_ACCOUNT_SETTINGS, isQuestionTaskNotification(), getAccountSettings (+4 more)
+Cohesion: 0.24
+Nodes (9): PATCH(), metadata, ProductLayout(), accountChangesSchema, AccountSettings, DEFAULT_ACCOUNT_SETTINGS, isQuestionTaskNotification(), getAccountSettings (+1 more)
 
 ### Community 193 - "Community 193"
-Cohesion: 0.11
-Nodes (17): Hero(), LegalDocument(), LegalSection(), overviewSteps, ProductOverview(), Independence(), RoleBuilder(), roleGroups (+9 more)
+Cohesion: 0.18
+Nodes (12): Hero(), overviewSteps, ProductOverview(), Independence(), RoleBuilder(), roleGroups, VacationReadiness(), AppWindow() (+4 more)
 
 ### Community 194 - "Community 194"
 Cohesion: 0.22
 Nodes (4): formatDate(), NumberMapping, Settings, TwilioIntegration()
 
 ### Community 196 - "Community 196"
-Cohesion: 0.19
-Nodes (11): OprynLogo(), Props, sizes, endpoints, headlines, KnowledgeScene(), STORY_STAGES, CallsIcon() (+3 more)
+Cohesion: 0.12
+Nodes (17): CommunicationAccountLink(), OprynLogo(), Props, sizes, GuideCompanion(), CommunicationLinkPage(), KnowledgeCenterpiece(), WhyOpryn() (+9 more)
 
 ### Community 197 - "Community 197"
 Cohesion: 0.33
 Nodes (5): Accessibility and restraint, Opryn interaction system, Ownership, Shared primitives and use, Verification scope
 
 ### Community 198 - "Community 198"
-Cohesion: 0.28
-Nodes (6): CredentialField, CredentialGuide, getCredentialGuide(), guides, providerPortal(), tokenField()
+Cohesion: 0.29
+Nodes (7): notionMarkdownSchema, notionPageSchema, notionPageTitle(), notionSearchSchema, notionSelectedPage(), richTextSchema, titlePropertySchema
 
 ### Community 200 - "Community 200"
 Cohesion: 0.29
 Nodes (6): Checks and evidence, Not yet verified / boundaries, Phase 2 — Test Opryn and knowledge applicability, Product behavior, Production release — 2026-09-16, Schema / rollout
 
 ### Community 202 - "Community 202"
-Cohesion: 0.10
-Nodes (21): CompanyAnalysis(), Run, ConflictReplacement(), GapRecheck(), LearningItem(), Process, Progress, learningState() (+13 more)
+Cohesion: 0.13
+Nodes (15): CompanyAnalysis(), Run, ConflictReplacement(), GapRecheck(), LearningItem(), Process, Progress, AnswerWorking() (+7 more)
 
 ### Community 206 - "Community 206"
-Cohesion: 0.39
-Nodes (5): CommunicationAccountLink(), getOptionalAppContext, requireUser(), CommunicationLinkPage(), OnboardingPage()
+Cohesion: 0.33
+Nodes (5): createSchema, DELETE(), deleteSchema, imageTypes, POST()
 
 ### Community 207 - "Community 207"
 Cohesion: 0.20
@@ -951,20 +949,16 @@ Cohesion: 0.28
 Nodes (5): CallProcessing(), statusCopy, CallReview(), Finding, CallReviewPage()
 
 ### Community 234 - "Community 234"
-Cohesion: 0.10
-Nodes (17): AIConnectionsList(), IntegrationsPage(), ClientRow(), formatDate(), Grant, GrantRow(), McpConnections(), ProcessChecklist() (+9 more)
-
-### Community 235 - "Community 235"
-Cohesion: 0.17
-Nodes (13): ConnectionGuide(), formatLearningSummary(), guides, LearningState, Mode, Provider, CONNECTION_PROVIDERS, ConnectionProviderId (+5 more)
+Cohesion: 0.07
+Nodes (23): AIConnectionsList(), IntegrationsPage(), ClientRow(), formatDate(), Grant, GrantRow(), McpConnections(), ProcessChecklist() (+15 more)
 
 ### Community 236 - "Community 236"
-Cohesion: 0.25
-Nodes (5): knowledgeScopesOverlap(), NeedsYouItem, NeedsYouKind, NeedsYouPriority, summarizeNeedsYou()
+Cohesion: 0.10
+Nodes (15): KnowledgeClassification(), Action, KnowledgeCriticalityToggle(), SuggestedKnowledgeApproval(), GreetingReveal(), localGreeting(), DecisionRow(), OwnerHome() (+7 more)
 
 ### Community 237 - "Community 237"
-Cohesion: 0.10
-Nodes (20): metadata, metadata, AccountControls(), AuthContext, AuthContextValue, AuthProvider(), useAuth(), Footer() (+12 more)
+Cohesion: 0.15
+Nodes (9): metadata, metadata, metadata, company, ContactComposer(), contactTopics, publicMetadata(), PublicIntegrations() (+1 more)
 
 ### Community 240 - "Community 240"
 Cohesion: 0.50
@@ -975,24 +969,24 @@ Cohesion: 0.20
 Nodes (9): AI page, Homepage hero, Pricing page, Public hero, AI and Pricing redesign, Remaining limitations, Scope, Screenshots, Shared public system (+1 more)
 
 ### Community 243 - "Community 243"
-Cohesion: 0.11
-Nodes (26): BillingSettings(), Props, searchSettings(), SETTINGS_SECTIONS, SettingsSection, settingsSections(), CompanyProfileFields(), initialWorkspace (+18 more)
+Cohesion: 0.07
+Nodes (45): AppShell(), activationGoals, activationStage(), activationStages, CompanyProfile, companyProfileSchema, emptyCompany, knowledgeAreas (+37 more)
 
 ### Community 244 - "Community 244"
-Cohesion: 0.11
-Nodes (28): KnowledgeScopePanel(), labels, consumers, KnowledgeTestbench(), SavedTest, ImpactKnowledge, KnowledgeScope, knowledgeScopeSchema (+20 more)
+Cohesion: 0.15
+Nodes (18): ImpactKnowledge, scopeContextSchema, compareTestExpectation(), testCompanyAnswer(), expectedVersions(), outcome, POST(), schema (+10 more)
 
 ### Community 246 - "Community 246"
-Cohesion: 0.11
-Nodes (23): POST(), POST(), after, schema, approveKnowledgeProposal(), assertDisplayedRevision(), createKnowledgeProposal(), decideProposal() (+15 more)
+Cohesion: 0.10
+Nodes (25): answerCompanyQuestion(), formatConversationContext(), POST(), schema, recheckKnowledgeGapAnswers(), RecheckNeedsImageContext, assertDisplayedRevision(), createKnowledgeProposal() (+17 more)
 
 ### Community 247 - "Community 247"
-Cohesion: 0.27
-Nodes (7): BusinessTool, POPULAR_BUSINESS_TOOL_IDS, searchBusinessTools(), TOOL_ALIASES, ToolList(), POST(), requestSchema
+Cohesion: 0.25
+Nodes (8): suggestBusinessTools(), BusinessTool, POPULAR_BUSINESS_TOOL_IDS, searchBusinessTools(), TOOL_ALIASES, ToolList(), POST(), requestSchema
 
 ### Community 251 - "Community 251"
-Cohesion: 0.24
-Nodes (9): suggestRuleFromOwnerAnswer(), POST(), schema, analyzeSchema, approveSchema, buildTestQuestion(), clarificationSchema, POST() (+1 more)
+Cohesion: 0.13
+Nodes (17): compareApprovedKnowledge(), embedKnowledge(), suggestRuleFromOwnerAnswer(), POST(), schema, GET(), POST(), analyzeSchema (+9 more)
 
 ### Community 252 - "Community 252"
 Cohesion: 0.21
@@ -1003,12 +997,8 @@ Cohesion: 0.50
 Nodes (4): assets, check(), page(), pricingText
 
 ### Community 255 - "Community 255"
-Cohesion: 0.12
-Nodes (24): AnalyticsPage(), MyLearning(), RoleLearningAssignment(), EmptyState(), PageHeading(), Props, RoleEditor(), TrainingManager() (+16 more)
-
-### Community 256 - "Community 256"
 Cohesion: 0.10
-Nodes (19): Expert, KnowledgeExperts(), Person, Action, InboxAction(), KnowledgeCriticalityToggle(), SuggestedKnowledgeApproval(), DecisionRow() (+11 more)
+Nodes (29): AnalyticsPage(), Entry, KnowledgeEntries(), KnowledgeHealthPreview(), KnowledgeLibraryPage(), EmptyState(), PageHeading(), KnowledgeTree() (+21 more)
 
 ### Community 257 - "Community 257"
 Cohesion: 0.20
@@ -1035,20 +1025,12 @@ Cohesion: 0.38
 Nodes (4): client(), progress(), reset(), test()
 
 ### Community 264 - "Community 264"
-Cohesion: 0.16
-Nodes (10): POST(), schema, DELETE(), GET(), POST(), JoinTeamPage(), normalizeInviteCredential(), createClient() (+2 more)
+Cohesion: 0.11
+Nodes (15): POST(), schema, OAuthAuthorizePage(), DELETE(), GET(), POST(), JoinTeamPage(), getOptionalAppContext (+7 more)
 
 ### Community 265 - "Community 265"
 Cohesion: 0.18
 Nodes (6): assignment, calls, file, knowledge, org, user
-
-### Community 266 - "Community 266"
-Cohesion: 0.14
-Nodes (9): DashboardPulse(), DashboardPulseProps, formatUpdatedTime(), targetSelector(), showSpotlight(), Layout, mountKnowledgeStory(), STORY_BEATS (+1 more)
-
-### Community 267 - "Community 267"
-Cohesion: 0.33
-Nodes (5): ClearHome(), destinations, sources, KnowledgeDemo(), MotionWords()
 
 ### Community 268 - "Community 268"
 Cohesion: 0.22
@@ -1066,25 +1048,9 @@ Nodes (5): db, key, [
   test,
 ], result, submission
 
-### Community 269 - "Community 269"
-Cohesion: 0.33
-Nodes (4): Intent, Job, Provider, SourceFirstLearning()
-
-### Community 270 - "Community 270"
-Cohesion: 0.40
-Nodes (3): ENTER_EASE, EXIT_EASE, ShortSlideRightProps
-
 ### Community 271 - "Community 271"
 Cohesion: 0.22
 Nodes (7): a, agent, errors, k, s, server, tests
-
-### Community 272 - "Community 272"
-Cohesion: 0.33
-Nodes (3): candidate, run(), service
-
-### Community 273 - "Community 273"
-Cohesion: 0.21
-Nodes (7): OPRYN_MCP_ISSUER, OPRYN_MCP_SCOPES, handle(), validHost(), createOprynMcpServer(), registerOprynTools(), GET()
 
 ### Community 275 - "Community 275"
 Cohesion: 0.29
@@ -1095,19 +1061,19 @@ Cohesion: 0.40
 Nodes (4): a, draft, knowledge, s
 
 ## Knowledge Gaps
-- **1140 isolated node(s):** `metadata`, `metadata`, `schema`, `schema`, `updateSchema` (+1135 more)
+- **1147 isolated node(s):** `metadata`, `metadata`, `schema`, `schema`, `updateSchema` (+1142 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **68 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **69 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `getRequestContext()` connect `Community 23` to `Community 5`, `Community 264`, `Community 138`, `Community 14`, `Community 20`, `Community 25`, `Community 34`, `Community 44`, `Community 50`, `Community 52`, `Community 56`, `Community 57`, `Community 60`, `Community 62`, `Community 63`, `Community 88`, `Community 95`, `Community 244`, `Community 246`, `Community 251`?**
-  _High betweenness centrality (0.066) - this node is a cross-community bridge._
-- **Why does `createClient()` connect `Community 264` to `Community 259`, `Community 5`, `Community 135`, `Community 138`, `Community 23`, `Community 25`, `Community 26`, `Community 34`, `Community 46`, `Community 192`, `Community 77`, `Community 206`, `Community 79`, `Community 88`, `Community 95`, `Community 231`, `Community 234`, `Community 243`, `Community 247`, `Community 252`, `Community 255`?**
-  _High betweenness centrality (0.043) - this node is a cross-community bridge._
-- **Why does `createServiceClient()` connect `Community 88` to `Community 5`, `Community 135`, `Community 138`, `Community 142`, `Community 273`, `Community 22`, `Community 23`, `Community 25`, `Community 44`, `Community 46`, `Community 57`, `Community 62`, `Community 63`, `Community 80`, `Community 86`, `Community 95`, `Community 234`, `Community 244`, `Community 246`, `Community 255`?**
-  _High betweenness centrality (0.035) - this node is a cross-community bridge._
+- **Why does `getRequestContext()` connect `Community 60` to `Community 4`, `Community 5`, `Community 264`, `Community 138`, `Community 14`, `Community 20`, `Community 23`, `Community 25`, `Community 34`, `Community 44`, `Community 48`, `Community 50`, `Community 52`, `Community 57`, `Community 58`, `Community 62`, `Community 63`, `Community 77`, `Community 206`, `Community 79`, `Community 88`, `Community 95`, `Community 243`, `Community 244`, `Community 246`, `Community 251`?**
+  _High betweenness centrality (0.068) - this node is a cross-community bridge._
+- **Why does `createClient()` connect `Community 264` to `Community 259`, `Community 5`, `Community 135`, `Community 14`, `Community 25`, `Community 26`, `Community 34`, `Community 46`, `Community 60`, `Community 192`, `Community 79`, `Community 84`, `Community 95`, `Community 231`, `Community 234`, `Community 243`, `Community 247`, `Community 252`, `Community 255`?**
+  _High betweenness centrality (0.044) - this node is a cross-community bridge._
+- **Why does `createServiceClient()` connect `Community 88` to `Community 4`, `Community 5`, `Community 135`, `Community 264`, `Community 138`, `Community 22`, `Community 23`, `Community 25`, `Community 44`, `Community 46`, `Community 48`, `Community 57`, `Community 58`, `Community 60`, `Community 62`, `Community 63`, `Community 80`, `Community 86`, `Community 95`, `Community 234`, `Community 244`, `Community 246`, `Community 251`, `Community 255`?**
+  _High betweenness centrality (0.033) - this node is a cross-community bridge._
 - **Are the 41 inferred relationships involving `getRequestContext()` (e.g. with `POST()` and `GET()`) actually correct?**
   _`getRequestContext()` has 41 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 13 inferred relationships involving `createServiceClient()` (e.g. with `POST()` and `DELETE()`) actually correct?**
@@ -1115,4 +1081,4 @@ _Questions this graph is uniquely positioned to answer:_
 - **Are the 27 inferred relationships involving `apiError()` (e.g. with `POST()` and `POST()`) actually correct?**
   _`apiError()` has 27 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `metadata`, `metadata`, `schema` to the rest of the system?**
-  _1140 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _1147 weakly-connected nodes found - possible documentation gaps or missing edges._
