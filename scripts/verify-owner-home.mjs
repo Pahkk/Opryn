@@ -4,6 +4,14 @@ import { createServer } from "node:http";
 import { mkdirSync, readFileSync, existsSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { chromium, expect } from "@playwright/test";
+import postcss from "postcss";
+import tailwindcss from "@tailwindcss/postcss";
+const globalCss = (
+  await postcss([tailwindcss()]).process(
+    readFileSync("app/globals.css", "utf8"),
+    { from: "app/globals.css" },
+  )
+).css;
 const { build } = await import(pathToFileURL(process.env.OPRYN_ESBUILD_MODULE));
 const items = [
   {
@@ -32,7 +40,8 @@ const items = [
     kind: "answer",
     priority: "now",
     title: "Knowledge gap · Needs an answer",
-    summary: "What if the customer has paid for the extra revision?",
+    summary:
+      "Please approve or revise a new company process called Create a Process that defines when something should become a process, the required fields, and approval criteria.",
     detail: "Asked 4 times across 2 channels. No approved answer covers this.",
     source: "Slack",
     targetId: "question-1",
@@ -103,14 +112,16 @@ const server = createServer((req, res) => {
   }
   res.setHeader("content-type", "text/html");
   res.end(
-    `<!doctype html><html lang="en"><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;background:#fffcf7;color:#14213d;font-family:Arial}*{box-sizing:border-box}a{color:inherit;text-decoration:none}button{font:inherit;border:0;background:transparent;color:inherit}p,h1,h2,h3,dl,dd{margin:0}svg{vertical-align:middle}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}${bundle.outputFiles.find((f) => f.path.endsWith(".css")).text}</style></head><body><div id="root"></div><script src="/fixture.js"></script></body></html>`,
+    `<!doctype html><html lang="en"><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>${globalCss}\n${bundle.outputFiles.find((f) => f.path.endsWith(".css")).text}</style></head><body class="opryn-app"><div id="root"></div><script src="/fixture.js"></script></body></html>`,
   );
 });
 await new Promise((r) => server.listen(0, "127.0.0.1", r));
 const base = `http://127.0.0.1:${server.address().port}`;
 const directory = "artifacts/owner-home";
 mkdirSync(directory, { recursive: true });
-const browser = await chromium.launch();
+const browser = await chromium.launch({
+  channel: process.env.OPRYN_BROWSER_CHANNEL,
+});
 let assertions = 0;
 try {
   for (const width of [390, 768, 1440])
@@ -147,8 +158,8 @@ try {
       await page.waitForTimeout(650);
       await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
       await expect(page.locator(".owner-decision")).toHaveCount(3);
-      await expect(page.locator(".owner-summary")).toContainText(
-        "12 handled this week",
+      await expect(page.locator(".owner-summary > span")).toContainText(
+        "Handled this week12",
       );
       assert.equal(
         await page.evaluate(

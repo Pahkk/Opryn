@@ -2,6 +2,14 @@
 
 import Link from "next/link";
 import {
+  ArrowRight,
+  BookOpen,
+  CheckCheck,
+  MessageSquare,
+  RefreshCw,
+  Users,
+} from "lucide-react";
+import {
   useEffect,
   useId,
   useRef,
@@ -17,20 +25,12 @@ import {
   useIsPresent,
 } from "motion/react";
 import type { NeedsYouItem } from "@/lib/opryn/needs-you";
-import {
-  AskIcon,
-  TeachIcon,
-  TeamIcon,
-  KnowledgeIcon,
-  NeedsYouIcon,
-  ApprovedIcon,
-} from "@/components/opryn-icons/opryn-icons";
+import { AskIcon, KnowledgeIcon } from "@/components/opryn-icons/opryn-icons";
 import {
   OprynAction,
   useActionFeedback,
 } from "@/components/motion/opryn-action";
 import { SuccessCheck } from "@/components/motion/success-check";
-import { OprynTrace } from "@/components/motion/opryn-trace";
 import { MotionNumber } from "@/components/motion/motion-number";
 import { useProductReducedMotion } from "@/lib/motion/use-product-motion";
 import { motionTokens, uiTransition } from "@/lib/motion/motion-tokens";
@@ -88,7 +88,9 @@ export function OwnerHome(p: Props) {
   const visibleItems = p.items.filter((i) => !settled[i.id]);
   const teachRepeatsDecision = p.teach
     ? visibleItems.some(
-        (item) => item.title.trim().toLowerCase() === p.teach?.title.trim().toLowerCase(),
+        (item) =>
+          item.title.trim().toLowerCase() ===
+          p.teach?.title.trim().toLowerCase(),
       )
     : false;
   function resolved(item: NeedsYouItem, title: string, approved: boolean) {
@@ -125,55 +127,78 @@ export function OwnerHome(p: Props) {
     <LayoutGroup id={group}>
       <div className="owner-home" data-motion-owner="motion">
         <motion.header {...entrance(0)} className="owner-header">
-          <p className="owner-eyebrow">{p.organizationName} / Today</p>
-          <LocalGreeting name={p.name} animated />
-          <p>Here’s what your business needs today.</p>
-          <div className="owner-summary" aria-label="Workspace summary">
-            <span>
-              <strong>
-                <MotionNumber value={p.handledCount} />
-              </strong>{" "}
-              handled this week
-            </span>
-            <span>
-              <strong>
-                <MotionNumber value={visibleItems.length} />
-              </strong>{" "}
-              need you
-            </span>
-            <Link href="/app/knowledge-gaps">
-              <strong>
-                <MotionNumber value={p.gapCount} />
-              </strong>{" "}
-              {p.gapCount === 1 ? "knowledge gap" : "knowledge gaps"}
-            </Link>
+          <div className="owner-header-top">
+            <div>
+              <p className="owner-eyebrow">
+                {p.organizationName} <span aria-hidden="true">/</span> Overview
+              </p>
+              <LocalGreeting name={p.name} />
+              <p className="owner-intro">
+                Your decisions, team activity, and company knowledge in one
+                place.
+              </p>
+            </div>
             <button
+              className="owner-refresh"
               ref={refreshButton}
               type="button"
               disabled={refreshing}
               aria-label="Refresh dashboard"
               onClick={() => startRefresh(() => router.refresh())}
             >
-              {refreshing ? "Updating…" : "Refresh ↻"}
+              <RefreshCw size={15} aria-hidden="true" />
+              {refreshing ? "Updating…" : "Refresh"}
             </button>
           </div>
           <nav className="owner-action-rail" aria-label="Home quick actions">
             {[
-              ["Ask Opryn", "/app/ask", AskIcon],
-              ["Teach Opryn", "/app/processes/new", TeachIcon],
-              ["Review", "/app/needs-you", NeedsYouIcon],
-              ["Invite", "/app/team", TeamIcon],
+              ["Ask Opryn", "/app/ask", MessageSquare],
+              ["Teach Opryn", "/app/processes/new", BookOpen],
+              ["Review", "/app/needs-you", CheckCheck],
+              ["Invite", "/app/team", Users],
             ].map(([label, href, Icon]) => {
-              const Glyph = Icon as typeof AskIcon;
+              const Glyph = Icon as typeof MessageSquare;
               return (
                 <Link key={label as string} href={href as string}>
-                  <Glyph size={17} />
+                  <Glyph size={16} aria-hidden="true" />
                   {label as string}
-                  <span aria-hidden="true">↗</span>
                 </Link>
               );
             })}
           </nav>
+          <div className="owner-summary" aria-label="Workspace summary">
+            <span>
+              <span className="owner-stat-label">Handled this week</span>
+              <strong>
+                <MotionNumber value={p.handledCount} />
+              </strong>
+              <span className="owner-stat-note">
+                Answered from approved knowledge
+              </span>
+            </span>
+            <Link href="/app/needs-you">
+              <span className="owner-stat-label">Need you</span>
+              <strong>
+                <MotionNumber value={visibleItems.length} />
+              </strong>
+              <span className="owner-stat-note">
+                Questions and decisions to review{" "}
+                <ArrowRight size={13} aria-hidden="true" />
+              </span>
+            </Link>
+            <Link href="/app/knowledge-gaps">
+              <span className="owner-stat-label">
+                {p.gapCount === 1 ? "Knowledge gap" : "Knowledge gaps"}
+              </span>
+              <strong>
+                <MotionNumber value={p.gapCount} />
+              </strong>
+              <span className="owner-stat-note">
+                Answers your team is missing{" "}
+                <ArrowRight size={13} aria-hidden="true" />
+              </span>
+            </Link>
+          </div>
           {p.setupHref ? (
             <Link className="owner-resume" href={p.setupHref}>
               Your setup is saved. Continue when you’re ready →
@@ -217,11 +242,13 @@ export function OwnerHome(p: Props) {
           >
             <div className="owner-section-heading">
               <div>
-                <p className="owner-eyebrow">Decisions, not notifications</p>
                 <h2 id="home-decisions-title">
                   Needs you
                   <span className="owner-count">{visibleItems.length}</span>
                 </h2>
+                <p className="owner-section-description">
+                  A few decisions to keep your team moving.
+                </p>
               </div>
               <Link href="/app/needs-you">View all →</Link>
             </div>
@@ -258,12 +285,12 @@ export function OwnerHome(p: Props) {
             className="owner-teach"
             aria-labelledby="home-teach-title"
           >
-            <OprynTrace />
-            <div className="owner-source-motif" aria-hidden="true">
-              <DocumentMotif />
+            <div className="owner-teach-heading">
+              <span className="owner-teach-icon">
+                <BookOpen size={19} aria-hidden="true" />
+              </span>
+              <h2 id="home-teach-title">Teach next</h2>
             </div>
-            <p className="owner-eyebrow">Build the next useful answer</p>
-            <h2 id="home-teach-title">Teach next</h2>
             {p.teach ? (
               <>
                 <h3>
@@ -297,8 +324,10 @@ export function OwnerHome(p: Props) {
           >
             <div className="owner-section-heading">
               <div>
-                <p className="owner-eyebrow">Evidence of work</p>
                 <h2 id="home-handled-title">Recently handled</h2>
+                <p className="owner-section-description">
+                  The latest questions Opryn answered for your team.
+                </p>
               </div>
               <Link href="/app/knowledge/week">This week →</Link>
             </div>
@@ -306,7 +335,7 @@ export function OwnerHome(p: Props) {
               p.handled.map((item) => (
                 <details className="owner-activity" key={item.id}>
                   <summary>
-                    <ApprovedIcon size={19} />
+                    <CheckCheck size={19} aria-hidden="true" />
                     <span>
                       <strong>{item.question}</strong>
                       <small>
@@ -486,14 +515,18 @@ function DecisionRow({
         <span className="owner-status-rail" aria-hidden="true" />
         <span className="owner-decision-copy">
           <span className="owner-decision-meta">
-            {answerReceipt
-              ? answerReceipt.approved
-                ? "Approved"
-                : "Answer sent"
-              : feedback.state === "success"
-                ? "Approved"
-                : labels[item.kind]}{" "}
-            <span>{item.priority === "now" ? "Priority" : ""}</span>
+            <span className="owner-status-label">
+              {answerReceipt
+                ? answerReceipt.approved
+                  ? "Approved"
+                  : "Answer sent"
+                : feedback.state === "success"
+                  ? "Approved"
+                  : labels[item.kind]}
+            </span>
+            {item.priority === "now" ? (
+              <span className="owner-priority">Priority</span>
+            ) : null}
           </span>
           <strong>{title}</strong>
           <span className="owner-decision-context">
@@ -590,33 +623,4 @@ function channelName(origin?: string) {
       : origin === "external_ai"
         ? "Connected AI"
         : "Team";
-}
-function DocumentMotif() {
-  return (
-    <svg width="90" height="74" viewBox="0 0 90 74" fill="none">
-      <rect x="55" y="10" width="22" height="16" rx="4" fill="#FFD5B5" />
-      <rect
-        x="17"
-        y="13"
-        width="53"
-        height="53"
-        rx="10"
-        fill="white"
-        stroke="#2855F9"
-        strokeWidth="2"
-      />
-      <path
-        d="M29 30h28M29 39h28M29 48h16"
-        stroke="#2855F9"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-      <path
-        d="m56 55 4 4 7-9"
-        stroke="#566279"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
 }
